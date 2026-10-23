@@ -9,4 +9,9 @@ samples/
 .venv/
 **/__pycache__/
 dist/
+build/
+.cache/
+.task/
+outputs/
+artifacts/
 *.egg-info/

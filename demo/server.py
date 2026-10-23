@@ -630,7 +630,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["content-type", WEB_TOKEN_HEADER],
 )
-attach_huggingface_oauth(app)
+if REQUIRE_LOGIN:
+    attach_huggingface_oauth(app)
 if OAuthError is not None:
     @app.exception_handler(OAuthError)
     async def oauth_error_handler(request: Request, exc) -> RedirectResponse:

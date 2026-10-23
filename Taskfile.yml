@@ -1,0 +1,114 @@
+version: '3'
+
+vars:
+  IMAGE: faster-qwen3-tts-studio:dev
+  CONTAINER: faster-qwen3-tts-studio
+  DATA_VOLUME: faster_qwen3_tts_studio_data
+  PORT: '7860'
+  BIND_ADDRESS: '127.0.0.1'
+  GPU_DEVICE: '0'
+  DEV_MOUNT: '1'
+  DRY_RUN: '0'
+
+env:
+  QWEN_TASK_IMAGE: '{{.IMAGE}}'
+  QWEN_TASK_CONTAINER: '{{.CONTAINER}}'
+  QWEN_TASK_DATA_VOLUME: '{{.DATA_VOLUME}}'
+  QWEN_TASK_PORT: '{{.PORT}}'
+  QWEN_TASK_BIND_ADDRESS: '{{.BIND_ADDRESS}}'
+  QWEN_TASK_GPU_DEVICE: '{{.GPU_DEVICE}}'
+  QWEN_TASK_DEV_MOUNT: '{{.DEV_MOUNT}}'
+  QWEN_TASK_DRY_RUN: '{{.DRY_RUN}}'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  doctor:
+    desc: Check PowerShell, uv, Docker Linux engine, and host NVIDIA GPUs
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 doctor
+
+  init:
+    desc: Build the Python 3.13 NVIDIA development image and create its data volume
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 init
+
+  start:
+    desc: Start the UI/API with local source mounts and persistent model cache
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 start
+
+  stop:
+    desc: Stop this project's container, retaining its data and image
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 stop
+
+  nuke:
+    desc: Delete this project's container, development image, and ALL data in its volume
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 nuke
+
+  logs:
+    desc: Follow this project's container logs
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 logs
+
+  status:
+    desc: Show this project's container state
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 status
+
+  compile:
+    desc: Check Python syntax without loading model dependencies
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - uv run --no-project --python 3.13 python -m compileall -q faster_qwen3_tts demo scripts
+
+  test:
+    desc: Test task lifecycle, licensing, and demo behavior without GPU dependencies
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File tests/test_dev_tasks.ps1
+      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_demo_ui.py tests/test_demo_entitlements.py -q -p no:cacheprovider
+
+  licenses:
+    desc: Check source notices and licensing documentation
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - uv run --no-project --python 3.13 python scripts/check_licensing.py
+
+  test-runtime:
+    desc: Run CPU engine unit tests inside the development image without model downloads
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/dev.ps1 test-runtime
+
+  validate:
+    desc: Run syntax, lightweight tests, and source notice checks
+    cmds:
+      - task: compile
+      - task: test
+      - task: licenses
+
+  package:
+    desc: Build local Python artifacts and verify their metadata and notices
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - uv build
+      - pwsh -NoProfile -File scripts/check-packages.ps1
+
+  release:
+    desc: Validate and prepare LOCAL release artifacts; remote publication is not configured
+    cmds:
+      - task: validate
+      - task: package

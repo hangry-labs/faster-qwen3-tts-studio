@@ -4,8 +4,16 @@ include LICENSE
 include NOTICE
 include THIRD_PARTY_NOTICES.md
 include docs/LICENSING.md
+include docs/DEVELOPMENT.md
+include Taskfile.yml
+include Dockerfile
+include .dockerignore
+include requirements.dev.txt
 include scripts/check_licensing.py
 include scripts/collect_runtime_licenses.py
+recursive-include scripts *.ps1
+include tests/test_dev_tasks.ps1
+recursive-include demo *.py *.html
 include benchmark.sh
 include setup.sh
 recursive-include faster_qwen3_tts *.py

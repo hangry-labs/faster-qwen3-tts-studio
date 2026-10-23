@@ -4,6 +4,25 @@ Real-time Qwen3-TTS inference with streaming and non-streaming generation. The
 Torch backend uses `torch.cuda.CUDAGraph`; the GGML backend supports CUDA and
 Apple Silicon Metal.
 
+## Development tasks
+
+The Hangry Labs development workflow uses Task, PowerShell 7, uv, and Docker
+Desktop with NVIDIA GPU support:
+
+```powershell
+task init
+task start
+# Open http://127.0.0.1:7860
+task stop
+```
+
+`task nuke` removes this project's container, development image, and persistent
+data volume. `task release` validates and builds local Python artifacts;
+publication is not configured yet. See [development tasks](docs/DEVELOPMENT.md)
+for setup, settings, cache behavior, and validation commands. The development
+image uses Python 3.13 and Torch; the upstream installation paths below remain
+available separately.
+
 ## Install
 
 Requires: Python 3.10+ and PyTorch 2.5.1+. The Torch backend requires

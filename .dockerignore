@@ -1,0 +1,12 @@
+.git
+.idea
+.ai
+**/.ai
+AGENTS.md
+**/AGENTS.md
+ref_audio*.wav
+samples/
+.venv/
+**/__pycache__/
+dist/
+*.egg-info/

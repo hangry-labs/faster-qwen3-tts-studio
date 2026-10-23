@@ -22,8 +22,14 @@ jobs:
         with:
           version: "latest"
           enable-cache: false
+      - name: Check source licensing evidence
+        run: uv run --no-project --python 3.13 python scripts/check_licensing.py
+      - name: Test licensing guards
+        run: uv run --no-project --python 3.13 python -m unittest discover -s tests -p test_licensing.py -v
       - name: Build distributions
         run: uv build
+      - name: Check distribution notices and exclusions
+        run: uv run --no-project --python 3.13 python scripts/check_licensing.py --artifact dist/*.whl --artifact dist/*.tar.gz
       - name: Check package metadata
         run: uvx twine check --strict dist/*
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

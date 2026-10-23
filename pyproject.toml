@@ -11,8 +11,8 @@ name = "faster-qwen3-tts"
 version = "0.5.4"
 description = "Real-time Qwen3-TTS inference with CUDA graphs or GGML"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "MIT AND Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Andres Marafioti" }]
 keywords = ["tts", "qwen", "cuda", "cudagraph", "ggml", "metal", "streaming"]
 classifiers = [

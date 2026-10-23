@@ -19,6 +19,16 @@ preload_from_hub:
 
 # Faster Qwen3-TTS Demo
 
+Licensing status: this is the inherited demo deployment recipe, not a
+qualified Hangry Labs Studio release. Read [the source repository's audit](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/LICENSING.md)
+before redistributing an image. The Python 3.10 recipe and floating dependencies
+still need the planned runtime qualification.
+
+Reference recordings are not bundled or downloaded automatically. Supply your
+own permitted recording for cloning. Optional local preset slots are disabled
+by default; `DEMO_ENABLE_REFERENCE_PRESETS=1` enables only operator-supplied
+files after their recording rights and speaker authorization are established.
+
 This Space hosts the demo UI for **faster-qwen3-tts** with streaming audio, TTFA/RTF metrics, voice clone, custom voices, and voice design. It defaults to the GGML/qwentts.cpp backend and includes a Settings toggle to switch between GGML and the Torch CUDA-graph backend for speed comparisons.
 
 ## Run locally (no Docker)

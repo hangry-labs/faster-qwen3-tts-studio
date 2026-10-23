@@ -1,7 +1,6 @@
 models/
 sample_*.wav
 *.wav
-!ref_audio.wav
 *.json
 __pycache__/
 *.pyc
@@ -10,3 +9,8 @@ __pycache__/
 outputs/
 artifacts/
 packages/qwentts_cpp_python/
+.ai/
+AGENTS.md
+build/
+dist/
+*.egg-info/

@@ -1,0 +1,30 @@
+Faster Qwen3-TTS Studio
+
+Derived from Faster Qwen3-TTS by Andres Marafioti.
+Copyright (c) 2026 Andres Marafioti. Original wrapper code is MIT licensed.
+Modifications and distribution work are maintained by Hangry Labs.
+
+This distribution also contains adapted Apache-2.0 code from:
+
+  Qwen3-TTS, Copyright 2026 The Alibaba Qwen team; and, where indicated
+  upstream, The Qwen team, Alibaba Group and the HuggingFace Inc. team.
+  https://github.com/QwenLM/Qwen3-TTS
+
+  Qwen3-TTS-streaming, derived from Qwen3-TTS and maintained by dffdeeq
+  and contributors.
+  https://github.com/dffdeeq/Qwen3-TTS-streaming
+
+The local talker input construction and streaming adaptation differ from
+upstream to support static caches, CUDA Graphs, chunked audio, and wrapper
+integration. Later Hangry Labs changes are recorded in source history.
+
+The source distribution therefore has MIT and Apache-2.0 obligations. The
+MIT text in LICENSE does not relicense Apache-2.0 portions, model assets,
+dependencies, or native libraries. Retain this notice and the applicable
+license texts. See THIRD_PARTY_NOTICES.md for the consolidated notices and texts.
+
+The project acknowledges nano-qwen3tts-vllm by Thanh Sang for CUDA Graph
+inspiration. That project is MIT licensed; inspiration is not a claim that
+the project is a required runtime dependency.
+
+No endorsement by upstream authors, model providers, or NVIDIA is implied.

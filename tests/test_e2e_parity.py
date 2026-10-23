@@ -1,6 +1,7 @@
 import gc
 import os
 import random
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -19,15 +20,15 @@ VOICE_DESIGN_MODEL_ID = os.environ.get("QWEN_TTS_VOICE_DESIGN_MODEL", "Qwen/Qwen
 # and ~16 tokens in ICL mode (with correct ref_text). 256 gives ample headroom.
 _MAX_NEW_TOKENS = 256
 
-# Correct transcript for ref_audio.wav (from demo/samples/parity/icl_transcripts.txt).
-# ICL voice cloning aligns (text tokens ↔ codec frames) position-by-position.
-# A mismatched transcript produces wrong alignment and the model loops indefinitely.
-_ICL_REF_TEXT = (
-    "I'm confused why some people have super short timelines, yet at the same time "
-    "are bullish on scaling up reinforcement learning atop LLMs. If we're actually "
-    "close to a human-like learner, then this whole approach of training on verifiable "
-    "outcomes is doomed."
-)
+# ICL needs the exact transcript of an operator-supplied, permitted recording.
+_ICL_REF_TEXT = os.environ.get("QWEN_TTS_REF_TEXT", "")
+
+
+def _reference_audio() -> str:
+    path = os.environ.get("QWEN_TTS_REF_AUDIO", "ref_audio.wav")
+    if not Path(path).is_file() or not _ICL_REF_TEXT.strip():
+        pytest.skip("Provide permitted QWEN_TTS_REF_AUDIO and its exact QWEN_TTS_REF_TEXT")
+    return path
 
 
 def _seed_all(seed: int = 0) -> None:
@@ -171,7 +172,7 @@ def parity_fixture():
     device = "cuda"
     dtype = torch.bfloat16
 
-    ref_audio = "ref_audio.wav"
+    ref_audio = _reference_audio()
     text = "Short parity test."
 
     # Both base and fast must use the same attn_implementation so that parity tests
@@ -260,7 +261,7 @@ def parity_fixture_fp32():
     device = "cuda"
     dtype = torch.float32
 
-    ref_audio = "ref_audio.wav"
+    ref_audio = _reference_audio()
     text = "Short parity test."
 
     base = Qwen3TTSModel.from_pretrained(
@@ -505,7 +506,7 @@ class TestFP32Parity:
         f = parity_fixture_fp32
         base, fast = f["base"], f["fast"]
 
-        ref_audio = "ref_audio.wav"
+        ref_audio = _reference_audio()
         text = "Short parity test."
 
         with torch.inference_mode():
@@ -638,7 +639,7 @@ class TestBF16Parity:
         _seed_all(0)
         fast = parity_fixture["fast"]
 
-        ref_audio = "ref_audio.wav"
+        ref_audio = _reference_audio()
         text = "Short parity test."
 
         with torch.inference_mode():
@@ -788,7 +789,7 @@ class TestBF16Parity:
 
         _seed_all(0)
 
-        ref_audio = "ref_audio.wav"
+        ref_audio = _reference_audio()
         text = "Short parity test."
 
         base = parity_fixture["base"]
@@ -884,7 +885,7 @@ class TestBF16Parity:
         base = parity_fixture["base"]
         fast = parity_fixture["fast"]
 
-        ref_audio = "ref_audio.wav"
+        ref_audio = _reference_audio()
         text = "Short parity test."
 
         prompt_items = base.create_voice_clone_prompt(
@@ -1026,7 +1027,7 @@ def test_instruct_prepends_tokens_to_voice_clone(parity_fixture):
     """
     fast = parity_fixture["fast"]
 
-    ref_audio = "ref_audio.wav"
+    ref_audio = _reference_audio()
     text = "Short parity test."
     language = "English"
     instruct_str = "Please speak in a slow, calm tone."
@@ -1061,7 +1062,7 @@ def test_instruct_changes_generation_output(parity_fixture):
 
     fast = parity_fixture["fast"]
 
-    ref_audio = "ref_audio.wav"
+    ref_audio = _reference_audio()
     text = "Short parity test."
     language = "English"
 

@@ -105,11 +105,7 @@ from faster_qwen3_tts import FasterQwen3TTS
 
 model = FasterQwen3TTS.from_pretrained("Qwen/Qwen3-TTS-12Hz-0.6B-Base")
 ref_audio = "ref_audio.wav"
-ref_text = (
-    "I'm confused why some people have super short timelines, yet at the same time are bullish on scaling up "
-    "reinforcement learning atop LLMs. If we're actually close to a human-like learner, then this whole approach "
-    "of training on verifiable outcomes is doomed."
-)
+ref_text = "The exact transcript of your authorized reference recording."
 
 # Streaming — yields audio chunks during generation
 play = StreamPlayer()
@@ -152,7 +148,7 @@ faster-qwen3-tts clone \
   --text "What do you mean that I'm not real?" \
   --language English \
   --ref-audio ref_audio.wav \
-  --ref-text "I'm confused why some people have super short timelines, yet at the same time are bullish on scaling up reinforcement learning atop LLMs. If we're actually close to a human-like learner, then this whole approach of training on verifiable outcomes is doomed." \
+  --ref-text "The exact transcript of your authorized reference recording." \
   --output out.wav
 ```
 
@@ -224,7 +220,7 @@ Features: voice clone (upload any WAV or use your microphone), voice design (1.7
 pip install "faster-qwen3-tts[demo]"
 python examples/openai_server.py \
     --ref-audio ref_audio.wav \
-    --ref-text "I'm confused why some people have super short timelines, yet at the same time are bullish on scaling up reinforcement learning atop LLMs. If we're actually close to a human-like learner, then this whole approach of training on verifiable outcomes is doomed." \
+    --ref-text "The exact transcript of your authorized reference recording." \
     --language English --port 8000
 ```
 
@@ -359,102 +355,21 @@ In ICL mode the model's prefill ends with the last codec token of the reference 
 
 **The fix is applied by default.** The wrapper appends 0.5 s of silence to the reference audio before encoding it, giving the model a clean starting point regardless of how the recording ends. Set `append_silence=False` to match the upstream behavior exactly.
 
-## Quality Samples
+## Reference recordings and validation
 
-### Quality Comparison: Qwen3TTS vs FasterQwen3TTS
+Supply reference audio that you have permission to process and clone, with an
+accurate transcript for ICL mode. The inherited reference recordings and audio
+comparisons were removed because their media provenance was not established.
+They are not included in current packages or images.
 
-We provide side‑by‑side audio samples to compare **Qwen3TTS** (dynamic cache) against **FasterQwen3TTS** (static cache) for both CustomVoice and ICL/voice‑clone. The algorithms are equivalent, but the kernels and reduction order differ, so results are not bit‑identical; the samples let you judge the perceptual impact directly. All samples use the **1.7B** models and cap generation at ~14 seconds so the model can finish naturally.
+For real-model cloning tests, set `QWEN_TTS_REF_AUDIO` to your recording and
+`QWEN_TTS_REF_TEXT` to its exact transcript. Cloning fixtures skip when those
+inputs are unavailable. CustomVoice and VoiceDesign tests do not need an
+external reference recording.
 
-- `samples/parity/README.md` describes the prompts and model details
-- `samples/parity/*.wav` contain 2 voices × 2 prompts × {static,dynamic}
-
-**CustomVoice (aiden) – Prompt 1**
-
-<audio controls src="samples/parity/custom_aiden_gen1_static.wav"></audio>
-<audio controls src="samples/parity/custom_aiden_gen1_dynamic.wav"></audio>
-
-**CustomVoice (aiden) – Prompt 2**
-
-<audio controls src="samples/parity/custom_aiden_gen2_static.wav"></audio>
-<audio controls src="samples/parity/custom_aiden_gen2_dynamic.wav"></audio>
-
-**CustomVoice (serena) – Prompt 1**
-
-<audio controls src="samples/parity/custom_serena_gen1_static.wav"></audio>
-<audio controls src="samples/parity/custom_serena_gen1_dynamic.wav"></audio>
-
-**CustomVoice (serena) – Prompt 2**
-
-<audio controls src="samples/parity/custom_serena_gen2_static.wav"></audio>
-<audio controls src="samples/parity/custom_serena_gen2_dynamic.wav"></audio>
-
-**ICL (ref_audio.wav) – Prompt 1**
-
-<audio controls src="samples/parity/icl_ref_audio_gen1_static.wav"></audio>
-<audio controls src="samples/parity/icl_ref_audio_gen1_dynamic.wav"></audio>
-
-**ICL (ref_audio.wav) – Prompt 2**
-
-<audio controls src="samples/parity/icl_ref_audio_gen2_static.wav"></audio>
-<audio controls src="samples/parity/icl_ref_audio_gen2_dynamic.wav"></audio>
-
-**ICL (ref_audio_2.wav) – Prompt 1**
-
-<audio controls src="samples/parity/icl_ref_audio_2_gen1_static.wav"></audio>
-<audio controls src="samples/parity/icl_ref_audio_2_gen1_dynamic.wav"></audio>
-
-**ICL (ref_audio_2.wav) – Prompt 2**
-
-<audio controls src="samples/parity/icl_ref_audio_2_gen2_static.wav"></audio>
-<audio controls src="samples/parity/icl_ref_audio_2_gen2_dynamic.wav"></audio>
-
-**ICL (ref_audio_3.wav) – Prompt 1**
-
-<audio controls src="samples/parity/icl_ref_audio_3_gen1_static.wav"></audio>
-<audio controls src="samples/parity/icl_ref_audio_3_gen1_dynamic.wav"></audio>
-
-**ICL (ref_audio_3.wav) – Prompt 2**
-
-<audio controls src="samples/parity/icl_ref_audio_3_gen2_static.wav"></audio>
-<audio controls src="samples/parity/icl_ref_audio_3_gen2_dynamic.wav"></audio>
-
-### non_streaming_mode Comparison (ICL)
-
-We provide side‑by‑side samples comparing **non_streaming_mode=False** vs **True** for ICL voice cloning.
-All samples use the **1.7B** model with `xvec_only=False`.
-
-- `samples/non_streaming_mode/README.md` describes prompts, settings, and filenames
-- `samples/non_streaming_mode/*.wav` contain 3 references × 2 prompts × {nsm_false,nsm_true}
-
-**ICL (ref_audio.wav) – Prompt 1**
-
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_gen1_nsm_false.wav"></audio>
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_gen1_nsm_true.wav"></audio>
-
-**ICL (ref_audio.wav) – Prompt 2**
-
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_gen2_nsm_false.wav"></audio>
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_gen2_nsm_true.wav"></audio>
-
-**ICL (ref_audio_2.wav) – Prompt 1**
-
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_2_gen1_nsm_false.wav"></audio>
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_2_gen1_nsm_true.wav"></audio>
-
-**ICL (ref_audio_2.wav) – Prompt 2**
-
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_2_gen2_nsm_false.wav"></audio>
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_2_gen2_nsm_true.wav"></audio>
-
-**ICL (ref_audio_3.wav) – Prompt 1**
-
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_3_gen1_nsm_false.wav"></audio>
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_3_gen1_nsm_true.wav"></audio>
-
-**ICL (ref_audio_3.wav) – Prompt 2**
-
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_3_gen2_nsm_false.wav"></audio>
-<audio controls src="samples/non_streaming_mode/icl_ref_audio_3_gen2_nsm_true.wav"></audio>
+See [the licensing audit](docs/LICENSING.md) for model redistribution and
+commercial-use findings. A passing model license does not grant rights to
+somebody else's recording or identity.
 
 ## Parity
 
@@ -575,7 +490,20 @@ and a non-`None` `ref_code`, and keep `ref_text` populated.
 
 ## License
 
-MIT
+Original wrapper code is MIT licensed. Adapted Qwen/streaming portions retain
+Apache-2.0 obligations, so the Python source distribution is described as
+`MIT AND Apache-2.0`. Model weights, dependencies, and Docker runtime components
+retain their own terms. Read [NOTICE](NOTICE),
+[Third-Party Notices](THIRD_PARTY_NOTICES.md), and [the audit](docs/LICENSING.md).
+
+## Responsible use and privacy
+
+Use cloning references only with the necessary recording rights and speaker
+authorization. Do not use synthetic voices for deceptive impersonation. Review
+the text and audio before publication, including commercial use. The software
+can run locally; model downloads and the inherited demo's optional Hugging Face
+login are separate network interactions. Do not assume that the current demo
+is an offline-qualified Hangry Labs image.
 
 ## Acknowledgments
 

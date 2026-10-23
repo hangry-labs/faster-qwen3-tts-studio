@@ -55,20 +55,8 @@ for model in ['Qwen3-TTS-12Hz-0.6B-Base', 'Qwen3-TTS-12Hz-1.7B-Base']:
     print(f'  {repo_id}: done')
 "
 
-# Generate ref audio if missing
-if [ ! -f "$DIR/ref_audio.wav" ]; then
-    echo ""
-    echo "Generating placeholder reference audio..."
-    .venv/bin/python -c "
-import numpy as np, soundfile as sf
-sr = 16000
-t = np.linspace(0, 1.0, sr, dtype=np.float32)
-audio = 0.3 * np.sin(2 * np.pi * 440 * t)
-sf.write('$DIR/ref_audio.wav', audio, sr)
-print('  Generated placeholder ref_audio.wav (replace with real speech for best quality)')
-"
-fi
-
+# Reference recordings are operator-supplied and are not downloaded or generated.
+echo "For cloning, provide a permitted recording and its accurate transcript."
 echo ""
 echo "=== Setup complete ==="
 echo "Activate the venv: source .venv/bin/activate"

@@ -1,6 +1,11 @@
 include README.md
 include BLOG.md
 include LICENSE
+include NOTICE
+include THIRD_PARTY_NOTICES.md
+include docs/LICENSING.md
+include scripts/check_licensing.py
+include scripts/collect_runtime_licenses.py
 include benchmark.sh
 include setup.sh
 recursive-include faster_qwen3_tts *.py
@@ -15,3 +20,6 @@ exclude ref_audio.wav
 exclude sample_*.wav
 prune .venv
 prune .ruff_cache
+prune .ai
+prune .idea
+global-exclude AGENTS.md

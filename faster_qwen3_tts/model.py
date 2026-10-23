@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: MIT AND Apache-2.0
+# Portions adapted from Qwen3-TTS, Copyright 2026 The Alibaba Qwen team.
+# Static-cache input construction and wrapper integration modify upstream code.
+# Preserve NOTICE and the Apache-2.0 text in THIRD_PARTY_NOTICES.md.
 """
 FasterQwen3TTS: Real-time TTS using CUDA graph capture.
 

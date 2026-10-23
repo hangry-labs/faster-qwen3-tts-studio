@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT AND Apache-2.0
+# Portions adapted from Qwen3-TTS and Qwen3-TTS-streaming (Qwen authors,
+# dffdeeq, and contributors). Modified for static caches and chunked output.
+# Preserve NOTICE and the Apache-2.0 text in THIRD_PARTY_NOTICES.md.
 """
 Streaming generation with CUDA graphs for both predictor and talker.
 

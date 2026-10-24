@@ -78,16 +78,17 @@
   <main class="workspace studio-workspace" data-view="custom">
     <aside class="settings-panel" id="inference-settings">
       <div class="section-title"><i class="icon-sliders-horizontal"></i><span>Voice setup</span></div>
-      <label class="compact-field" id="saved-voice-field"><span>Saved voice</span><select id="saved-voice"><option value="">Built-in speaker</option></select></label>
-      <label class="compact-field"><span>Model</span><select id="model" aria-label="Model"></select></label>
-      <p class="field-help" id="model-help">Choose the voice workflow above.</p>
       <div class="voice-setup-grid">
         <label class="compact-field"><span>Language</span><select id="language" aria-label="Language"></select></label>
+        <label class="compact-field" id="saved-voice-field"><span>Saved voice</span><select id="saved-voice"><option value="">Built-in</option></select></label>
+        <label class="compact-field"><span>Model</span><select id="model" aria-label="Model"></select></label>
         <label class="compact-field" id="speaker-field"><span>Speaker</span><select id="speaker" aria-label="Speaker"></select></label>
+        <label class="compact-field"><span>Hardware</span><input value="NVIDIA CUDA" readonly aria-label="Inference hardware"></label>
+        <label class="compact-field" id="output-format-field"><span>Format</span><select id="output-format"><option>wav</option><option>mp3</option><option>flac</option><option>ogg</option><option>opus</option><option>aac</option><option>pcm</option></select></label>
       </div>
-      <label class="compact-field" id="output-format-field"><span>Output format</span><select id="output-format"><option>wav</option><option>mp3</option><option>flac</option><option>ogg</option><option>opus</option><option>aac</option><option>pcm</option></select></label>
-      <label class="toggle-field"><span><strong>Stream audio</strong><small>Listen as speech is generated</small></span><input type="checkbox" id="streaming" checked><span class="toggle-track" aria-hidden="true"></span></label>
-      <details class="settings-details compact-advanced">
+      <p class="field-help" id="model-help">Choose a built-in or saved voice.</p>
+      <input type="checkbox" id="streaming" hidden>
+      <details class="settings-details compact-advanced" id="generation-settings">
         <summary><span><i class="icon-sliders-horizontal"></i> Generation settings</span><i class="icon-chevron-down"></i></summary>
         <label class="compact-field"><span>Text delivery</span><select id="text-feed"><option value="true">Whole text</option><option value="false">Incremental text</option></select></label>
         <p class="field-help">Whole text gives the model the full sentence before speech starts. This is separate from streaming playback.</p>
@@ -102,12 +103,18 @@
         <label class="toggle-field"><span>Random seed</span><input id="random-seed" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span></label>
         <label class="compact-field"><span>Seed</span><input id="seed" type="number" min="0" max="4294967295" value="42" disabled></label>
         <button class="secondary-button" id="reset-controls" type="button"><i class="icon-rotate-ccw"></i> Reset controls</button>
+
+        <label class="toggle-field"><span>Protect long audio</span><input id="protect-long" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span></label>
+        <label class="toggle-field"><span>Normalize loudness</span><input id="normalize-loudness" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
+        <label class="compact-field"><span>Speech speed</span><input id="speech-speed" type="number" value="1" min="0.25" max="4" step="0.05"></label>
+        <label class="compact-field" id="custom-instruction-field" hidden><span>Default delivery direction</span><textarea id="custom-instruct" maxlength="1500" rows="2" placeholder="Speak with warmth and quiet excitement."></textarea></label><p class="field-help" id="custom-instruction-help">Native-speaker direction requires 1.7B CustomVoice. Saved voices use Base with experimental delivery direction.</p>
+        <input id="last-generated-seed" type="hidden" value="">
       </details>
       <div class="status-line" id="global-status" role="status">Connecting to inference</div>
-      <p class="field-help">NVIDIA CUDA graphs · WAV output · 24 kHz</p>
+      <p class="field-help">NVIDIA CUDA graphs · 24 kHz speech</p>
     </aside>
     <section class="content-panel" id="workflow-content">
-      <section class="composer workflow-pane" data-workflow="custom">        <div class="composer-heading">
+<div class="generate-workspace-grid" id="generate-authoring"><div class="generate-primary-column" id="generate-primary">      <section class="composer workflow-pane" data-workflow="custom">        <div class="composer-heading">
           <div class="composer-title-tools">
             <div class="section-title"><i class="icon-message-square-text"></i><span id="composer-title" data-i18n="scripts.name">Script name</span></div>
             <label class="script-inline-name"><span class="visually-hidden" data-i18n="scripts.name">Script name</span><input id="script-name" type="text" maxlength="80" placeholder="Name this script" data-i18n-placeholder="scripts.namePlaceholder" autocomplete="off"></label>
@@ -126,16 +133,40 @@
               </div>
             </details>
           </div>
-          <div class="composer-actions"><div class="segmented-control input-type-control" role="group" aria-label="Input format" data-i18n-aria-label="composer.inputType"><button class="active" type="button" data-input-type="magic" aria-pressed="true" data-i18n="magic.title">Magic</button><button type="button" data-input-type="text" aria-pressed="false">Text</button><button type="button" data-input-type="ssml" aria-pressed="false">SSML</button><button type="button" data-input-type="ssml-h" aria-pressed="false">SSML-H</button></div><span class="text-metrics" id="text-metrics">0 characters</span><button class="secondary-button compact-command" id="sample-button" type="button" hidden><i class="icon-refresh-cw"></i><span data-i18n="composer.newSample">New sample</span></button></div>
+          <div class="composer-actions"><div class="segmented-control input-type-control" role="group" aria-label="Input format" data-i18n-aria-label="composer.inputType"><button class="active" type="button" data-input-type="magic" aria-pressed="true" data-i18n="magic.title">Magic</button><button type="button" data-input-type="text" aria-pressed="false">Text</button><button type="button" data-input-type="ssml" aria-pressed="false">SSML</button><button type="button" data-input-type="ssml-h" aria-pressed="false">SSML-H</button></div><button class="icon-button" id="markup-guide-button" type="button" title="Input format guide" aria-label="Input format guide"><i class="icon-circle-help"></i></button><span class="text-metrics" id="text-metrics">0 characters</span><button class="secondary-button compact-command" id="sample-button" type="button" hidden><i class="icon-refresh-cw"></i><span data-i18n="composer.newSample">New sample</span></button></div>
         </div>
-<div class="qwen-generation-toolbar" role="toolbar" aria-label="Generation controls">
-<details><summary><i class="icon-sliders-horizontal"></i> Model controls</summary><div id="model-controls-popup"></div></details>
-<details><summary><i class="icon-square"></i> Seed</summary><div id="seed-controls-popup"></div></details>
-<details><summary><i class="icon-sparkles"></i> Output processing</summary><div class="toolbar-popup">
-<label class="compact-field"><span>Speed</span><input id="speech-speed" type="number" value="1" min="0.25" max="4" step="0.05"></label>
-<label class="toggle-field"><span>Normalize loudness (-16 LUFS)</span><input id="normalize-loudness" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
-<label class="toggle-field"><span>Protect long audio</span><input id="protect-long" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span></label>
-</div></details></div>        <section class="magic-editor-shell" id="magic-editor-shell" aria-label="Magic dialogue editor" data-i18n-aria-label="magic.editorLabel">
+        <div class="generation-toolbar" id="generation-toolbar" role="toolbar" aria-label="Generation controls" data-i18n-aria-label="generation.settings">
+          <div class="generation-menu" data-generation-menu="model">
+            <button class="generation-category-button" type="button" data-generation-menu-trigger="model" aria-expanded="false"><i class="icon-sliders-horizontal"></i><span data-i18n="generation.modelControls">Model controls</span><output data-generation-summary="model">2 / 10</output><i class="icon-chevron-down"></i></button>
+            <section class="generation-menu-panel" data-generation-menu-panel="model" hidden>
+              <div class="generation-menu-heading"><strong data-i18n="generation.modelControls">Model controls</strong><button class="icon-button reset-controls" type="button" data-generation-reset title="Reset controls" aria-label="Reset controls" data-i18n-title="generation.reset" data-i18n-aria-label="generation.reset"><i class="icon-rotate-ccw"></i></button></div>
+              <label class="range-control"><span>Temperature</span><span class="range-input-row"><input data-generation-proxy="temperature" type="range" min="0.1" max="2" step="0.05" value="0.9"><input data-generation-proxy="temperature" class="number-input" type="number" min="0.1" max="2" step="0.05" value="0.9" aria-label="Temperature"></span></label>
+              <label class="range-control"><span>Top K</span><span class="range-input-row"><input data-generation-proxy="topK" type="range" min="1" max="200" step="1" value="50"><input data-generation-proxy="topK" class="number-input" type="number" min="1" max="200" value="50" aria-label="Top K"></span></label>
+              <label class="range-control"><span>Repetition penalty</span><span class="range-input-row"><input data-generation-proxy="repetition" type="range" min="1" max="2" step="0.01" value="1.05"><input data-generation-proxy="repetition" class="number-input" type="number" min="1" max="2" step="0.01" value="1.05" aria-label="Repetition penalty"></span></label>
+              <label class="compact-field"><span>Text delivery</span><select data-generation-proxy="feed"><option value="true">Whole text</option><option value="false">Incremental text</option></select></label>
+              <label class="compact-field"><span>Audio chunk frames</span><input data-generation-proxy="chunk" type="number" min="1" max="64" value="8"></label>
+              <label class="compact-field"><span>Maximum audio length per unit</span><select data-generation-proxy="tokens"><option value="180">15 seconds</option><option value="360" selected>30 seconds</option><option value="600">50 seconds</option></select></label>
+            </section>
+          </div>
+          <div class="generation-menu" data-generation-menu="seed">
+            <button class="generation-category-button" type="button" data-generation-menu-trigger="seed" aria-expanded="false"><i class="icon-square"></i><span data-i18n="generation.seed">Seed</span><output data-generation-summary="seed">Randomize</output><i class="icon-chevron-down"></i></button>
+            <section class="generation-menu-panel generation-seed-panel" data-generation-menu-panel="seed" hidden>
+              <div class="generation-menu-heading"><strong data-i18n="generation.seed">Seed</strong><span><span data-i18n="generation.lastSeed">Last used seed</span> <output data-generation-summary="last-seed">--</output></span></div>
+              <label class="toggle-field"><span data-i18n="generation.randomSeed">Randomize</span><input data-generation-proxy="randomize" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span></label>
+              <label class="compact-field"><span data-i18n="generation.seedValue">Seed value</span><input data-generation-proxy="seed" type="number" min="0" max="4294967295" step="1" value="42"></label>
+            </section>
+          </div>
+          <div class="generation-menu" data-generation-menu="output">
+            <button class="generation-category-button" type="button" data-generation-menu-trigger="output" aria-expanded="false"><i class="icon-sparkles"></i><span data-i18n="generation.outputProcessing">Output processing</span><output data-generation-summary="output">2/3</output><i class="icon-chevron-down"></i></button>
+            <section class="generation-menu-panel generation-output-panel" data-generation-menu-panel="output" hidden>
+              <div class="generation-menu-heading"><strong data-i18n="generation.outputProcessing">Output processing</strong><span>-16 LUFS</span></div>
+              <label class="toggle-field"><span><strong data-i18n="generation.protectLongAudio">Protect long audio</strong><small data-i18n="generation.protectLongAudioHelp">Split long passages at natural boundaries</small></span><input data-generation-proxy="protect" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span></label>
+              <label class="toggle-field"><span data-i18n="generation.normalize">Normalize loudness</span><input data-generation-proxy="loudness" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span></label>
+              <label class="compact-field"><span>Speech speed</span><input data-generation-proxy="speed" type="number" min="0.25" max="4" step="0.05" value="1"></label>
+            </section>
+          </div>
+        </div>
+        <section class="magic-editor-shell" id="magic-editor-shell" aria-label="Magic dialogue editor" data-i18n-aria-label="magic.editorLabel">
           <div class="magic-toolbar" role="toolbar" aria-label="Dialogue tools" data-i18n-aria-label="magic.toolbarLabel">
             <div class="magic-menu" data-magic-menu="voice">
               <button class="magic-category-button" type="button" data-magic-menu-trigger="voice" aria-expanded="false" title="Voice" aria-label="Voice" data-i18n-title="magic.voice" data-i18n-aria-label="magic.voice"><i class="icon-mic"></i><span data-i18n="magic.voice">Voice</span><i class="icon-chevron-down"></i></button>
@@ -202,7 +233,64 @@
           <footer class="magic-footer"><span><i class="icon-sparkles"></i><span data-i18n="magic.footer">Turns are converted to validated SSML-H when you generate</span></span><span id="magic-summary">1 turn</span></footer>
         </section>
         <textarea id="text-custom" maxlength="50000" rows="8" aria-label="Text or SSML to synthesize" placeholder="What would you like to hear?"></textarea>
-<details class="markup-guide"><summary>SSML and SSML-H guide</summary><p>Use a speak root. Supported: voice, lang, prosody, break, p, s, sub and bounded say-as. SSML-H adds designed characters and h:direction delivery instructions. Phonemes, remote audio and external lexicons are unsupported.</p><p>Rate, pitch and volume are audio effects. Explicit pauses replace the 120 ms turn gap, including 0ms. <a href="/tts/ssml/capabilities" target="_blank">Exact capabilities and limits</a></p><pre>&lt;speak&gt;&lt;voice name="Ryan"&gt;Hello.&lt;/voice&gt;&lt;break time="300ms"/&gt;&lt;voice name="Vivian"&gt;Welcome back.&lt;/voice&gt;&lt;/speak&gt;</pre></details><label class="compact-field" id="custom-instruction-field" hidden><span>Default delivery direction</span><textarea id="custom-instruct" maxlength="1500" rows="2" placeholder="Speak with warmth and quiet excitement."></textarea></label><p class="field-help" id="custom-instruction-help">Native-speaker direction requires 1.7B CustomVoice. Saved voices use Base with experimental delivery direction.</p></section>
+</section>
+<section class="tab-panel" id="result-panel">        <div class="generation-command-bar">
+          <div class="generation-launch-control">
+            <div class="segmented-control generation-mode-control" role="group" aria-label="Output mode" data-i18n-aria-label="generation.outputMode">
+              <button class="active" type="button" data-generation-mode="generate" aria-pressed="true"><i class="icon-audio-lines"></i><span data-i18n="tabs.generate">Generate</span></button>
+              <button type="button" data-generation-mode="stream" aria-pressed="false" title="Preview and save a progressive MP3 stream"><i class="icon-radio"></i><span data-i18n="tabs.stream">Stream</span></button>
+            </div>
+            <button class="primary-button" id="generate-button" type="button" disabled><i class="icon-audio-lines"></i><span data-i18n="common.generateAudio">Generate audio</span></button>
+          </div>
+          <button class="secondary-button stop-button" id="stream-stop" type="button" disabled hidden data-i18n="common.stop">Stop</button>
+        </div>
+        <div class="inference-progress" id="generate-progress" hidden role="status" aria-live="polite"><div class="progress-track"><span></span></div><div class="progress-copy"><strong data-i18n="progress.preparing">Preparing request</strong><span>Qwen is getting ready</span></div><div class="stage-dots" aria-hidden="true"><span data-stage="loading_model"></span><span data-stage="generating"></span><span data-stage="encoding"></span></div></div>
+        <div class="live-stream-surface" id="stream-live" hidden><canvas id="stream-live-wave" aria-label="Live streamed audio waveform" data-i18n-aria-label="stream.waveform"></canvas><div><strong id="stream-live-state" data-i18n="stream.waiting">Waiting for audio</strong><span id="stream-live-detail">0 KiB buffered</span></div></div>
+<p id="request-status" role="status" class="visually-hidden" hidden></p><span id="text-count" hidden></span>        <section class="output-section audio-studio-section">
+          <section class="voice-finishing generate-finishing audio-studio" id="generate-finishing" hidden>
+            <div class="audio-studio-toolbar">
+              <div class="audio-studio-title"><i id="generation-output-icon" class="icon-audio-lines"></i><span id="generation-output-title" data-i18n="output.generated">Generated audio</span><span class="final-badge" id="generation-output-badge" data-i18n="output.final">Final output</span></div>
+              <label class="audio-studio-select"><span data-i18n="finishing.method">Method</span><select data-finish-role="method"><option value="ffmpeg" data-i18n="finishing.ffmpegStudio">FFmpeg Studio</option><option value="ffmpeg-shape">FFmpeg Voice Shape</option></select></label>
+              <label class="audio-studio-select"><span data-i18n="finishing.preset">Preset</span><select data-finish-role="preset"><option value="clean" data-i18n="finishing.clean">Clean</option><option value="studio" selected data-i18n="finishing.studio">Studio</option><option value="custom" data-i18n="finishing.custom">Custom</option></select></label>
+              <details class="audio-studio-adjustments">
+                <summary><i class="icon-sliders-horizontal"></i><span data-i18n="finishing.adjust">Adjust</span><i class="icon-chevron-down"></i></summary>
+                <div class="audio-studio-adjustment-panel">
+                  <div class="finishing-control-grid signalsmith-control-grid" data-finish-role="signalsmith-controls" hidden>
+                    <label class="range-control"><span class="range-heading"><span data-i18n="finishing.pitch">Pitch</span><output data-finish-role="pitch-value">0 st</output></span><input data-finish-role="pitch" type="range" min="-6" max="6" step="0.5" value="0"></label>
+                    <label class="range-control"><span class="range-heading"><span data-i18n="finishing.speed">Speed</span><output data-finish-role="speed-value">1.00x</output></span><input data-finish-role="speed" type="range" min="0.75" max="1.25" step="0.05" value="1"></label>
+                  </div>
+                  <div class="finishing-control-grid">
+                    <label class="range-control"><span class="range-heading"><span data-i18n="finishing.noise">Noise cleanup</span><output data-finish-role="noise-value">2 dB</output></span><input data-finish-role="noise" type="range" min="0" max="12" step="0.5" value="2"></label>
+                    <label class="range-control"><span class="range-heading"><span data-i18n="finishing.bass">Bass</span><output data-finish-role="bass-value">+1 dB</output></span><input data-finish-role="bass" type="range" min="-6" max="6" step="0.5" value="1"></label>
+                    <label class="range-control"><span class="range-heading"><span data-i18n="finishing.presence">Presence</span><output data-finish-role="presence-value">+1 dB</output></span><input data-finish-role="presence" type="range" min="-6" max="6" step="0.5" value="1"></label>
+                    <label class="range-control"><span class="range-heading"><span data-i18n="finishing.dynamics">Dynamics</span><output data-finish-role="dynamics-value">35%</output></span><input data-finish-role="dynamics" type="range" min="0" max="100" step="5" value="35"></label>
+                  </div>
+                  <label class="toggle-field"><span data-i18n="finishing.normalize">Finish at -16 LUFS</span><input data-finish-role="normalize" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
+                </div>
+              </details>
+              <div class="audio-studio-actions">
+                <button class="secondary-button compact-command" data-finish-role="save-source" type="button" title="Save original audio" data-i18n-title="finishing.saveOriginal"><i class="icon-download"></i><span data-i18n="common.save">Save</span></button>
+                <button class="primary-button compact-command" data-finish-role="create" type="button"><i class="icon-sparkles"></i><span data-i18n="finishing.create">Create processed preview</span></button>
+              </div>
+            </div>
+            <div class="audio-studio-source"><div id="generate-result"><section id="output-editor" aria-live="polite"></section><section class="timestamp-results" id="generate-timestamp-results" hidden aria-live="polite"></section></div><div id="stream-result" hidden><section id="stream-output" aria-live="polite"></section></div></div>
+            <div class="finishing-status" data-finish-role="status" role="status" aria-live="polite" hidden></div>
+            <section class="processed-preview" data-finish-role="preview" hidden><div class="output-heading"><div class="section-title"><i class="icon-sparkles"></i><span data-i18n="finishing.processedAudio">Processed audio</span></div><div><span class="stale-badge" data-finish-role="stale-badge" hidden data-i18n="finishing.settingsChanged">Settings changed</span><span class="final-badge" data-finish-role="method-badge">FFmpeg Studio</span><button class="secondary-button compact-command" data-finish-role="save-processed" type="button" title="Save processed audio" data-i18n-title="finishing.saveProcessed"><i class="icon-download"></i><span data-i18n="common.save">Save</span></button></div></div><section data-finish-role="output" aria-live="polite"></section></section>
+          </section>
+        </section>        <div class="studio-metrics" id="generation-metrics" aria-live="polite"><span>Generation metrics appear here.</span></div>
+        <details class="settings-details" id="generation-diagnostics"><summary>Generation diagnostics</summary><dl class="studio-diagnostics" id="diagnostic-values"><dt>Timing details</dt><dd>Generate speech to see timings.</dd></dl><p class="field-help">Server first audio includes reference preparation and audio decoding after model loading. Model TTFA covers model prefill and token generation when reported by streaming. Playback start is scheduled by the browser; it does not measure speaker hardware latency.</p></details>
+        <div class="studio-output-actions"><button class="secondary-button compact-command" id="use-as-reference" type="button" disabled><i class="icon-arrow-right"></i> Use as cloning reference</button><button class="secondary-button compact-command" id="save-output" type="button" disabled><i class="icon-save"></i> Save voice</button></div>
+</section>
+<div id="stream-surface" hidden><strong id="stream-state"></strong><span id="stream-detail"></span><canvas id="stream-canvas" height="70"></canvas></div></div>
+      <aside class="script-library" aria-labelledby="script-library-title">
+        <div class="script-library-heading">
+          <div class="section-title"><i class="icon-book-open"></i><span id="script-library-title" data-i18n="scripts.saved">Saved scripts</span><span class="count-badge" id="script-count">0</span></div>
+          <button class="icon-button bordered" id="script-folder-add" type="button" title="New folder" aria-label="New folder" data-i18n-title="scripts.newFolder" data-i18n-aria-label="scripts.newFolder"><span class="folder-plus-icon" aria-hidden="true">+</span></button>
+        </div>
+        <label class="profile-search script-search"><span class="visually-hidden" data-i18n="scripts.search">Search saved scripts</span><input id="script-filter" type="search" placeholder="Search scripts" data-i18n-placeholder="scripts.searchPlaceholder"></label>
+        <div class="script-list" id="script-list"></div>
+        <small class="script-library-note" data-i18n="scripts.persisted">Scripts remain in the persistent product volume.</small>
+      </aside></div>
       <section class="composer workflow-pane" data-workflow="design" hidden>
         <div class="section-heading-row"><div class="section-title"><i class="icon-sparkles"></i><span>Design a voice</span></div><button class="secondary-button sample-button" data-example="design" type="button">Example</button></div>
         <p class="workflow-description">Describe a voice, listen to a sample, then use it as a cloning reference.</p>
@@ -227,24 +315,7 @@
         <details class="settings-details"><summary>Saved voices <span id="voice-count"></span></summary><div id="voice-library" class="voice-library"></div><button class="secondary-button" id="save-reference" type="button" disabled>Save this reference</button></details>
         <p class="field-help">Only clone speakers who have authorized it. Do not use cloned voices for deceptive impersonation.</p>
       </section>
-      <section class="result-panel" id="result-panel">
-        <div class="generation-command-bar"><span id="text-count">0 / 1000 characters</span><button class="primary-button" id="generate-button" type="button" disabled><i class="icon-play"></i><span>Generate speech</span></button></div>
-        <p class="field-help" id="request-status" role="status" hidden></p>
-        <div class="stream-surface" id="stream-surface" hidden><div class="section-heading-row"><strong id="stream-state" role="status">Waiting for speech</strong><span id="stream-detail"></span></div><canvas id="stream-canvas" height="70" aria-label="Generated audio waveform"></canvas></div>
-        <div id="output-editor"></div>
-        <div class="studio-metrics" id="generation-metrics" aria-live="polite"><span>Generation metrics appear here.</span></div>
-        <details class="settings-details" id="generation-diagnostics"><summary>Generation diagnostics</summary><dl class="studio-diagnostics" id="diagnostic-values"><dt>Timing details</dt><dd>Generate speech to see timings.</dd></dl><p class="field-help">Server first audio includes reference preparation and audio decoding after model loading. Model TTFA covers model prefill and token generation when reported by streaming. Playback start is scheduled by the browser; it does not measure speaker hardware latency.</p></details>
-        <div class="studio-output-actions"><button class="secondary-button" id="use-as-reference" type="button" disabled><i class="icon-arrow-right"></i> Use as cloning reference</button><button class="secondary-button" id="save-output" type="button" disabled><i class="icon-save"></i> Save voice</button></div>
-      </section>
-      <aside class="script-library" aria-labelledby="script-library-title">
-        <div class="script-library-heading">
-          <div class="section-title"><i class="icon-book-open"></i><span id="script-library-title" data-i18n="scripts.saved">Saved scripts</span><span class="count-badge" id="script-count">0</span></div>
-          <button class="icon-button bordered" id="script-folder-add" type="button" title="New folder" aria-label="New folder" data-i18n-title="scripts.newFolder" data-i18n-aria-label="scripts.newFolder"><span class="folder-plus-icon" aria-hidden="true">+</span></button>
-        </div>
-        <label class="profile-search script-search"><span class="visually-hidden" data-i18n="scripts.search">Search saved scripts</span><input id="script-filter" type="search" placeholder="Search scripts" data-i18n-placeholder="scripts.searchPlaceholder"></label>
-        <div class="script-list" id="script-list"></div>
-        <small class="script-library-note" data-i18n="scripts.persisted">Scripts remain in the persistent product volume.</small>
-      </aside>
+
     </section>
     <section class="content-panel standalone-view" id="api-view" hidden>
       <div class="section-title"><i class="icon-code"></i><span>Studio API</span></div><p class="workflow-description">The browser and API use the same serialized inference engine.</p>
@@ -328,6 +399,7 @@
   </dialog>
 <dialog class="confirm-dialog script-folder-dialog" id="script-folder-dialog"><form id="script-folder-form"><div class="dialog-heading"><h2 data-i18n="scripts.newFolder">New folder</h2><button class="icon-button" id="script-folder-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div><label class="field"><span data-i18n="scripts.folderName">Folder name</span><input id="script-folder-name" type="text" maxlength="80" placeholder="Audio dramas" data-i18n-placeholder="scripts.folderPlaceholder" required></label><div class="dialog-actions"><button class="secondary-button" id="script-folder-cancel" type="button" data-i18n="common.cancel">Cancel</button><button class="primary-button" type="submit"><i class="icon-check"></i><span data-i18n="scripts.createFolder">Create folder</span></button></div></form></dialog>
 <dialog class="confirm-dialog" id="delete-script-dialog"><div class="dialog-heading"><h2 data-i18n="scripts.deleteTitle">Delete saved script?</h2><button class="icon-button" id="delete-script-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div><p><span data-i18n="scripts.deletePrefix">Permanently delete</span> <strong id="delete-script-name"></strong><span data-i18n="scripts.deleteSuffix">?</span></p><div class="dialog-actions"><button class="secondary-button" id="delete-script-cancel" type="button" data-i18n="common.cancel">Cancel</button><button class="danger-button" id="delete-script-confirm" type="button" data-i18n="common.delete">Delete</button></div></dialog>
+<dialog class="guide-dialog" id="markup-guide-dialog"><div class="dialog-heading"><h2>SSML and SSML-H</h2><button id="close-markup-guide" class="icon-button" type="button" aria-label="Close guide"><i class="icon-x"></i></button></div><p>Use a speak root. Supported: voice, lang, prosody, break, p, s, sub and bounded say-as. SSML-H adds designed characters and h:direction delivery instructions. Phonemes, remote audio and external lexicons are unsupported.</p><p>Rate, pitch and volume are audio effects. Explicit pauses replace the 120 ms turn gap, including 0ms. <a href="/tts/ssml/capabilities" target="_blank">Exact capabilities and limits</a></p><pre>&lt;speak&gt;&lt;voice name="Ryan"&gt;Hello.&lt;/voice&gt;&lt;break time="300ms"/&gt;&lt;voice name="Vivian"&gt;Welcome back.&lt;/voice&gt;&lt;/speak&gt;</pre></dialog>
   <div class="toast" id="toast" role="alert" hidden></div>
 </body>
 </html>

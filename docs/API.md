@@ -146,8 +146,25 @@ pauses and adds a 120 ms handoff only where no pause was specified.
 | `GET /tts/languages`, `/tts/voices`, `/tts/speakers` | Qwen inventory and saved profiles |
 | `GET /tts/ssml/capabilities` | Exact supported markup and processor limits |
 | `POST /tts/transcribe-upload` | `reference_audio` forwarded to the configured ASR service |
-| `POST /tts/postprocess-upload` | Audio plus JSON `options`: speed, pitch in semitones, linear volume, normalization, output format |
+| `POST /tts/postprocess-upload` | Audio plus JSON `options`: speed, pitch in semitones, linear volume, normalization, output format, and finishing controls below |
 | `POST /tts/purge` | Unload this Studio's resident model |
+
+Supply a unique `X-Qwen-Request-ID` (1 to 80 letters, digits or hyphens) with
+`/tts/generate`, `/tts/stream`, `/tts/magic/take` or `/tts/magic/render`, then poll
+`GET /tts/activity?request_id=...` for that request's phase, title and detail.
+Completed progressive requests also expose metrics and committed profile ids.
+Unknown or expired ids return an empty object. Progress is retained in memory
+for up to an hour, bounded to the most recent 128 requests. Omitting the query
+retains the model/queue status response.
+
+Finishing accepts multipart `audio` and JSON `options`, up to 40 MB and 300
+seconds. `method="ffmpeg"` offers `noise_reduction_db` (0 to 12), `bass_db` and
+`presence_db` (-6 to 6), `dynamics` (0 to 100), and `normalize_loudness` (-16
+LUFS). `method="ffmpeg-shape"` additionally applies `pitch_semitones` (-6 to 6)
+and `speed_factor` (0.75 to 1.25). `preset` records `clean`, `studio` or `custom`;
+clients send the numeric settings explicitly. Legacy `speed`, `pitch`, `volume`
+and `output_format` remain supported. The browser keeps the original recording
+separate from the processed preview.
 
 The original `/studio/*` multipart/JSON/SSE contracts remain available for
 single-model workflows. No local ASR, forced alignment, server-path audio access,

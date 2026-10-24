@@ -45,7 +45,8 @@ def tempo_filters(rate):
     return filters + [f'atempo={rate:.8f}']
 
 
-def effects(audio, *, rate=1., pitch=0., volume=1., normalize=False):
+def effects(audio, *, rate=1., pitch=0., volume=1., normalize=False,
+            noise=0., bass=0., presence=0., dynamics=0.):
     filters = []
     if pitch:
         factor = 2 ** (pitch / 12)
@@ -55,6 +56,14 @@ def effects(audio, *, rate=1., pitch=0., volume=1., normalize=False):
         filters += tempo_filters(rate)
     if volume != 1:
         filters.append(f'volume={volume:.8f}')
+    if noise:
+        filters.append(f'afftdn=nr={noise:.4f}:nf=-50')
+    if bass:
+        filters.append(f'bass=g={bass:.4f}:f=160:w=0.6')
+    if presence:
+        filters.append(f'equalizer=f=3000:t=q:w=1:g={presence:.4f}')
+    if dynamics:
+        filters.append(f'acompressor=threshold=0.125:ratio={1 + dynamics / 25:.4f}:attack=20:release=180:makeup=1')
     if normalize:
         filters += ['loudnorm=I=-16:TP=-1.5:LRA=11', f'aresample={RATE}']
     if not filters or not len(audio):

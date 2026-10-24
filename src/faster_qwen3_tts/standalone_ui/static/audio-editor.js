@@ -1,4 +1,4 @@
-// Adapted from VoxCPMTTS: failed loads now clear invalid audio; see NOTICE.
+// Adapted from VoxCPMTTS: current failures clear invalid audio; stale loads are ignored.
 import WaveSurfer from './vendor/wavesurfer/wavesurfer.esm.js'
 import Regions from './vendor/wavesurfer/plugins/regions.esm.js'
 import { fileFromBlob, formatTime, trimAudio } from './audio-utils.js'
@@ -171,6 +171,7 @@ export class AudioEditor {
   }
 
   async load(value, name = null) {
+    const revision = this.loadRevision = (this.loadRevision || 0) + 1
     const file = value instanceof File ? value : fileFromBlob(value, name || 'audio.wav')
     this.disableTrim()
     this.wave.pause()
@@ -188,9 +189,11 @@ export class AudioEditor {
     try {
       await this.wave.load(this.objectUrl)
     } catch (error) {
+      if (revision !== this.loadRevision) return
       this.clear()
       throw error
     }
+    if (revision !== this.loadRevision) return
     this.wave.setTime(0)
     this.currentElement.textContent = '0:00'
     this.setAudioActionsEnabled(true)
@@ -198,8 +201,11 @@ export class AudioEditor {
   }
 
   clear() {
+    this.loadRevision = (this.loadRevision || 0) + 1
     this.disableTrim()
+    this.wave.pause()
     this.wave.empty()
+    this.setPlayIcon(false)
     if (this.objectUrl) URL.revokeObjectURL(this.objectUrl)
     this.objectUrl = null
     this.file = null
@@ -298,6 +304,7 @@ export class AudioEditor {
   }
 
   destroy() {
+    this.loadRevision = (this.loadRevision || 0) + 1
     this.disableTrim()
     if (this.objectUrl) URL.revokeObjectURL(this.objectUrl)
     this.objectUrl = null

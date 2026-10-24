@@ -38,6 +38,8 @@ function selectOptions(select, items, value = null) {
     const option = document.createElement('option')
     option.value = typeof item === 'string' ? item : item.id
     option.textContent = typeof item === 'string' ? item : item.label
+    if (select.id === 'model') option.textContent = option.textContent.replace('CustomVoice', 'Custom').replace('VoiceDesign', 'Design').replace('-', ' ')
+    option.title = typeof item === 'string' ? item : item.label
     return option
   }))
   if (value && [...select.options].some((item) => item.value === value)) select.value = value
@@ -55,6 +57,7 @@ const output = new AudioEditor($('#output-editor'), { label: 'Generated audio',
   onChange: (file) => {
     $('#use-as-reference').disabled = !file
     $('#save-output').disabled = !file
+    if (state.capabilities && state.mode === 'custom' && !workbench.resultStreaming) workbench.sourceEdited(file)
   } })
 for (const editor of [reference, output]) editor.container.addEventListener('audio-error', (event) => toast(event.detail?.message || 'Unable to load audio.'))
 const recorder = new AudioRecorder({ button: $('#record-reference'), status: $('#recording-status'),
@@ -83,6 +86,7 @@ function updateModelControls() {
   updateCloneGuidance()
   $('#model-help').textContent = spec?.mode === 'design' ? 'Creates a new voice from a description.' : spec?.mode === 'clone' ? 'Recreates a voice from reference audio.' : 'Nine built-in speakers. The 1.7B model also supports style instructions.'
   state.models[state.mode] = $('#model').value
+  $('#model').title = spec?.label || $('#model').value
   workbench.defaultVoice()
 }
 
@@ -137,6 +141,13 @@ function updateChunkHelp() {
 }
 
 async function activateTab(tab) {
+  const changed = tab !== state.tab
+  if (changed && state.busy) return
+  if (changed && state.capabilities) {
+    if (state.outputs[state.mode]) state.outputs[state.mode].finishing = workbench.finisher.snapshot()
+    output.wave.pause(); workbench.streamOutput.wave.pause(); workbench.finisher.output.wave.pause()
+    $('#generate-progress').hidden = true
+  }
   if (state.capabilities && ['custom', 'design', 'clone'].includes(state.tab)) state.textFeed[state.mode] = $('#text-feed').value === 'true'
   state.tab = tab
   history.replaceState(null, '', location.pathname + location.search + '#' + tab)
@@ -157,7 +168,10 @@ async function activateTab(tab) {
   $('#saved-voice-field').hidden = tab !== 'custom'
   $('#output-format-field').hidden = tab !== 'custom'
   // Sampling, seed and finishing controls remain available in every workflow.
-  const toolbar = $('.qwen-generation-toolbar')
+  const toolbar = $('#generation-toolbar')
+  $('#generate-authoring').hidden = tab !== 'custom'
+  const parent = tab === 'custom' ? $('#generate-primary') : $('#workflow-content')
+  parent.append($('#result-panel'), $('#stream-surface'))
   if (tab === 'custom') $('[data-workflow=custom]').insertBefore(toolbar, $('#magic-editor-shell'))
   else if (workflow) $('#workflow-content').prepend(toolbar)
   toolbar.hidden = !workflow
@@ -169,8 +183,23 @@ async function activateTab(tab) {
     $('#text-feed').value = String(state.textFeed[state.mode] ?? state.capabilities.workflow_defaults[state.mode].non_streaming_mode)
     $('#generate-button span').textContent = state.busy ? 'Stop generation' : names[state.mode]
     const saved = state.outputs[state.mode]
-    if (saved) { await output.load(saved.file); renderMetrics(saved.metrics) }
-    else if (!state.busy) { output.clear(); $('#generation-metrics').textContent = 'Generation metrics appear here.'; renderDiagnostics({}) }
+    if (tab === 'custom') {
+      $('#generate-result').hidden = workbench.resultStreaming || !saved
+      $('#stream-result').hidden = !workbench.resultStreaming
+      workbench.showOutput(!!saved)
+      if (saved && !workbench.resultStreaming && output.currentFile() !== saved.file) {
+        workbench.presenting = true
+        try { await output.load(saved.file) } finally { workbench.presenting = false }
+      }
+      if (saved) renderMetrics(saved.metrics)
+    } else {
+      $('#generate-result').hidden = false; $('#stream-result').hidden = true
+      workbench.showOutput(!!saved)
+      if (saved) { await output.load(saved.file); renderMetrics(saved.metrics) }
+      else if (!state.busy) { output.clear(); renderDiagnostics({}) }
+    }
+    if (changed && saved?.finishing) await workbench.finisher.restore(saved.finishing)
+    workbench.toolbar.sync()
   }
   updateCount()
   if (tab === 'system' && !document.hidden) { gpu.start(); refreshAsr().catch(() => {}) }
@@ -179,7 +208,7 @@ async function activateTab(tab) {
 }
 
 function example(mode) {
-  if (mode === 'custom') { workbench.loadText(examples.custom); workbench.setInputType('magic', { syncSsmlH: false }) }
+  if (mode === 'custom') { workbench.loadExample(); updateCount(); return }
   $(`#text-${mode}`).value = examples[mode]
   if (mode === 'design') $('#design-instruct').value = 'A warm female narrator with a clear, gentle voice and a relaxed, conversational delivery.'
   updateCount()
@@ -308,7 +337,12 @@ async function generate() {
     chunks.forEach((chunk) => { all.set(chunk, offset); offset += chunk.length })
     const file = new File([encodeWav([all], rate)], `qwen-${mode}-${Date.now()}.wav`, { type: 'audio/wav' })
     state.outputs[mode] = { file, text: options.text, metrics: { ...metrics, ...clientMetrics } }
-    if (state.mode === mode && ['custom','design','clone'].includes(state.tab)) { await output.load(file); renderMetrics({ ...metrics, ...clientMetrics }) }
+    if (state.mode === mode && ['custom','design','clone'].includes(state.tab)) {
+      workbench.showOutput(true)
+      $('#generate-result').hidden = false; $('#stream-result').hidden = true
+      workbench.finisher.setSource(file, 'wav')
+      await output.load(file); renderMetrics({ ...metrics, ...clientMetrics })
+    }
     $('#stream-state').textContent = 'Generation complete'
     $('#global-status').textContent = 'Speech generated'
     if (state.player) await state.player.finish()
@@ -395,7 +429,14 @@ async function setHeaderCollapsed(collapsed, animate = true) {
   try { sessionStorage.setItem('qwen3tts-ui-state-v1', JSON.stringify({ tab: state.tab, headerCollapsed: collapsed })) } catch {}
 }
 
-const workbench = new GenerateWorkbench({ options: requestOptions, fetchJson, toast, onMetrics: renderMetrics,
+const workbench = new GenerateWorkbench({ options: requestOptions, fetchJson, toast, onMetrics: renderMetrics, outputEditor: output,
+  saveVoice: openSave,
+  restoreSettings: async settings => {
+    $('#saved-voice').value = settings.voice_profile || ''
+    if (settings.model) state.models.custom = settings.model
+    await activateTab('custom')
+    if (settings.voice) $('#speaker').value = settings.voice
+  },
   onBusy: (busy, controller) => {
     state.busy = busy; state.controller = controller
     $('#generate-button span').textContent = busy ? 'Stop generation' : names[state.mode]
@@ -403,7 +444,7 @@ const workbench = new GenerateWorkbench({ options: requestOptions, fetchJson, to
   },
   onOutput: async (file, text, metrics) => {
     state.outputs.custom = { file, text, metrics }
-    if (state.tab === 'custom') await output.load(file)
+    if (!file) delete state.outputs.custom
   },
 })
 $('#saved-voice').addEventListener('change', () => activateTab('custom').catch(error => toast(error.message)))
@@ -434,6 +475,8 @@ $('#reset-controls').addEventListener('click', () => {
   $('#text-feed').value = String(state.capabilities.workflow_defaults[state.mode].non_streaming_mode)
   state.textFeed[state.mode] = $('#text-feed').value === 'true'
   $('#random-seed').checked = true; $('#seed').disabled = true
+  $('#speech-speed').value = '1'; $('#protect-long').checked = true; $('#normalize-loudness').checked = false
+  workbench.toolbar.sync()
 })
 $('#clone-method').addEventListener('change', updateCloneGuidance)
 $('#chunk-size').addEventListener('input', updateChunkHelp)
@@ -451,8 +494,8 @@ $('#transcribe-reference').addEventListener('click', async () => {
   catch (error) { toast(error.message) }
   finally { button.disabled = !reference.currentFile(); button.textContent = 'Transcribe reference' }
 })
-$('#use-as-reference').addEventListener('click', async () => { if (!output.currentFile()) return; const saved = state.outputs[state.mode]; await reference.load(output.currentFile()); $('#reference-text').value = saved?.text || ''; await activateTab('clone') })
-$('#save-output').addEventListener('click', () => openSave(output.currentFile(), state.outputs[state.mode]?.text))
+$('#use-as-reference').addEventListener('click', async () => { const file = state.mode === 'custom' ? workbench.currentFile() : output.currentFile(); if (!file) return; const saved = state.outputs[state.mode]; await reference.load(file); $('#reference-text').value = saved?.text || ''; await activateTab('clone') })
+$('#save-output').addEventListener('click', () => openSave(state.mode === 'custom' ? workbench.currentFile() : output.currentFile(), state.outputs[state.mode]?.text))
 $('#save-reference').addEventListener('click', () => openSave(reference.currentFile(), $('#reference-text').value))
 $('#close-save').addEventListener('click', () => $('#save-voice-dialog').close())
 closeDialogOnBackdrop($('#save-voice-dialog'), () => $('#save-voice-dialog').close())
@@ -460,7 +503,7 @@ $('#save-voice-form').addEventListener('submit', async (event) => {
   event.preventDefault(); const button = event.submitter; button.disabled = true
   try {
     const form = new FormData(); form.set('file', state.saveFile); form.set('name', $('#voice-name').value); form.set('transcript', $('#voice-transcript').value)
-    await fetchJson('/studio/voices', { method: 'POST', body: form }); $('#save-voice-dialog').close(); await refreshVoices(); toast('Voice saved to your local library.')
+    await fetchJson('/studio/voices', { method: 'POST', body: form }); $('#save-voice-dialog').close(); await refreshVoices(); await workbench.refreshVoices(); toast('Voice saved to your local library.')
   } catch (error) { toast(error.message) } finally { button.disabled = false }
 })
 $('#save-asr').addEventListener('click', async () => {

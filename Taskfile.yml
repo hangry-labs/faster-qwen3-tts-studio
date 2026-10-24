@@ -90,6 +90,12 @@ tasks:
     cmds:
       - uv run --no-project --python 3.13 python scripts/check_licensing.py
 
+  test-ui:
+    desc: Check Generate drafts and audio replacement with Node's built-in test runner
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - node --test tests/ui/*.test.mjs
+
   test-runtime:
     desc: Run CPU engine unit tests inside the development image without model downloads
     dir: '{{.TASKFILE_DIR}}'

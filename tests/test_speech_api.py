@@ -64,6 +64,50 @@ def save_voice(client, name='narrator'):
     return result.json()
 
 
+def test_request_progress_is_scoped_and_keeps_metrics(api):
+    client, _, _ = api
+    first = client.post('/tts/generate', json={'text': 'A short test.'}, headers={'X-Qwen-Request-ID': 'ui-first'})
+    assert first.status_code == 200
+    assert json.loads(first.headers['x-qwen-metrics'])['duration_s'] > 0
+    activity = client.get('/tts/activity?request_id=ui-first').json()
+    assert activity['phase'] == 'complete'
+    assert activity['metrics']['duration_s'] > 0
+    assert client.get('/tts/activity?request_id=other-client').json() == {}
+    streamed = client.post('/tts/stream', json={'text': 'Another test.', 'stream_format': 'mp3'}, headers={'X-Qwen-Request-ID': 'ui-stream'})
+    assert streamed.status_code == 200 and streamed.content
+    assert client.get('/tts/activity?request_id=ui-stream').json()['phase'] == 'complete'
+    assert client.get('/tts/activity?request_id=ui-first').json() == activity
+    assert client.get('/tts/activity').json()['state'] == 'idle'
+
+
+def test_finishing_controls_process_audio_and_shape_pitch_speed(api):
+    client, engine, _ = api
+    time_axis = np.arange(audio.RATE, dtype=np.float32) / audio.RATE
+    source = audio.wav(.25 * np.sin(2 * np.pi * 220 * time_axis))
+    options = {'method': 'ffmpeg-shape', 'preset': 'custom', 'pitch_semitones': 6,
+        'speed_factor': 1.25, 'noise_reduction_db': 2, 'bass_db': 1,
+        'presence_db': 1, 'dynamics': 35, 'normalize_loudness': True}
+    result = client.post('/tts/postprocess-upload', data={'options': json.dumps(options)},
+        files={'audio': ('source.wav', source, 'audio/wav')})
+    assert result.status_code == 200, result.text
+    samples, rate = sf.read(io.BytesIO(result.content))
+    assert rate == audio.RATE and .7 < len(samples) / rate < .9
+    peak_frequency = np.argmax(np.abs(np.fft.rfft(samples))) * rate / len(samples)
+    assert 300 < peak_frequency < 325
+    assert np.isfinite(samples).all() and np.max(np.abs(samples)) <= 1
+    assert not engine.requests
+
+
+@pytest.mark.parametrize('overrides', [{'method': 'signalsmith'}, {'noise_reduction_db': 13},
+    {'bass_db': -7}, {'presence_db': 7}, {'dynamics': 101}, {'speed_factor': 2}, {'pitch_semitones': 7}])
+def test_finishing_rejects_unsupported_controls_before_processing(api, overrides):
+    client, engine, _ = api
+    result = client.post('/tts/postprocess-upload', data={'options': json.dumps(overrides)},
+        files={'audio': ('invalid.wav', b'not audio', 'audio/wav')})
+    assert result.status_code == 422
+    assert not engine.requests
+
+
 @pytest.mark.parametrize('fmt', ['wav', 'mp3', 'opus', 'aac', 'flac', 'pcm', 'ogg'])
 def test_openai_client_formats_and_aliases(api, fmt):
     client, engine, _ = api

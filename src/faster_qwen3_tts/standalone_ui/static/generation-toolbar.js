@@ -1,11 +1,11 @@
+// Shared VoxCPMTTS menu behavior, mapped to Qwen's actual sampling controls.
 const CONTROL_IDS = {
-  guidance: 'guidance',
-  steps: 'steps',
+  temperature: 'temperature', topK: 'top-k', repetition: 'repetition',
+  chunk: 'chunk-size', tokens: 'max-tokens', feed: 'text-feed', speed: 'speech-speed',
   seed: 'seed',
-  randomize: 'randomize-seed',
-  protect: 'protect-long-audio',
+  randomize: 'random-seed',
+  protect: 'protect-long',
   loudness: 'normalize-loudness',
-  text: 'normalize-text',
 }
 
 export class GenerationToolbar {
@@ -26,6 +26,10 @@ export class GenerationToolbar {
   }
 
   bind() {
+    this.root.querySelectorAll('[data-generation-reset]').forEach(button => button.addEventListener('click', () => {
+      document.getElementById('reset-controls').click()
+      this.sync()
+    }))
     for (const [name, menu] of this.menus) {
       menu.trigger.addEventListener('click', () => {
         if (this.openName === name) this.close()
@@ -111,19 +115,19 @@ export class GenerationToolbar {
       })
     }
 
-    const guidance = document.getElementById(CONTROL_IDS.guidance)?.value || '2'
-    const steps = document.getElementById(CONTROL_IDS.steps)?.value || '10'
+    const temperature = document.getElementById(CONTROL_IDS.temperature)?.value || '0.9'
+    const topK = document.getElementById(CONTROL_IDS.topK)?.value || '50'
     const randomize = Boolean(document.getElementById(CONTROL_IDS.randomize)?.checked)
     const seed = document.getElementById(CONTROL_IDS.seed)?.value || '42'
     const lastSeed = document.getElementById('last-generated-seed')?.value || '--'
-    const enabledOutputCount = ['protect', 'loudness', 'text']
+    const enabledOutputCount = ['protect', 'loudness']
       .filter((name) => document.getElementById(CONTROL_IDS[name])?.checked).length
 
-    this.root.querySelector('[data-generation-summary="model"]').textContent = `${guidance} / ${steps}`
+    this.root.querySelector('[data-generation-summary="model"]').textContent = `${temperature} / ${topK}`
     this.root.querySelector('[data-generation-summary="seed"]').textContent = randomize
       ? this.randomLabel
       : seed
-    this.root.querySelector('[data-generation-summary="output"]').textContent = `${enabledOutputCount}/3`
+    this.root.querySelector('[data-generation-summary="output"]').textContent = `${enabledOutputCount}/2`
     this.root.querySelector('[data-generation-summary="last-seed"]').textContent = lastSeed
     this.root.querySelector('[data-generation-proxy="seed"]').disabled = randomize
   }

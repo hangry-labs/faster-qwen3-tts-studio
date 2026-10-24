@@ -9,6 +9,8 @@ import json
 import os
 import queue
 import threading
+import time
+import re
 from typing import Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
@@ -67,6 +69,14 @@ class EffectsRequest(BaseModel):
     volume: float = Field(default=1, ge=0, le=2)
     normalize_loudness: bool = False
     output_format: Literal['wav', 'mp3', 'flac', 'ogg', 'opus', 'aac', 'pcm'] = 'wav'
+    method: Literal['ffmpeg', 'ffmpeg-shape'] = 'ffmpeg'
+    preset: Literal['clean', 'studio', 'custom'] = 'custom'
+    pitch_semitones: float | None = Field(default=None, ge=-6, le=6)
+    speed_factor: float | None = Field(default=None, ge=.75, le=1.25)
+    noise_reduction_db: float = Field(default=0, ge=0, le=12)
+    bass_db: float = Field(default=0, ge=-6, le=6)
+    presence_db: float = Field(default=0, ge=-6, le=6)
+    dynamics: float = Field(default=0, ge=0, le=100)
 
 
 def error_payload(message, status=400, param=None):
@@ -87,6 +97,50 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     service = SpeechService(engine, store)
     app.state.speech = service
     router = APIRouter()
+    activities = {}
+    activity_lock = threading.Lock()
+
+    def begin_activity(request):
+        identity = request.headers.get('X-Qwen-Request-ID', '') if request else ''
+        if not re.fullmatch(r'[a-zA-Z0-9-]{1,80}', identity):
+            return None
+        with activity_lock:
+            cutoff = time.monotonic() - 3600
+            for key in list(activities):
+                if activities[key]['updated'] < cutoff:
+                    del activities[key]
+            if len(activities) >= 128:
+                del activities[next(iter(activities))]
+            activities[identity] = {'phase': 'queued', 'title': 'Waiting for inference', 'detail': 'Your request is queued', 'updated': time.monotonic()}
+        return identity
+
+    def update_activity(identity, event):
+        if not identity:
+            return
+        kind = event['type']
+        phases = {
+            'queued': ('queued', 'Waiting for inference', 'Your request is queued'),
+            'loading': ('loading_model', 'Loading model', 'Preparing Qwen on the GPU'),
+            'ready': ('generating', 'Generating speech', 'Qwen is producing your recording'),
+            'designing': ('generating', 'Designing a character voice', 'Preparing the dialogue voice'),
+            'turn': ('generating', 'Generating dialogue', f"Speech turn {event.get('index', 0) + 1}"),
+            'chunk': ('streaming', 'Receiving audio', 'Speech is arriving from Qwen'),
+            'done': ('encoding', 'Encoding audio', 'Preparing the completed recording'),
+            'error': ('failed', 'Generation failed', str(event.get('message', 'Inference failed'))),
+            'complete': ('complete', 'Generation complete', 'Recording ready'),
+            'cancelled': ('failed', 'Generation stopped', 'The client stopped this request'),
+        }
+        if kind not in phases:
+            return
+        phase, title, detail = phases[kind]
+        with activity_lock:
+            if identity not in activities:
+                return
+            activities[identity] = {**activities.get(identity, {}), 'phase': phase, 'title': title, 'detail': detail, 'updated': time.monotonic()}
+            if 'metrics' in event:
+                activities[identity]['metrics'] = event['metrics']
+            if 'committed_profiles' in event:
+                activities[identity]['committed_profiles'] = event['committed_profiles']
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
@@ -108,6 +162,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         return await call_next(request)
 
     async def complete(prepared, http_request=None, **options):
+        identity = begin_activity(http_request)
         events, cancelled = start_worker(service, prepared, **options)
         result = None
         try:
@@ -117,6 +172,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                     raise HTTPException(499, 'Client disconnected.')
                 if event is None:
                     continue
+                update_activity(identity, event)
                 if event['type'] == 'error':
                     raise HTTPException(503, event['message'])
                 if event['type'] == 'result':
@@ -125,6 +181,10 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                     if result is None:
                         raise HTTPException(503, 'Generation ended before completion.')
                     return result
+        except (asyncio.CancelledError, HTTPException) as exc:
+            if isinstance(exc, asyncio.CancelledError) or exc.status_code == 499:
+                update_activity(identity, {'type': 'cancelled'})
+            raise
         finally:
             cancelled.set()
 
@@ -144,11 +204,14 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         if http_request is not None and await http_request.is_disconnected():
             raise HTTPException(499, 'Client disconnected before encoding completed.')
         profiles = commit(result)
+        update_activity(http_request.headers.get('X-Qwen-Request-ID') if http_request else None, {'type': 'complete'})
         return Response(encoded, media_type=audio.FORMATS[payload.output_format][0],
-                        headers={**headers(prepared, payload.output_format), 'X-Qwen-Committed-Profiles': json.dumps(profiles)})
+                        headers={**headers(prepared, payload.output_format), 'X-Qwen-Committed-Profiles': json.dumps(profiles),
+                                 'X-Qwen-Metrics': json.dumps(result['metrics'])})
 
-    def progressive(payload, reference=None):
+    def progressive(payload, reference=None, http_request=None):
         prepared = service.prepare(payload, reference)
+        identity = begin_activity(http_request)
         fmt = payload.stream_format
         events, cancelled = start_worker(service, prepared, streaming=True)
         result = {}
@@ -158,6 +221,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                 if event is None:
                     continue
                 kind = event['type']
+                update_activity(identity, event)
                 if kind == 'chunk':
                     yield event['audio']
                 elif kind == 'result':
@@ -174,9 +238,15 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                 while (chunk := await asyncio.to_thread(advance)) is not None:
                     yield chunk
                 if result and not cancelled.is_set():
-                    commit(result)
+                    profiles = commit(result)
+                    update_activity(identity, {'type': 'complete', 'metrics': result['metrics'], 'committed_profiles': profiles})
             finally:
                 cancelled.set()
+                if not result:
+                    with activity_lock:
+                        phase = activities.get(identity, {}).get('phase')
+                    if phase != 'failed':
+                        update_activity(identity, {'type': 'cancelled'})
                 # Closing happens only after any active next() has returned.
         return StreamingResponse(stream(), media_type=audio.FORMATS[fmt][0], headers=headers(prepared, fmt))
 
@@ -232,9 +302,19 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         return {'msg': 'pong', 'type': 'Qwen3-TTS Studio', 'version': __version__, 'backend': 'torch'}
 
     @router.get('/tts/status')
-    @router.get('/tts/activity')
     def status():
         return engine.status()
+
+    @router.get('/tts/activity')
+    def activity(request_id: str | None = None):
+        if request_id is None:
+            return engine.status()
+        with activity_lock:
+            value = activities.get(request_id, {})
+            if value and value['updated'] < time.monotonic() - 3600:
+                del activities[request_id]
+                return {}
+            return {key: value[key] for key in ('phase', 'title', 'detail', 'metrics', 'committed_profiles') if key in value}
 
     @router.get('/tts/defaults')
     def defaults():
@@ -287,8 +367,8 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         return await binary(SpeechRequest.model_validate_json(payload), request, await canonical_audio(reference_audio))
 
     @router.post('/tts/stream')
-    def stream(payload: SpeechRequest):
-        return progressive(payload)
+    def stream(payload: SpeechRequest, request: Request):
+        return progressive(payload, http_request=request)
 
     @router.post('/tts/stream-upload')
     async def stream_upload(payload: str = Form(...), reference_audio: UploadFile = File(...)):
@@ -383,11 +463,16 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     @router.post('/tts/postprocess-upload')
     async def postprocess(options: str = Form(...), audio_file: UploadFile = File(..., alias='audio')):
         config = EffectsRequest.model_validate_json(options)
-        source = await canonical_audio(audio_file)
-        # Canonical reference uploads may have a different sample rate.
+        source = await audio_file.read(40 * 1024 * 1024 + 1)
+        if not source or len(source) > 40 * 1024 * 1024:
+            raise ValueError('Choose generated audio up to 40 MB.')
         converted = await asyncio.to_thread(resample_wav, source)
-        waveform = await asyncio.to_thread(audio.effects, converted, rate=config.speed, pitch=config.pitch,
-                                          volume=config.volume, normalize=config.normalize_loudness)
+        shape = config.method == 'ffmpeg-shape'
+        waveform = await asyncio.to_thread(audio.effects, converted,
+            rate=config.speed_factor if shape and config.speed_factor is not None else config.speed,
+            pitch=config.pitch_semitones if shape and config.pitch_semitones is not None else config.pitch,
+            volume=config.volume, normalize=config.normalize_loudness,
+            noise=config.noise_reduction_db, bass=config.bass_db, presence=config.presence_db, dynamics=config.dynamics)
         return Response(await asyncio.to_thread(audio.encode, waveform, config.output_format), media_type=audio.FORMATS[config.output_format][0])
 
     async def uploads(files, metadata):
@@ -422,6 +507,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
             raise ValueError('Magic speech_index does not identify a speech unit.')
         result = await complete(prepared, request, speech_index=payload.speech_index)
         # Previewing a single turn never commits document-level profiles.
+        update_activity(request.headers.get('X-Qwen-Request-ID'), {'type': 'complete'})
         return Response(audio.wav(result['audio']), media_type='audio/wav', headers=headers(prepared, 'wav'))
 
     @router.post('/tts/magic/render')
@@ -450,6 +536,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         bundle = pack_magic_take_bundle(encoded_takes,
             encoded, sample_rate=audio.RATE, output_format=fmt, output_media_type=audio.FORMATS[fmt][0],
             request_seed=prepared.seed, committed_profiles=profiles, metrics=result['metrics'])
+        update_activity(request.headers.get('X-Qwen-Request-ID'), {'type': 'complete', 'committed_profiles': profiles})
         return Response(bundle, media_type=MAGIC_TAKE_MEDIA_TYPE, headers=headers(prepared, fmt))
 
     @router.post('/tts/magic/assemble-upload')

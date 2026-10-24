@@ -4,6 +4,8 @@
 
 # Hangry Labs Faster Qwen3-TTS Studio
 
+Development version **v1.0-snapshot**. See the [release notes](docs/RELEASE_NOTES.md).
+
 Local Qwen3-TTS voice design, voice cloning and speech generation in a Docker
 Studio with a browser UI, streaming playback and an HTTP API.
 
@@ -247,6 +249,8 @@ task release
 packaged image. `task validate` checks syntax, lifecycle safety and notices;
 `task test-runtime` runs CPU unit tests in Docker. `task smoke` exercises real
 generation against an explicitly configured ASR service.
+With Node.js 22 or newer installed, `task test-ui` checks input-mode isolation
+and audio replacement races without loading a model.
 
 `task release` prepares local Python artifacts; it does not publish a Docker
 release. `task nuke` deletes this project's container, local image and **all data

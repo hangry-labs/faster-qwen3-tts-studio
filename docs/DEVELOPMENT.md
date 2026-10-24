@@ -6,6 +6,12 @@ NVIDIA GPU support. The host does not need a Python virtual environment or CUDA
 toolkit. `uv` supplies Python 3.13 for lightweight tooling; Docker holds the
 inference dependencies.
 
+Optional frontend regressions use Node.js 22 or newer and its built-in test
+runner: `task test-ui`. They cover draft isolation across input modes and
+overlapping audio loads without a browser, model download or npm dependencies.
+The container publication workflow runs them before image builds. Interactive
+Playwright checks against the running Studio complement these component tests.
+
 ```powershell
 task doctor
 task init

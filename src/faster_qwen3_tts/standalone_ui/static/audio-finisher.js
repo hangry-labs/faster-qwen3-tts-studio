@@ -12,11 +12,12 @@ function signedDecibels(value) {
 }
 
 export class AudioFinisher {
-  constructor(root, { audioEditorLabels, labels, responseError, onError }) {
+  constructor(root, { audioEditorLabels, labels, responseError, onError, onChange = () => {} }) {
     this.root = root
     this.labels = labels
     this.responseError = responseError
     this.onError = onError
+    this.onChange = onChange
     this.source = null
     this.processedOptions = null
     this.$ = (role) => root.querySelector(`[data-finish-role="${role}"]`)
@@ -26,6 +27,7 @@ export class AudioFinisher {
       emptyDescription: labels.ready,
       labels: audioEditorLabels,
       onChange: (file) => {
+        this.onChange()
         if (!file) {
           this.processedOptions = null
           this.$('preview').hidden = true
@@ -77,7 +79,7 @@ export class AudioFinisher {
   }
 
   methodLabel(method = this.$('method').value) {
-    return method === 'signalsmith' ? this.labels.signalsmith : this.labels.ffmpeg
+    return method === 'ffmpeg-shape' ? this.labels.signalsmith : this.labels.ffmpeg
   }
 
   options() {
@@ -105,7 +107,7 @@ export class AudioFinisher {
   }
 
   renderMethod() {
-    this.$('signalsmith-controls').hidden = this.$('method').value !== 'signalsmith'
+    this.$('signalsmith-controls').hidden = this.$('method').value !== 'ffmpeg-shape'
     if (!this.output.currentFile()) this.$('method-badge').textContent = this.methodLabel()
   }
 
@@ -145,12 +147,14 @@ export class AudioFinisher {
   }
 
   setSource(blob, extension) {
+    this.sourceRevision = (this.sourceRevision || 0) + 1
     this.source = { blob, extension }
     this.resetPreview()
     this.root.hidden = false
   }
 
   clear({ hide = true } = {}) {
+    this.sourceRevision = (this.sourceRevision || 0) + 1
     this.source = null
     this.resetPreview()
     if (this.adjustments) this.adjustments.open = false
@@ -171,6 +175,7 @@ export class AudioFinisher {
   }
 
   markPreviewStale() {
+    this.onChange()
     if (!this.output.currentFile()) return
     this.renderStale(true)
   }
@@ -181,7 +186,7 @@ export class AudioFinisher {
     const url = URL.createObjectURL(this.source.blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `voxcpmtts-original.${extension}`
+    anchor.download = `qwen3tts-original.${extension}`
     anchor.click()
     setTimeout(() => URL.revokeObjectURL(url), 0)
   }
@@ -208,7 +213,7 @@ export class AudioFinisher {
     if (!source?.blob) return
     this.setSource(source.blob, source.extension)
     if (!processed?.blob) return
-    await this.output.load(processed.blob, `voxcpmtts-processed.${processed.extension || 'wav'}`)
+    await this.output.load(processed.blob, `qwen3tts-processed.${processed.extension || 'wav'}`)
     this.processedOptions = processedOptions || options
     this.$('method-badge').textContent = this.methodLabel(this.processedOptions.method)
     this.$('preview').hidden = false
@@ -220,18 +225,20 @@ export class AudioFinisher {
     const button = this.$('create')
     const status = this.$('status')
     const options = this.options()
+    const revision = this.sourceRevision
     button.disabled = true
     status.hidden = false
     status.dataset.tone = 'neutral'
     status.textContent = this.labels.processing.replace('{method}', this.methodLabel(options.method))
     try {
       const form = new FormData()
-      form.append('audio', this.source.blob, `voxcpmtts-source.${this.source.extension || 'wav'}`)
+      form.append('audio', this.source.blob, `qwen3tts-source.${this.source.extension || 'wav'}`)
       form.append('options', JSON.stringify(options))
       const response = await fetch('/tts/postprocess-upload', { method: 'POST', body: form })
       if (!response.ok) throw new Error(await this.responseError(response))
       const blob = await response.blob()
-      await this.output.load(blob, 'voxcpmtts-processed.wav')
+      if (revision !== this.sourceRevision) return
+      await this.output.load(blob, 'qwen3tts-processed.wav')
       this.processedOptions = options
       this.$('method-badge').textContent = this.methodLabel(options.method)
       this.$('preview').hidden = false
@@ -239,6 +246,7 @@ export class AudioFinisher {
       status.dataset.tone = 'success'
       status.textContent = this.labels.complete
     } catch (error) {
+      if (revision !== this.sourceRevision) return
       status.hidden = false
       status.dataset.tone = 'error'
       status.textContent = error instanceof Error ? error.message : String(error)

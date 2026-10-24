@@ -48,6 +48,8 @@ jobs:
           uv build
           uv run --no-project --python 3.13 python scripts/check_licensing.py --artifact dist/*.whl --artifact dist/*.tar.gz
           uvx twine check --strict dist/*
+      - name: Check Generate draft and player regressions
+        run: node --test tests/ui/*.test.mjs
 
   build:
     needs: validate

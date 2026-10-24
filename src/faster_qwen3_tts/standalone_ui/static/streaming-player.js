@@ -111,21 +111,35 @@ export class StreamWaveform {
 }
 
 export class IncrementalAudioPlayback {
-  static async create(visualizer) {
+  static async create(visualizer, { signal } = {}) {
     if (!window.MediaSource || !MediaSource.isTypeSupported('audio/mpeg')) return null
     const mediaSource = new MediaSource()
     const objectUrl = URL.createObjectURL(mediaSource)
     const audio = new Audio(objectUrl)
-    await new Promise((resolve, reject) => {
-      mediaSource.addEventListener('sourceopen', resolve, { once: true })
-      mediaSource.addEventListener('error', reject, { once: true })
-    })
     try {
+      await new Promise((resolve, reject) => {
+        const cleanup = () => {
+          clearTimeout(timer)
+          mediaSource.removeEventListener('sourceopen', opened)
+          mediaSource.removeEventListener('error', failed)
+          signal?.removeEventListener('abort', aborted)
+        }
+        const opened = () => { cleanup(); resolve() }
+        const failed = () => { cleanup(); reject(new Error('Browser streaming unavailable.')) }
+        const aborted = () => { cleanup(); reject(new DOMException('Stopped', 'AbortError')) }
+        const timer = setTimeout(failed, 5000)
+        mediaSource.addEventListener('sourceopen', opened, { once: true })
+        mediaSource.addEventListener('error', failed, { once: true })
+        signal?.addEventListener('abort', aborted, { once: true })
+        if (signal?.aborted) aborted()
+      })
       const playback = new IncrementalAudioPlayback(mediaSource, audio, objectUrl)
       await visualizer.attach(audio)
       return playback
-    } catch {
+    } catch (error) {
+      audio.pause()
       URL.revokeObjectURL(objectUrl)
+      if (error.name === 'AbortError') throw error
       return null
     }
   }

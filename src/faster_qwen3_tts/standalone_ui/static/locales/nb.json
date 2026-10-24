@@ -66,7 +66,7 @@
   "composer.text": "Inndata tekst",
   "composer.input": "Tekst eller oppmerking som skal syntetiseres",
   "composer.inputType": "Inndataformat",
-  "composer.defaultText": "VoxCPM2 lager naturlig flerspråklig tale med stemmedesign og kloning.",
+  "composer.defaultText": "Welcome back. It is a lovely day to give your ideas a voice.",
   "composer.newSample": "Ny prøve",
   "composer.metrics": "{characters} tegn · {words} ord",
   "magic.title": "Magi",

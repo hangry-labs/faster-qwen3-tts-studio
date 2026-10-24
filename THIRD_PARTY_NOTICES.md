@@ -18,6 +18,9 @@ requirements. Original license texts and notices take precedence over summaries.
 | Qwen3-TTS-streaming adaptations | Apache-2.0 | Qwen authors, dffdeeq, and contributors; [reviewed source](https://github.com/dffdeeq/Qwen3-TTS-streaming/tree/13ef823ffe76aec4ac7e35d3fec28ecfc8d7427a) |
 | Incorporated qwen-tts-hf compatibility source | Apache-2.0 | Qwen authors; Transformers 5 compatibility distribution maintained by Andres Marafioti; [publishing source](https://github.com/andimarafioti/Qwen3-TTS/tree/af457d954d8ce797603c6f260c3f911a09b1d90a) |
 | nano-qwen3tts-vllm, acknowledged inspiration | MIT | Copyright 2026 Thanh Sang; [source](https://github.com/tsdocode/nano-qwen3tts-vllm/tree/ea48202b8398128c6aa8109c3e0ceb1bfb2e7a6b) |
+| VoxCPMTTS Studio, Magic bundle and dialogue storage adaptations | Apache-2.0 | Hangry Labs; [source](https://github.com/hangry-labs/VoxCPMTTS); adaptations identified in [NOTICE](NOTICE) |
+| ssml-h-tools 0.3.1 | Apache-2.0 | Copyright 2026 Hangry Labs; [source](https://github.com/hangry-labs/ssml-h-tools); installed package retains LICENSE and NOTICE |
+| defusedxml 0.7.1 | PSF-2.0 | Christian Heimes; [source](https://github.com/tiran/defusedxml); installed wheel retains its Python Software Foundation license |
 
 [NOTICE](NOTICE) identifies adaptations. [Upstream provenance](docs/UPSTREAMS.md)
 records all three synchronization sources and exact incorporated revisions. Preserve the source copyright headers,

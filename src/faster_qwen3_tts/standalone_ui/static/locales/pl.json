@@ -66,7 +66,7 @@
   "composer.text": "Tekst wejściowy",
   "composer.input": "Tekst lub znaczniki do syntezy",
   "composer.inputType": "Format wejściowy",
-  "composer.defaultText": "VoxCPM2 tworzy naturalną wielojęzyczną mowę z projektowaniem i klonowaniem głosu.",
+  "composer.defaultText": "Welcome back. It is a lovely day to give your ideas a voice.",
   "composer.newSample": "Nowa próbka",
   "composer.metrics": "{characters} znaków · {words} słów",
   "magic.title": "Magia",

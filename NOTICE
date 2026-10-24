@@ -37,9 +37,15 @@ the project is a required runtime dependency.
 
 No endorsement by upstream authors, model providers, or NVIDIA is implied.
 
-The Hangry Labs Studio shell, media components, styles, and GPU monitor are
+The Hangry Labs Studio shell, media components, styles, GPU monitor, Magic
+take bundle, dialogue script storage and adapted API contracts are
 adapted from Hangry Labs VoxCPMTTS (Apache-2.0):
 https://github.com/hangry-labs/VoxCPMTTS
 Qwen-specific workflow, runtime, and API changes are maintained in this project.
 Browser library notices accompany their vendored assets and are summarized in
 THIRD_PARTY_NOTICES.md.
+
+The runtime uses SSML-H Tools, Copyright 2026 Hangry Labs, Apache-2.0.
+It implements parts of https://github.com/hangry-labs/ssml-h-spec.
+SSML-H is based on W3C SSML 1.1 but is not a W3C Recommendation and is not
+endorsed by W3C. The package's original NOTICE and license remain installed.

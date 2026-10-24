@@ -3,11 +3,33 @@
 .product-logo { object-fit: contain; }
 @media (min-width: 1101px) { .brand-hero { height: 244px; min-height: 244px; } }
 @media (max-width: 920px) { .brand-copy { width: min(520px, 100%); bottom: auto; margin-inline: auto; transform: none; } }
-.studio-workspace { grid-template-columns: minmax(260px, 310px) minmax(0, 1fr); align-items: start; max-width: 1600px; margin-inline: auto; }
+.studio-workspace { grid-template-columns: minmax(240px, 278px) minmax(0, 1fr); align-items: stretch; width: 100%; max-width: none; margin: 0; }
 .studio-workspace > * { min-width: 0; }
 html[data-header-collapsed="true"] .brand-hero .labs-branding { align-self: center; }
 .studio-workspace .content-panel { display: grid; align-content: start; gap: 20px; }
 .studio-workspace .settings-panel { display: grid; gap: 18px; }
+.studio-workspace .settings-panel { align-content: start; }
+.studio-workspace[data-view=custom] #workflow-content { grid-template-columns: minmax(0, 1fr) minmax(260px, .34fr); gap: 16px; }
+.studio-workspace[data-view=custom] #workflow-content > :not(.script-library) { grid-column: 1; }
+.studio-workspace[data-view=custom] #workflow-content > .script-library { grid-column: 2; grid-row: 1 / span 6; }
+.studio-workspace .composer-heading { gap: 12px; flex-wrap: wrap; }
+.studio-workspace .composer-title-tools { flex-wrap: wrap; }
+.studio-workspace .composer { min-width: 0; }
+.studio-workspace .magic-editor-shell { min-width: 0; }
+.studio-workspace .magic-turn textarea { min-height: 90px; padding: 12px; }
+.studio-workspace .script-library { min-width: 0; }
+.studio-workspace .qwen-generation-toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; border: 1px solid var(--line-soft); border-radius: 6px; background: #1b1c20; }
+.qwen-generation-toolbar > details { position: relative; }
+.qwen-generation-toolbar summary { cursor: pointer; font-size: .76rem; padding: 8px; }
+.qwen-generation-toolbar details > div { position: absolute; top: 100%; left: 0; width: min(310px, calc(100vw - 50px)); padding: 16px; display: grid; gap: 14px; background: #202126; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 30px #0008; z-index: 20; }
+.markup-guide { font-size: .78rem; color: var(--muted); line-height: 1.6; }
+.markup-guide summary { cursor: pointer; }
+.markup-guide pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.markup-guide a { color: var(--accent); }
+.qwen-generation-toolbar details > div { max-height: 70vh; overflow: auto; }
+.studio-workspace #text-custom { min-height: 240px; }
+.studio-workspace .script-library[hidden], .studio-workspace #text-custom[hidden] { display: none; }
+@media (max-width: 1250px) { .studio-workspace[data-view=custom] #workflow-content { grid-template-columns: minmax(0, 1fr); } .studio-workspace[data-view=custom] #workflow-content > .script-library { grid-column: 1; grid-row: auto; } }
 .studio-workspace .settings-panel > .compact-field { margin: 0; }
 .studio-workspace .compact-field { display: grid; gap: 8px; min-width: 0; }
 .studio-workspace label > span { font-size: .82rem; color: var(--muted); }

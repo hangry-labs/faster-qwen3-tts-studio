@@ -29,7 +29,7 @@ with patch.object(socket.socket, 'connect', no_network), patch.object(socket.soc
     from fastapi.testclient import TestClient
     from faster_qwen3_tts.standalone_ui.server import create_app
     app = create_app()
-    assert not any(route.path.startswith('/oauth/') for route in app.routes)
+    assert not any(path.startswith('/oauth/') for path in app.openapi()['paths'])
     with TestClient(app) as client:
         status = client.get('/status').json()
         assert status['available_backends'] == ['torch']

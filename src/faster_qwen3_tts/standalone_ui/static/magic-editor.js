@@ -167,7 +167,7 @@ export class MagicEditor {
       onPersist: (definition, previous) => this.persistVoiceDefinition(definition, previous),
       onError: this.onError,
     })
-    this.blocks = [this.createSpeech(t('composer.defaultText', {}, 'VoxCPM2 generates natural multilingual speech with voice design and cloning.'))]
+    this.blocks = [this.createSpeech(t('composer.defaultText', {}, 'Qwen2 generates natural multilingual speech with voice design and cloning.'))]
     this.activeId = this.blocks[0].id
     this.bind()
     this.render()
@@ -349,7 +349,7 @@ export class MagicEditor {
     this.profileIds = new Set(profiles.map((profile) => String(profile.id).toLowerCase()))
     this.voices = profiles.map((profile) => ({
       id: profile.id,
-      label: profile.id,
+      label: profile.name || profile.id,
       portraitUrl: profile.portrait_url || '',
       version: profile.created_at || 'current',
     }))
@@ -379,7 +379,7 @@ export class MagicEditor {
   setDefaultVoice(profile) {
     const next = profile ? {
       id: profile.id,
-      label: profile.id,
+      label: profile.name || profile.id,
       portraitUrl: profile.portrait_url || '',
       version: profile.created_at || 'current',
     } : null
@@ -804,7 +804,7 @@ export class MagicEditor {
     if (!block?.preview) return
     const link = document.createElement('a')
     link.href = block.preview.url
-    link.download = `voxcpmtts-turn-${index + 1}.${block.preview.extension || 'wav'}`
+    link.download = `qwen3tts-turn-${index + 1}.${block.preview.extension || 'wav'}`
     link.click()
   }
 

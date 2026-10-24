@@ -1,8 +1,9 @@
 import { t } from './i18n.js'
 import { closeDialogOnBackdrop } from './dialog-utils.js?v=pointerdown-v1'
+import { serializeMagicDocument } from './magic-document.js'
 
 const $ = (selector, root = document) => root.querySelector(selector)
-const COLLAPSED_FOLDERS_KEY = 'voxcpmtts.script-folders.collapsed'
+const COLLAPSED_FOLDERS_KEY = 'qwen3tts.script-folders.collapsed'
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -159,17 +160,20 @@ export class DialogueScriptLibrary {
   }
 
   currentDocument() {
-    if (this.getInputType() === 'ssml-h') {
-      const dirty = this.dirty
-      this.runWithoutDirty(() => this.magicEditor.loadSSMLH($('#text-input').value))
-      this.dirty = dirty
+    const mode = this.getInputType()
+    if (mode === 'text') return serializeMagicDocument([{ type: 'speech', text: $('#text-custom').value, prosody: {} }])
+    if (mode === 'ssml' || mode === 'ssml-h') {
+      const parsed = new DOMParser().parseFromString($('#text-custom').value, 'application/xml')
+      if (parsed.querySelector('parsererror') || parsed.documentElement.localName !== 'speak') throw new Error('Enter a valid speak document before saving.')
+      if (mode === 'ssml') parsed.documentElement.setAttribute('version', '1.1')
+      return new XMLSerializer().serializeToString(parsed)
     }
     return this.magicEditor.toSSMLH()
   }
 
   download() {
     try {
-      const name = this.active?.id || normalizedName($('#script-name').value) || 'voxcpm-dialogue'
+      const name = this.active?.id || normalizedName($('#script-name').value) || 'qwen-dialogue'
       downloadDocument(this.currentDocument(), `${name}.ssml`)
       $('.script-transfer-menu').open = false
     } catch (error) {
@@ -211,7 +215,11 @@ export class DialogueScriptLibrary {
     const record = await this.fetchJson(`/tts/dialogue-scripts/${encodeURIComponent(scriptId)}`)
     this.clearWorkspace()
     this.setInputType('magic', { syncSsmlH: false })
-    this.runWithoutDirty(() => this.magicEditor.loadSSMLH(record.document))
+    try { this.runWithoutDirty(() => this.magicEditor.loadSSMLH(record.document)) }
+    catch {
+      this.setInputType('ssml-h', { syncSsmlH: false })
+      $('#text-custom').value = record.document
+    }
     this.active = record
     this.dirty = false
     $('#script-name').value = record.name
@@ -291,7 +299,11 @@ export class DialogueScriptLibrary {
     this.dirty = false
     this.clearWorkspace()
     this.setInputType('magic', { syncSsmlH: false })
-    this.runWithoutDirty(() => this.magicEditor.loadSSMLH(source))
+    try { this.runWithoutDirty(() => this.magicEditor.loadSSMLH(source)) }
+    catch {
+      this.setInputType('ssml-h', { syncSsmlH: false })
+      $('#text-custom').value = source
+    }
     $('#script-name').value = file.name.replace(/\.(ssml|xml)$/i, '').slice(0, 80)
     this.onDocumentChange(this.magicEditor.toSSMLH())
     this.render()

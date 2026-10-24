@@ -33,9 +33,9 @@ model on demand. First use downloads its pinned checkpoint into the persistent
 volume; model weights are not baked into this development image.
 
 The same port serves the [API view](http://localhost:7860/docs) and
-[OpenAPI schema](http://localhost:7860/openapi.json). The Studio API uses its own
-request format. OpenAI-compatible speech routes and MCP are not implemented in
-the Studio yet.
+[OpenAPI schema](http://localhost:7860/openapi.json). It includes OpenAI-compatible
+speech, native synthesis, SSML/SSML-H, Magic takes and saved voices/scripts.
+See the [API guide](docs/API.md). MCP is not implemented yet.
 
 On Windows, the [Task workflow](docs/DEVELOPMENT.md) provides `task init`,
 `task start` and `task stop` instead of assembling Docker commands manually.
@@ -47,6 +47,9 @@ On Windows, the [Task workflow](docs/DEVELOPMENT.md) provides `task init`,
 - Nine built-in CustomVoice speakers, with style instructions on the 1.7B model
 - Ten languages plus automatic language selection
 - Complete WAV output or incremental browser playback
+- OpenAI-compatible speech in MP3, WAV, FLAC, Opus, AAC, Ogg and PCM
+- Magic dialogue editing, a bounded SSML subset and SSML-H designed characters
+- Saved script folders, locked/reusable takes and explicit workspace snapshots
 - Reference upload, drag and drop, microphone selection and recording
 - Waveform playback, trimming, download and browser-supported sharing
 - An explicit saved-voice library that survives container replacement
@@ -118,7 +121,8 @@ headroom for other GPU workloads; memory needs depend on the selected checkpoint
 and request. System can unload the resident TTS model without stopping the UI.
 
 The default port mapping binds to this computer only. The Studio has no account
-or API authentication. Publish it to a trusted network only with appropriate
+system. An optional `QWEN_STUDIO_API_KEY` protects only `/v1` routes. Publish the
+whole Studio to a trusted network only with appropriate
 access controls. Browser microphone capture needs localhost or HTTPS and
 permission.
 
@@ -130,12 +134,13 @@ Mount one volume at `/app/persistent` and reuse it when replacing the container.
 | --- | --- |
 | `/app/persistent/huggingface` | Downloaded model checkpoints |
 | `/app/persistent/torch_inductor` | Compiler cache |
-| `/app/persistent/studio` | Operator settings and explicitly saved voice references |
+| `/app/persistent/studio` | Settings, explicitly saved voices, scripts and workspace audio |
 
 | Environment variable | Default | Purpose |
 | --- | --- | --- |
 | `CUDA_VISIBLE_DEVICES` | Set to `0` in the quick start | Select the visible NVIDIA GPU |
 | `QWEN_STUDIO_ASR_URL` | Empty | Initial connection to an existing reference-transcription service |
+| `QWEN_STUDIO_API_KEY` | Empty | Optional Bearer key for OpenAI-compatible `/v1` routes only |
 | `QWEN_STUDIO_DATA` | `/app/persistent/studio` | Operator settings and saved-voice directory |
 | `HF_HOME` | `/app/persistent/huggingface` | Model download cache |
 | `TORCHINDUCTOR_CACHE_DIR` | `/app/persistent/torch_inductor` | Compiler cache |
@@ -211,8 +216,20 @@ for queue/loading progress around a complete generation.
 | `POST /studio/models/load` | Load an official checkpoint |
 | `POST /studio/models/unload` | Release the active model |
 
-The [Studio guide](docs/STUDIO.md) covers the native API contract. OpenAI-compatible
-routes are not implemented by this server yet.
+The [Studio guide](docs/STUDIO.md) covers the browser and existing multipart
+contracts. The [speech API guide](docs/API.md) covers OpenAI-compatible clients,
+native binary/streaming output, voice saving, Magic and script workspaces.
+
+```bash
+curl http://localhost:7860/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3-tts","input":"Good morning from Hangry Labs.","voice":"Ryan","response_format":"mp3"}' \
+  --output speech.mp3
+```
+
+For structured dialogue, opt in with `input_type="ssml"` or `"ssml-h"` on native
+routes. Read the exact [SSML-H processor profile](docs/SSML-H.md); this is a
+bounded subset, not complete W3C SSML support. OpenAI input stays plain text.
 
 ## Local Development
 

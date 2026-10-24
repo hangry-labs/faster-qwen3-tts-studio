@@ -66,7 +66,7 @@
   "composer.text": "输入文本",
   "composer.input": "待合成的文本或标记",
   "composer.inputType": "输入格式",
-  "composer.defaultText": "VoxCPM2 通过声音设计和克隆生成自然的多语言语音。",
+  "composer.defaultText": "Welcome back. It is a lovely day to give your ideas a voice.",
   "composer.newSample": "新样本",
   "composer.metrics": "{characters} 个字符 · {words} 个词",
   "magic.title": "魔法",

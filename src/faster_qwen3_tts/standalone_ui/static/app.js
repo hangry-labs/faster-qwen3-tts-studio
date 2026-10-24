@@ -6,6 +6,7 @@ import { GpuMonitor } from './gpu-monitor.js'
 import { encodeWav } from './audio-utils.js'
 import { decodePcmWav, PcmPlayer } from './pcm-player.js'
 import { closeDialogOnBackdrop } from './dialog-utils.js'
+import { GenerateWorkbench } from './generate-workbench.js'
 
 const $ = (selector) => document.querySelector(selector)
 const $$ = (selector) => [...document.querySelectorAll(selector)]
@@ -69,19 +70,20 @@ async function loadReference(file) {
 }
 
 function updateCount() {
-  $('#text-count').textContent = `${$(`#text-${state.mode}`).value.length} / 1000 characters`
+  $('#text-count').textContent = state.mode === 'custom' ? `${workbench.count().length} input characters` : `${$(`#text-${state.mode}`).value.length} / 1000 characters`
 }
 
 function updateModelControls() {
   if (!state.capabilities) return
   const spec = state.capabilities.models.find((item) => item.id === $('#model').value)
-  $('#speaker-field').hidden = state.mode !== 'custom'
+  $('#speaker-field').hidden = state.mode !== 'custom' || !!$('#saved-voice').value
   $('#custom-instruction-field').hidden = state.mode !== 'custom' || !spec?.instructions
   $('#custom-instruction-help').hidden = state.mode !== 'custom' || !!spec?.instructions
   $('#clone-instruction-field').hidden = state.mode !== 'clone' || !spec?.instructions
   updateCloneGuidance()
   $('#model-help').textContent = spec?.mode === 'design' ? 'Creates a new voice from a description.' : spec?.mode === 'clone' ? 'Recreates a voice from reference audio.' : 'Nine built-in speakers. The 1.7B model also supports style instructions.'
   state.models[state.mode] = $('#model').value
+  workbench.defaultVoice()
 }
 
 function updateCloneGuidance() {
@@ -151,9 +153,18 @@ async function activateTab(tab) {
   $('#workflow-content').hidden = !workflow
   $('#api-view').hidden = tab !== 'api'
   $('#system-view').hidden = tab !== 'system'
+  $('.script-library').hidden = tab !== 'custom'
+  $('#saved-voice-field').hidden = tab !== 'custom'
+  $('#output-format-field').hidden = tab !== 'custom'
+  // Sampling, seed and finishing controls remain available in every workflow.
+  const toolbar = $('.qwen-generation-toolbar')
+  if (tab === 'custom') $('[data-workflow=custom]').insertBefore(toolbar, $('#magic-editor-shell'))
+  else if (workflow) $('#workflow-content').prepend(toolbar)
+  toolbar.hidden = !workflow
   $$('.workflow-pane').forEach((panel) => { panel.hidden = panel.dataset.workflow !== state.mode })
   if (workflow && state.capabilities) {
-    selectOptions($('#model'), state.capabilities.models.filter((item) => item.mode === state.mode), state.models[state.mode])
+    const modelMode = tab === 'custom' && $('#saved-voice').value ? 'clone' : state.mode
+    selectOptions($('#model'), state.capabilities.models.filter((item) => item.mode === modelMode), state.models[state.mode])
     updateModelControls()
     $('#text-feed').value = String(state.textFeed[state.mode] ?? state.capabilities.workflow_defaults[state.mode].non_streaming_mode)
     $('#generate-button span').textContent = state.busy ? 'Stop generation' : names[state.mode]
@@ -168,6 +179,7 @@ async function activateTab(tab) {
 }
 
 function example(mode) {
+  if (mode === 'custom') { workbench.loadText(examples.custom); workbench.setInputType('magic', { syncSsmlH: false }) }
   $(`#text-${mode}`).value = examples[mode]
   if (mode === 'design') $('#design-instruct').value = 'A warm female narrator with a clear, gentle voice and a relaxed, conversational delivery.'
   updateCount()
@@ -224,6 +236,12 @@ async function generate() {
   if (state.busy) {
     state.controller?.abort()
     state.player?.stop().catch(() => {})
+    return
+  }
+  if (state.mode === 'custom') {
+    try { await workbench.generate($('#streaming').checked) }
+    catch (error) { toast(error.name === 'AbortError' ? 'Generation stopped' : error.message) }
+    finally { refreshStatus().catch(() => {}) }
     return
   }
   const options = requestOptions(), mode = options.mode, streaming = $('#streaming').checked
@@ -354,6 +372,7 @@ async function refreshVoices() {
     })
     actions.append(use, remove); item.append(name, actions); $('#voice-library').append(item)
   }
+  await workbench.refreshVoices()
 }
 
 function openSave(file, transcript) {
@@ -376,6 +395,19 @@ async function setHeaderCollapsed(collapsed, animate = true) {
   try { sessionStorage.setItem('qwen3tts-ui-state-v1', JSON.stringify({ tab: state.tab, headerCollapsed: collapsed })) } catch {}
 }
 
+const workbench = new GenerateWorkbench({ options: requestOptions, fetchJson, toast, onMetrics: renderMetrics,
+  onBusy: (busy, controller) => {
+    state.busy = busy; state.controller = controller
+    $('#generate-button span').textContent = busy ? 'Stop generation' : names[state.mode]
+    $('#generate-button').dataset.running = String(busy)
+  },
+  onOutput: async (file, text, metrics) => {
+    state.outputs.custom = { file, text, metrics }
+    if (state.tab === 'custom') await output.load(file)
+  },
+})
+$('#saved-voice').addEventListener('change', () => activateTab('custom').catch(error => toast(error.message)))
+$('#speaker').addEventListener('change', () => workbench.defaultVoice())
 $('#generate-button').addEventListener('click', () => generate().catch((error) => toast(error.message)))
 $$('.tab-button').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.tab).catch((error) => toast(error.message))))
 $('.app-tabs').addEventListener('keydown', (event) => {
@@ -456,6 +488,7 @@ async function initialize() {
   await initializeI18n()
   const [capabilities, settings] = await Promise.all([fetchJson('/studio/capabilities'), fetchJson('/system/settings')])
   state.capabilities = capabilities
+  await workbench.initialize()
   for (const [mode, defaults] of Object.entries(capabilities.workflow_defaults)) state.textFeed[mode] = defaults.non_streaming_mode
   $('#clone-method').value = String(capabilities.workflow_defaults.clone.xvec_only)
   for (const id of ['chunk-size', 'chunk-size-slider']) { $('#' + id).min = capabilities.chunk_size.min; $('#' + id).max = capabilities.chunk_size.max }
@@ -464,7 +497,7 @@ async function initialize() {
   selectOptions($('#speaker'), capabilities.speakers, 'Ryan')
   selectOptions($('#system-model'), capabilities.models)
   $('#asr-url').value = settings.asr_url
-  $('#api-example').textContent = `curl ${location.origin}/studio/generate \\\n  -F 'options={"mode":"custom","model":"Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice","text":"Hello from Qwen Studio.","speaker":"Ryan","language":"English"}'`
+  $('#api-example').textContent = `curl ${location.origin}/v1/audio/speech -H 'Content-Type: application/json' -d '{"model":"qwen3-tts","input":"Hello from Qwen Studio.","voice":"Ryan","response_format":"mp3"}' --output speech.mp3`
   let saved = null
   try { saved = JSON.parse(sessionStorage.getItem('qwen3tts-ui-state-v1') || 'null') } catch {}
   setHeaderCollapsed(!!saved?.headerCollapsed, false)

@@ -11,14 +11,12 @@ import os
 from pathlib import Path
 import queue
 import re
-import shutil
 import subprocess
 import tempfile
 import threading
-import uuid
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 import httpx
 import numpy as np
@@ -27,6 +25,7 @@ import soundfile as sf
 
 from .gpu import GpuMonitor
 from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS, StudioEngine
+from .profiles import VoiceStore
 from faster_qwen3_tts import __version__
 
 ROOT = Path(__file__).resolve().parent
@@ -49,6 +48,7 @@ def create_app(engine=None, data_root: Path | None = None):
     data = data_root or Path(os.getenv('QWEN_STUDIO_DATA', '/app/persistent/studio'))
     voices = data / 'voices'
     voices.mkdir(parents=True, exist_ok=True)
+    voice_store = VoiceStore(voices)
     settings_path = data / 'settings.json'
     settings = {'asr_url': os.getenv('QWEN_STUDIO_ASR_URL', '').strip().rstrip('/')}
     if settings_path.exists():
@@ -101,7 +101,9 @@ def create_app(engine=None, data_root: Path | None = None):
     def capabilities():
         return {'models': list(MODELS.values()), 'languages': LANGUAGES, 'speakers': SPEAKERS,
                 'modes': ['custom', 'design', 'clone'], 'backend': 'torch', 'streaming': True,
-                'formats': ['wav'], 'max_text_chars': 1000, 'max_upload_bytes': MAX_UPLOAD,
+                'formats': ['wav'], 'native_formats': ['wav', 'mp3', 'flac', 'ogg', 'opus', 'aac', 'pcm'],
+                'input_types': ['text', 'ssml', 'ssml-h'], 'openai': True, 'magic': True,
+                'max_text_chars': 1000, 'max_upload_bytes': MAX_UPLOAD,
                 'chunk_size': {'min': 1, 'max': 64, 'default': 8},
                 'workflow_defaults': {'custom': {'non_streaming_mode': True},
                                       'design': {'non_streaming_mode': True},
@@ -154,7 +156,7 @@ def create_app(engine=None, data_root: Path | None = None):
                 raise ValueError('Decode through the bounded mono conversion path.')
             samples, rate = sf.read(io.BytesIO(content), dtype='float32', always_2d=True)
         except Exception:
-            process = subprocess.run(['ffmpeg', '-v', 'error', '-i', 'pipe:0', '-t', '121',
+            process = subprocess.run(['ffmpeg', '-v', 'error', '-protocol_whitelist', 'pipe', '-i', 'pipe:0', '-t', '121',
                                       '-f', 'wav', '-ac', '1', '-ar', '24000', 'pipe:1'],
                                      input=content, capture_output=True, timeout=25)
             if process.returncode:
@@ -196,18 +198,9 @@ def create_app(engine=None, data_root: Path | None = None):
         except (httpx.HTTPError, KeyError, ValueError) as exc:
             raise HTTPException(503, 'Reference transcription failed. Check the ASR connection in System.') from exc
 
-    def voice_path(voice_id: str):
-        if not re.fullmatch(r'[a-f0-9]{32}', voice_id):
-            raise HTTPException(404, 'Voice not found.')
-        folder = voices / voice_id
-        if not folder.is_dir():
-            raise HTTPException(404, 'Voice not found.')
-        return folder
-
     @app.get('/studio/voices')
     def voice_list():
-        return {'voices': [json.loads(path.read_text(encoding='utf-8'))
-                           for path in sorted(voices.glob('*/voice.json'))]}
+        return {'voices': [{k: v for k, v in record.items() if k != 'audio_folder' and not k.startswith('_')} for record in voice_store.list()]}
 
     @app.post('/studio/voices')
     async def save_voice(name: str = Form(...), transcript: str = Form(''),
@@ -215,35 +208,38 @@ def create_app(engine=None, data_root: Path | None = None):
         if not name.strip() or len(name) > 80 or len(transcript) > 4000:
             raise HTTPException(422, 'Provide a voice name up to 80 characters and a transcript up to 4000 characters.')
         audio = await canonical_audio(file)
-        voice_id = uuid.uuid4().hex
-        folder = voices / voice_id
-        folder.mkdir()
-        metadata = {'id': voice_id, 'name': name.strip(), 'transcript': transcript,
-                    'audio_url': f'/studio/voices/{voice_id}/audio'}
-        (folder / 'audio.wav').write_bytes(audio)
-        (folder / 'voice.json').write_text(json.dumps(metadata, ensure_ascii=False), encoding='utf-8')
-        return metadata
+        metadata = voice_store.commit([({'name': name.strip(), 'transcript': transcript}, audio, False)])[name.strip()]
+        return {k: v for k, v in metadata.items() if k != 'audio_folder' and not k.startswith('_')}
 
     @app.get('/studio/voices/{voice_id}/audio')
     def voice_audio(voice_id: str):
-        return FileResponse(voice_path(voice_id) / 'audio.wav', media_type='audio/wav')
+        try:
+            return Response(voice_store.audio(voice_store.resolve(voice_id)), media_type='audio/wav')
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
 
     @app.delete('/studio/voices/{voice_id}')
     def delete_voice(voice_id: str):
-        shutil.rmtree(voice_path(voice_id))
+        try:
+            voice_store.delete(voice_id)
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
         return {'deleted': True}
 
     async def prepare(options: str, reference: UploadFile | None, voice_id: str):
+        profile = voice_store.resolve(voice_id) if voice_id else None
         try:
-            config = GenerationRequest.model_validate_json(options)
+            values = json.loads(options)
+            if profile and isinstance(values, dict) and not values.get('ref_text'):
+                values['ref_text'] = profile.get('transcript', '')
+            config = GenerationRequest.model_validate(values)
         except ValidationError as exc:
             raise HTTPException(422, str(exc)) from exc
         audio = None
         if reference is not None and reference.filename:
             audio = await canonical_audio(reference)
         elif voice_id:
-            folder = voice_path(voice_id)
-            audio = (folder / 'audio.wav').read_bytes()
+            audio = voice_store.audio(profile)
         if config.mode == 'clone' and audio is None:
             raise HTTPException(422, 'Choose or record reference audio.')
         if config.mode != 'clone' and audio is not None:
@@ -338,6 +334,10 @@ def create_app(engine=None, data_root: Path | None = None):
         finally:
             cancelled.set()
 
+    from .api import attach_api
+    from .script_api import attach_scripts
+    attach_api(app, engine=engine, store=voice_store, canonical_audio=canonical_audio, transcribe=transcribe)
+    attach_scripts(app, data / 'scripts')
     return app
 
 

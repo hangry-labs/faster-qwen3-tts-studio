@@ -105,14 +105,30 @@ Memory needs vary by model and request. System can unload the active model while
 keeping the UI available. Prepared clone prompts use a bounded CPU cache cleared
 on unload. Inference is serialized with FIFO waiting-request feedback.
 
-The example binds HTTP to this computer only. There is no account or API
-authentication in the Studio. Use trusted network access controls if exposing
+The example binds HTTP to this computer only. There is no account system.
+`QWEN_STUDIO_API_KEY` optionally protects `/v1` with a Bearer key, but the native
+and browser routes remain unauthenticated. Use trusted network controls if exposing
 the port elsewhere. Recording requires localhost or HTTPS and browser permission.
 
 ## API Example
 
-The Studio has its own API. OpenAI-compatible speech endpoints and MCP are not
-implemented in this Docker server yet.
+The Studio serves OpenAI-compatible speech, native generation, SSML/SSML-H,
+Magic takes and saved voices/scripts on the same port. MCP is not implemented.
+
+```bash
+curl http://localhost:7860/v1/audio/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3-tts","input":"Good morning from Hangry Labs.","voice":"Ryan","response_format":"mp3"}' \
+  --output speech.mp3
+```
+
+`GET /v1/models` and `/v1/audio/voices` expose the actual inventory. Saved voice
+ids work with the speech endpoint, including optional delivery `instructions`.
+Formats include MP3, WAV, FLAC, Opus, AAC, Ogg and raw 24 kHz mono PCM16.
+OpenAI input remains plain text. Native `/tts/generate`, `/tts/stream` and
+`/tts/events` support explicit `input_type="ssml"` or `"ssml-h"`.
+See the [API guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/API.md)
+and exact [SSML-H profile](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/SSML-H.md).
 
 Use this Python example with `httpx` installed:
 

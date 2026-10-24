@@ -78,12 +78,14 @@
   <main class="workspace studio-workspace" data-view="custom">
     <aside class="settings-panel" id="inference-settings">
       <div class="section-title"><i class="icon-sliders-horizontal"></i><span>Voice setup</span></div>
+      <label class="compact-field" id="saved-voice-field"><span>Saved voice</span><select id="saved-voice"><option value="">Built-in speaker</option></select></label>
       <label class="compact-field"><span>Model</span><select id="model" aria-label="Model"></select></label>
       <p class="field-help" id="model-help">Choose the voice workflow above.</p>
       <div class="voice-setup-grid">
         <label class="compact-field"><span>Language</span><select id="language" aria-label="Language"></select></label>
         <label class="compact-field" id="speaker-field"><span>Speaker</span><select id="speaker" aria-label="Speaker"></select></label>
       </div>
+      <label class="compact-field" id="output-format-field"><span>Output format</span><select id="output-format"><option>wav</option><option>mp3</option><option>flac</option><option>ogg</option><option>opus</option><option>aac</option><option>pcm</option></select></label>
       <label class="toggle-field"><span><strong>Stream audio</strong><small>Listen as speech is generated</small></span><input type="checkbox" id="streaming" checked><span class="toggle-track" aria-hidden="true"></span></label>
       <details class="settings-details compact-advanced">
         <summary><span><i class="icon-sliders-horizontal"></i> Generation settings</span><i class="icon-chevron-down"></i></summary>
@@ -105,13 +107,102 @@
       <p class="field-help">NVIDIA CUDA graphs · WAV output · 24 kHz</p>
     </aside>
     <section class="content-panel" id="workflow-content">
-      <section class="composer workflow-pane" data-workflow="custom">
-        <div class="section-heading-row"><div class="section-title"><i class="icon-message-square-text"></i><span>Generate speech</span></div><button class="secondary-button sample-button" data-example="custom" type="button">Example</button></div>
-        <p class="workflow-description">Choose a built-in speaker and give your words a voice.</p>
-        <label class="compact-field"><span>Text to speak</span><textarea id="text-custom" maxlength="1000" rows="6" placeholder="What would you like to hear?"></textarea></label>
-        <label class="compact-field" id="custom-instruction-field" hidden><span>Style instruction</span><textarea id="custom-instruct" maxlength="1500" rows="2" placeholder="For example: Speak with warmth and quiet excitement."></textarea></label>
-        <p class="field-help" id="custom-instruction-help">Choose the 1.7B model to direct emotion and speaking style.</p>
-      </section>
+      <section class="composer workflow-pane" data-workflow="custom">        <div class="composer-heading">
+          <div class="composer-title-tools">
+            <div class="section-title"><i class="icon-message-square-text"></i><span id="composer-title" data-i18n="scripts.name">Script name</span></div>
+            <label class="script-inline-name"><span class="visually-hidden" data-i18n="scripts.name">Script name</span><input id="script-name" type="text" maxlength="80" placeholder="Name this script" data-i18n-placeholder="scripts.namePlaceholder" autocomplete="off"></label>
+            <button class="secondary-button compact-command script-save-button" id="script-save" type="button" hidden><i class="icon-check"></i><span data-i18n="scripts.saveShort">Save</span></button>
+            <div class="dialogue-history-controls" role="group" aria-label="Dialogue versions" data-i18n-aria-label="scripts.dialogueVersions">
+              <button class="icon-button bordered" id="dialogue-undo" type="button" disabled title="Previous dialogue version" aria-label="Previous dialogue version" data-i18n-title="scripts.undo" data-i18n-aria-label="scripts.undo"><span aria-hidden="true">←</span></button>
+              <button class="icon-button bordered" id="dialogue-redo" type="button" disabled title="Next dialogue version" aria-label="Next dialogue version" data-i18n-title="scripts.redo" data-i18n-aria-label="scripts.redo"><span aria-hidden="true">→</span></button>
+            </div>
+            <button class="secondary-button compact-command script-new-button" id="script-new" type="button" title="Start a new script" data-i18n-title="scripts.new"><i class="icon-x"></i><span data-i18n="scripts.newShort">New</span></button>
+            <input class="visually-hidden" id="script-import-input" type="file" accept=".ssml,.xml,application/ssml+xml,text/xml,application/xml">
+            <details class="script-transfer-menu">
+              <summary><i class="icon-download"></i><span data-i18n="scripts.transfer">Import / export</span><i class="icon-chevron-down"></i></summary>
+              <div class="script-transfer-panel">
+                <button class="secondary-button compact-command" id="script-import" type="button"><i class="icon-upload"></i><span data-i18n="scripts.import">Import SSML-H</span></button>
+                <button class="secondary-button compact-command" id="script-download" type="button"><i class="icon-download"></i><span data-i18n="scripts.export">Export SSML-H</span></button>
+              </div>
+            </details>
+          </div>
+          <div class="composer-actions"><div class="segmented-control input-type-control" role="group" aria-label="Input format" data-i18n-aria-label="composer.inputType"><button class="active" type="button" data-input-type="magic" aria-pressed="true" data-i18n="magic.title">Magic</button><button type="button" data-input-type="text" aria-pressed="false">Text</button><button type="button" data-input-type="ssml" aria-pressed="false">SSML</button><button type="button" data-input-type="ssml-h" aria-pressed="false">SSML-H</button></div><span class="text-metrics" id="text-metrics">0 characters</span><button class="secondary-button compact-command" id="sample-button" type="button" hidden><i class="icon-refresh-cw"></i><span data-i18n="composer.newSample">New sample</span></button></div>
+        </div>
+<div class="qwen-generation-toolbar" role="toolbar" aria-label="Generation controls">
+<details><summary><i class="icon-sliders-horizontal"></i> Model controls</summary><div id="model-controls-popup"></div></details>
+<details><summary><i class="icon-square"></i> Seed</summary><div id="seed-controls-popup"></div></details>
+<details><summary><i class="icon-sparkles"></i> Output processing</summary><div class="toolbar-popup">
+<label class="compact-field"><span>Speed</span><input id="speech-speed" type="number" value="1" min="0.25" max="4" step="0.05"></label>
+<label class="toggle-field"><span>Normalize loudness (-16 LUFS)</span><input id="normalize-loudness" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
+<label class="toggle-field"><span>Protect long audio</span><input id="protect-long" type="checkbox" checked><span class="toggle-track" aria-hidden="true"></span></label>
+</div></details></div>        <section class="magic-editor-shell" id="magic-editor-shell" aria-label="Magic dialogue editor" data-i18n-aria-label="magic.editorLabel">
+          <div class="magic-toolbar" role="toolbar" aria-label="Dialogue tools" data-i18n-aria-label="magic.toolbarLabel">
+            <div class="magic-menu" data-magic-menu="voice">
+              <button class="magic-category-button" type="button" data-magic-menu-trigger="voice" aria-expanded="false" title="Voice" aria-label="Voice" data-i18n-title="magic.voice" data-i18n-aria-label="magic.voice"><i class="icon-mic"></i><span data-i18n="magic.voice">Voice</span><i class="icon-chevron-down"></i></button>
+              <section class="magic-menu-panel magic-choice-panel" data-magic-menu-panel="voice" hidden>
+                <div class="magic-menu-heading"><strong data-i18n="magic.voice">Voice</strong><span data-magic-current="voice"></span></div>
+                <label class="magic-menu-search"><span class="visually-hidden" data-i18n="profiles.search">Search saved voices</span><input data-magic-filter="voice" type="search" placeholder="Search voices" data-i18n-placeholder="profiles.searchPlaceholder"></label>
+                <div class="magic-menu-list magic-voice-menu-list" data-magic-options="voice"></div>
+                <select id="magic-voice-control" hidden tabindex="-1" aria-hidden="true"></select>
+              </section>
+            </div>
+            <div class="magic-menu" data-magic-menu="language">
+              <button class="magic-category-button" type="button" data-magic-menu-trigger="language" aria-expanded="false" title="Language" aria-label="Language" data-i18n-title="magic.language" data-i18n-aria-label="magic.language"><i class="icon-book-open"></i><span data-i18n="magic.language">Language</span><i class="icon-chevron-down"></i></button>
+              <section class="magic-menu-panel magic-choice-panel" data-magic-menu-panel="language" hidden>
+                <div class="magic-menu-heading"><strong data-i18n="magic.language">Language</strong><span data-magic-current="language"></span></div>
+                <label class="magic-menu-search"><span class="visually-hidden" data-i18n="magic.searchLanguages">Search languages</span><input data-magic-filter="language" type="search" placeholder="Search languages" data-i18n-placeholder="magic.searchLanguages"></label>
+                <div class="magic-menu-list" data-magic-options="language"></div>
+                <select id="magic-language-control" hidden tabindex="-1" aria-hidden="true"></select>
+              </section>
+            </div>
+            <div class="magic-menu" data-magic-menu="direction">
+              <button class="magic-category-button" type="button" data-magic-menu-trigger="direction" aria-expanded="false" title="Direction" aria-label="Direction" data-i18n-title="magic.direction" data-i18n-aria-label="magic.direction"><i class="icon-message-square-text"></i><span data-i18n="magic.direction">Direction</span><i class="icon-chevron-down"></i></button>
+              <section class="magic-menu-panel magic-direction-panel" data-magic-menu-panel="direction" hidden>
+                <div class="magic-menu-heading"><strong data-i18n="magic.direction">Direction</strong><span data-magic-current="direction"></span></div>
+                <div class="magic-direction-layout">
+                  <div class="magic-menu-mode-list">
+                    <button type="button" data-magic-direction-mode="predefined"><i class="icon-sparkles" aria-hidden="true"></i><span data-i18n="magic.predefined">Predefined</span><i class="icon-chevron-down" aria-hidden="true"></i></button>
+                    <button type="button" data-magic-direction-mode="custom"><i class="icon-message-square-text" aria-hidden="true"></i><span data-i18n="magic.directionCustom">Custom...</span><i class="icon-chevron-down" aria-hidden="true"></i></button>
+                  </div>
+                  <div class="magic-menu-detail" data-magic-direction-detail="predefined">
+                    <div class="magic-menu-list" data-magic-options="direction"></div>
+                  </div>
+                  <div class="magic-menu-detail" data-magic-direction-detail="custom" hidden>
+                    <label class="magic-popup-field"><span data-i18n="magic.customDirection">Custom direction</span><input id="magic-custom-direction" type="text" maxlength="240" placeholder="Softly, with cautious optimism" data-i18n-placeholder="magic.customDirectionPlaceholder"></label>
+                  </div>
+                </div>
+                <select id="magic-direction-control" hidden tabindex="-1" aria-hidden="true"></select>
+              </section>
+            </div>
+            <div class="magic-menu" data-magic-menu="transformations">
+              <button class="magic-category-button" type="button" data-magic-menu-trigger="transformations" aria-expanded="false" title="Transform" aria-label="Transform" data-i18n-title="magic.transformations" data-i18n-aria-label="magic.transformations"><i class="icon-sliders-horizontal"></i><span data-i18n="magic.transformations">Transform</span><i class="icon-chevron-down"></i></button>
+              <section class="magic-menu-panel magic-transform-panel" data-magic-menu-panel="transformations" hidden>
+                <div class="magic-menu-heading"><strong data-i18n="magic.transformations">Transform</strong><span data-magic-current="transformations"></span></div>
+                <label class="magic-popup-field"><span data-i18n="magic.rate">Rate</span><select id="magic-rate-control"></select></label>
+                <label class="magic-popup-field"><span data-i18n="magic.pitch">Pitch</span><select id="magic-pitch-control"></select></label>
+                <label class="magic-popup-field"><span data-i18n="magic.volume">Volume</span><select id="magic-volume-control"></select></label>
+              </section>
+            </div>
+            <div class="magic-menu" data-magic-menu="expression">
+              <button class="magic-category-button" type="button" data-magic-menu-trigger="expression" aria-expanded="false" title="Expression" aria-label="Expression" data-i18n-title="magic.expression" data-i18n-aria-label="magic.expression"><i class="icon-sparkles"></i><span data-i18n="magic.expression">Expression</span><i class="icon-chevron-down"></i></button>
+              <section class="magic-menu-panel magic-expression-panel" data-magic-menu-panel="expression" hidden>
+                <div class="magic-menu-heading"><strong data-i18n="magic.expression">Expression</strong></div>
+                <label class="magic-popup-field" title="Inline cues are experimental and may be spoken literally" data-i18n-title="magic.cueHelp"><span data-i18n="magic.cue">Cue (experimental)</span><select id="magic-expression-control"></select></label>
+                <label class="magic-popup-field"><span data-i18n="magic.sayAs">Say as</span><select id="magic-say-as-control"></select></label>
+                <button class="secondary-button compact-command magic-pronunciation-action" id="magic-add-substitution" type="button"><i class="icon-audio-lines"></i><span data-i18n="magic.pronunciation">Pronunciation</span></button>
+              </section>
+            </div>
+            <div class="magic-toolbar-actions">
+              <button class="secondary-button compact-command" id="magic-edit-definitions" type="button" title="Characters" aria-label="Characters" data-i18n-title="magic.characters" data-i18n-aria-label="magic.characters"><i class="icon-boxes"></i><span data-i18n="magic.characters">Characters</span><span class="magic-definition-count" id="magic-definition-count">0</span></button>
+              <button class="secondary-button compact-command" id="magic-add-pause" type="button" title="Add pause" aria-label="Add pause" data-i18n-title="magic.addPause" data-i18n-aria-label="magic.addPause"><i class="icon-pause"></i><span data-i18n="magic.addPause">Add pause</span></button>
+              <button class="secondary-button compact-command" id="magic-add-turn" type="button" title="Add turn" aria-label="Add turn" data-i18n-title="magic.addTurn" data-i18n-aria-label="magic.addTurn"><i class="icon-message-square-text"></i><span data-i18n="magic.addTurn">Add turn</span></button>
+            </div>
+          </div>
+          <div class="magic-canvas" id="magic-editor"></div>
+          <footer class="magic-footer"><span><i class="icon-sparkles"></i><span data-i18n="magic.footer">Turns are converted to validated SSML-H when you generate</span></span><span id="magic-summary">1 turn</span></footer>
+        </section>
+        <textarea id="text-custom" maxlength="50000" rows="8" aria-label="Text or SSML to synthesize" placeholder="What would you like to hear?"></textarea>
+<details class="markup-guide"><summary>SSML and SSML-H guide</summary><p>Use a speak root. Supported: voice, lang, prosody, break, p, s, sub and bounded say-as. SSML-H adds designed characters and h:direction delivery instructions. Phonemes, remote audio and external lexicons are unsupported.</p><p>Rate, pitch and volume are audio effects. Explicit pauses replace the 120 ms turn gap, including 0ms. <a href="/tts/ssml/capabilities" target="_blank">Exact capabilities and limits</a></p><pre>&lt;speak&gt;&lt;voice name="Ryan"&gt;Hello.&lt;/voice&gt;&lt;break time="300ms"/&gt;&lt;voice name="Vivian"&gt;Welcome back.&lt;/voice&gt;&lt;/speak&gt;</pre></details><label class="compact-field" id="custom-instruction-field" hidden><span>Default delivery direction</span><textarea id="custom-instruct" maxlength="1500" rows="2" placeholder="Speak with warmth and quiet excitement."></textarea></label><p class="field-help" id="custom-instruction-help">Native-speaker direction requires 1.7B CustomVoice. Saved voices use Base with experimental delivery direction.</p></section>
       <section class="composer workflow-pane" data-workflow="design" hidden>
         <div class="section-heading-row"><div class="section-title"><i class="icon-sparkles"></i><span>Design a voice</span></div><button class="secondary-button sample-button" data-example="design" type="button">Example</button></div>
         <p class="workflow-description">Describe a voice, listen to a sample, then use it as a cloning reference.</p>
@@ -145,11 +236,32 @@
         <details class="settings-details" id="generation-diagnostics"><summary>Generation diagnostics</summary><dl class="studio-diagnostics" id="diagnostic-values"><dt>Timing details</dt><dd>Generate speech to see timings.</dd></dl><p class="field-help">Server first audio includes reference preparation and audio decoding after model loading. Model TTFA covers model prefill and token generation when reported by streaming. Playback start is scheduled by the browser; it does not measure speaker hardware latency.</p></details>
         <div class="studio-output-actions"><button class="secondary-button" id="use-as-reference" type="button" disabled><i class="icon-arrow-right"></i> Use as cloning reference</button><button class="secondary-button" id="save-output" type="button" disabled><i class="icon-save"></i> Save voice</button></div>
       </section>
+      <aside class="script-library" aria-labelledby="script-library-title">
+        <div class="script-library-heading">
+          <div class="section-title"><i class="icon-book-open"></i><span id="script-library-title" data-i18n="scripts.saved">Saved scripts</span><span class="count-badge" id="script-count">0</span></div>
+          <button class="icon-button bordered" id="script-folder-add" type="button" title="New folder" aria-label="New folder" data-i18n-title="scripts.newFolder" data-i18n-aria-label="scripts.newFolder"><span class="folder-plus-icon" aria-hidden="true">+</span></button>
+        </div>
+        <label class="profile-search script-search"><span class="visually-hidden" data-i18n="scripts.search">Search saved scripts</span><input id="script-filter" type="search" placeholder="Search scripts" data-i18n-placeholder="scripts.searchPlaceholder"></label>
+        <div class="script-list" id="script-list"></div>
+        <small class="script-library-note" data-i18n="scripts.persisted">Scripts remain in the persistent product volume.</small>
+      </aside>
     </section>
     <section class="content-panel standalone-view" id="api-view" hidden>
       <div class="section-title"><i class="icon-code"></i><span>Studio API</span></div><p class="workflow-description">The browser and API use the same serialized inference engine.</p>
-      <div class="api-card"><h2>Generate speech</h2><p>Send multipart form data with a JSON <code>options</code> field and an optional <code>reference</code> audio file for cloning.</p><pre id="api-example"></pre><a class="secondary-button" href="/openapi.json">OpenAPI schema</a></div>
-      <div class="api-card"><h2>Available endpoints</h2><dl><dt>GET /studio/capabilities</dt><dd>Models, languages, speakers, limits and supported controls</dd><dt>POST /studio/generate</dt><dd>Complete WAV audio with timings</dd><dt>POST /studio/generate/stream</dt><dd>Server-sent events carrying WAV chunks and timings</dd><dt>POST /studio/asr/transcribe</dt><dd>Transcribe reference audio through your configured Qwen3 ASR service</dd><dt>GET /studio/voices</dt><dd>Explicitly saved voice references</dd><dt>GET /system/gpu</dt><dd>Demand-driven NVIDIA telemetry</dd></dl></div>
+      <div class="api-card"><h2>Generate speech</h2><p>Use OpenAI-compatible speech clients, native JSON for text/SSML/SSML-H, or the existing multipart Studio routes. All share one Qwen inference queue.</p><pre id="api-example"></pre><a class="secondary-button" href="/openapi.json">OpenAPI schema</a></div>
+      <div class="api-card"><h2>Speech and dialogue API</h2><dl>
+<dt>GET /v1/models · GET /v1/audio/voices</dt><dd>Actual Qwen checkpoints, native speakers, compatibility aliases and saved voices.</dd>
+<dt>POST /v1/audio/speech</dt><dd>OpenAI-compatible plain-text speech; MP3, WAV, FLAC, Opus, AAC, Ogg and raw PCM. Saved voices accept delivery instructions.</dd>
+<dt>POST /tts/generate · POST /tts/stream · POST /tts/events</dt><dd>Complete audio, progressive audio or native SSE. Explicit text, SSML and SSML-H input modes.</dd>
+<dt>POST /tts/plan · POST /tts/metrics</dt><dd>Validate and inspect the full synthesis plan before loading a model.</dd>
+<dt>GET /tts/ssml/capabilities</dt><dd>Exact bounded SSML and SSML-H subset, descriptors and limits.</dd>
+<dt>POST /tts/magic/take · /tts/magic/render · /tts/magic/assemble-upload</dt><dd>Preview/regenerate turns, reuse locked takes and assemble dialogue.</dd>
+<dt>GET/POST /tts/voice-profiles · PUT/DELETE /tts/voice-profiles/{id}</dt><dd>Save, edit and use audio-backed voice references.</dd>
+<dt>GET/POST /tts/dialogue-scripts · POST /tts/dialogue-workspaces</dt><dd>Scripts, folders, settings, takes and explicitly saved audio.</dd>
+<dt>POST /tts/transcribe-upload · POST /tts/postprocess-upload</dt><dd>Configured external ASR and bounded FFmpeg audio effects.</dd>
+<dt>POST /tts/purge · GET /system/gpu</dt><dd>Unload this Studio's model and inspect NVIDIA telemetry.</dd></dl>
+<p>Raw PCM is 24 kHz mono signed 16-bit little endian. Browser streaming previews use WAV. Native-speaker delivery direction requires 1.7B CustomVoice; Base direction is experimental. Phonemes, remote audio and local ASR are unsupported.</p>
+<a class="secondary-button" href="https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/API.md" target="_blank" rel="noreferrer">API contract and examples</a></div>
     </section>
     <section class="content-panel standalone-view" id="system-view" hidden>
       <div class="system-grid">
@@ -163,6 +275,59 @@
     </section>
   </main>
   <dialog class="studio-dialog" id="save-voice-dialog"><form id="save-voice-form"><div class="section-heading-row"><h2>Save voice reference</h2><button class="icon-button" id="close-save" type="button" aria-label="Close dialog"><i class="icon-x"></i></button></div><p class="field-help">This explicitly stores the audio and transcript in your local voice library.</p><label class="compact-field"><span>Voice name</span><input id="voice-name" maxlength="80" required></label><label class="compact-field"><span>Reference transcript</span><textarea id="voice-transcript" rows="3" maxlength="4000"></textarea></label><button class="primary-button" type="submit">Save voice</button></form></dialog>
+<dialog class="guide-dialog compact-dialog" id="magic-substitution-dialog">
+    <form id="magic-substitution-form" method="dialog">
+      <div class="dialog-heading"><h2 data-i18n="magic.pronunciationTitle">Pronunciation override</h2><button class="icon-button" id="magic-substitution-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div>
+      <p data-i18n="magic.pronunciationCopy">Keep the selected text in the script while sending different written text to the speech model.</p>
+      <div class="magic-selected-text"><span data-i18n="magic.selectedText">Selected text</span><output id="magic-substitution-source"></output></div>
+      <label class="field"><span data-i18n="magic.speakAs">Speak as</span><input id="magic-substitution-alias" type="text" maxlength="300" autocomplete="off" required placeholder="Text the model should pronounce" data-i18n-placeholder="magic.speakAsPlaceholder"></label>
+      <div class="dialog-actions"><button class="secondary-button" id="magic-substitution-cancel" type="button" data-i18n="common.cancel">Cancel</button><button class="primary-button" type="submit"><i class="icon-check"></i><span data-i18n="magic.applyPronunciation">Apply pronunciation</span></button></div>
+    </form>
+  </dialog>
+<dialog class="guide-dialog magic-definitions-dialog" id="magic-voice-definitions-dialog">
+    <div class="dialog-heading"><div><h2 data-i18n="magic.definitionsTitle">Script characters</h2><p data-i18n="magic.definitionsCopy">Design temporary or persistent voices stored inside this SSML-H document.</p></div><button class="icon-button" id="magic-definition-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div>
+    <div class="magic-definition-workspace">
+      <aside class="magic-definition-sidebar">
+        <div class="magic-definition-sidebar-heading"><strong data-i18n="magic.characters">Characters</strong><span id="magic-definition-summary">0 of 12 characters</span></div>
+        <select id="magic-definition-list" size="7" aria-label="Script characters" data-i18n-aria-label="magic.characters"></select>
+        <div class="magic-definition-list-actions"><button class="secondary-button compact-command" id="magic-definition-add" type="button"><i class="icon-message-square-text"></i><span data-i18n="magic.definitionAdd">New</span></button><button class="danger-button compact-command" id="magic-definition-delete" type="button"><i class="icon-x"></i><span data-i18n="common.delete">Delete</span></button></div>
+      </aside>
+      <form id="magic-definition-form">
+        <h3 id="magic-definition-form-title" data-i18n="magic.definitionNew">New character</h3>
+        <div class="magic-definition-grid">
+          <label class="field"><span data-i18n="profiles.name">Voice name</span><input name="name" type="text" maxlength="64" autocomplete="off" required placeholder="Captain" data-i18n-placeholder="magic.definitionNamePlaceholder"></label>
+          <label class="field"><span data-i18n="magic.definitionScope">Scope</span><select name="scope"><option value="request" data-i18n="magic.scopeRequest">This request</option><option value="profile" data-i18n="magic.scopeProfile">Save as voice</option></select></label>
+          <label class="field magic-definition-wide"><span data-i18n="profiles.description">Description</span><input name="description" type="text" maxlength="500" placeholder="A calm, experienced ship captain" data-i18n-placeholder="magic.definitionDescriptionPlaceholder"></label>
+          <label class="field"><span data-i18n="magic.gender">Gender</span><input name="gender" type="text" maxlength="80" placeholder="male" data-i18n-placeholder="magic.genderPlaceholder"></label>
+          <label class="field"><span data-i18n="magic.age">Age</span><input name="age" type="text" maxlength="80" placeholder="middle-aged" data-i18n-placeholder="magic.agePlaceholder"></label>
+          <label class="field"><span data-i18n="magic.definitionPitch">Voice pitch</span><input name="pitch" type="text" maxlength="80" placeholder="low" data-i18n-placeholder="magic.pitchPlaceholder"></label>
+          <label class="field"><span data-i18n="magic.style">Style</span><input name="style" type="text" maxlength="120" placeholder="warm and confident" data-i18n-placeholder="magic.stylePlaceholder"></label>
+          <label class="field"><span data-i18n="magic.languages">Languages</span><input name="languages" type="text" maxlength="240" placeholder="en-US pl-PL" data-i18n-placeholder="magic.languagesPlaceholder"></label>
+          <label class="field"><span data-i18n="magic.accent">Accent</span><input name="accent" type="text" maxlength="120" placeholder="american" data-i18n-placeholder="magic.accentPlaceholder"></label>
+          <label class="field"><span data-i18n="magic.dialect">Dialect</span><input name="dialect" type="text" maxlength="120" placeholder="midwestern" data-i18n-placeholder="magic.dialectPlaceholder"></label>
+          <label class="field"><span data-i18n="generation.seed">Seed</span><input name="seed" type="number" min="0" max="4294967295" step="1" placeholder="4242"></label>
+          <label class="field magic-definition-wide"><span data-i18n="magic.sampleText">Design sample text</span><input name="sample" type="text" maxlength="500" placeholder="My name is Captain Marek. The ship is ready." data-i18n-placeholder="magic.samplePlaceholder"></label>
+          <label class="field"><span data-i18n="magic.sampleLanguage">Sample language</span><input name="sampleLanguage" type="text" maxlength="40" placeholder="en-US" data-i18n-placeholder="magic.sampleLanguagePlaceholder"></label>
+          <label class="toggle-field magic-definition-replace"><input name="replace" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span data-i18n="magic.definitionReplace">Replace an existing saved voice with this name</span></label>
+        </div>
+        <div class="dialog-status" id="magic-definition-error" role="alert" hidden></div>
+        <div class="dialog-actions"><button class="primary-button" type="submit"><i class="icon-check"></i><span data-i18n="magic.definitionApply">Apply character</span></button></div>
+      </form>
+    </div>
+    <div class="dialog-actions"><button class="secondary-button" id="magic-definition-done" type="button" data-i18n="common.done">Done</button></div>
+  </dialog>
+<dialog class="guide-dialog" id="edit-script-dialog">
+    <form id="edit-script-form" method="dialog">
+      <div class="dialog-heading"><h2 data-i18n="scripts.editTitle">Edit script details</h2><button class="icon-button" id="edit-script-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div>
+      <p><span data-i18n="scripts.editCopy">Organize</span> <strong id="edit-script-name"></strong> <span data-i18n="scripts.editSuffix">with a description and searchable tags.</span></p>
+      <label class="field"><span data-i18n="scripts.folder">Folder</span><select id="edit-script-folder"></select></label>
+      <label class="field"><span><span data-i18n="profiles.tags">Tags</span> <small data-i18n="profiles.commaSeparated">Comma separated</small></span><input id="edit-script-tags" type="text" maxlength="395" placeholder="launch, dramatic, english" data-i18n-placeholder="scripts.tagsPlaceholder" autocomplete="off"></label>
+      <label class="field"><span><span data-i18n="profiles.description">Description</span> <small data-i18n="common.optional">Optional</small></span><input id="edit-script-description" type="text" maxlength="240" placeholder="Short launch dialogue" data-i18n-placeholder="scripts.descriptionPlaceholder"></label>
+      <div class="dialog-actions"><button class="secondary-button" id="edit-script-cancel" type="button" data-i18n="common.cancel">Cancel</button><button class="primary-button" type="submit"><i class="icon-check"></i><span data-i18n="scripts.updateDetails">Update details</span></button></div>
+    </form>
+  </dialog>
+<dialog class="confirm-dialog script-folder-dialog" id="script-folder-dialog"><form id="script-folder-form"><div class="dialog-heading"><h2 data-i18n="scripts.newFolder">New folder</h2><button class="icon-button" id="script-folder-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div><label class="field"><span data-i18n="scripts.folderName">Folder name</span><input id="script-folder-name" type="text" maxlength="80" placeholder="Audio dramas" data-i18n-placeholder="scripts.folderPlaceholder" required></label><div class="dialog-actions"><button class="secondary-button" id="script-folder-cancel" type="button" data-i18n="common.cancel">Cancel</button><button class="primary-button" type="submit"><i class="icon-check"></i><span data-i18n="scripts.createFolder">Create folder</span></button></div></form></dialog>
+<dialog class="confirm-dialog" id="delete-script-dialog"><div class="dialog-heading"><h2 data-i18n="scripts.deleteTitle">Delete saved script?</h2><button class="icon-button" id="delete-script-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div><p><span data-i18n="scripts.deletePrefix">Permanently delete</span> <strong id="delete-script-name"></strong><span data-i18n="scripts.deleteSuffix">?</span></p><div class="dialog-actions"><button class="secondary-button" id="delete-script-cancel" type="button" data-i18n="common.cancel">Cancel</button><button class="danger-button" id="delete-script-confirm" type="button" data-i18n="common.delete">Delete</button></div></dialog>
   <div class="toast" id="toast" role="alert" hidden></div>
 </body>
 </html>

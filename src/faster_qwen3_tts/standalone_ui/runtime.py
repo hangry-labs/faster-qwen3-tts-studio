@@ -4,6 +4,7 @@ from __future__ import annotations
 import gc
 import threading
 import time
+from contextlib import contextmanager
 from collections import deque
 from pathlib import Path
 from typing import Callable, Literal
@@ -68,6 +69,20 @@ class StudioEngine:
         self.error: str | None = None
         self.queued = 0
         self.waiters = deque()
+        self.session_owner = threading.local()
+
+    @contextmanager
+    def session(self, cancelled, emit):
+        """Keep one FIFO GPU lease across all voices and bootstrap samples."""
+        acquired = self._acquire(cancelled, emit)
+        if not acquired:
+            raise InterruptedError('Generation cancelled.')
+        self.session_owner.active = True
+        try:
+            yield
+        finally:
+            self.session_owner.active = False
+            self.gate.release()
 
     def status(self):
         with self.state_lock:
@@ -152,7 +167,8 @@ class StudioEngine:
     def generate(self, request: GenerationRequest, reference: Path | None,
                  cancelled: threading.Event, emit: Callable[[dict], None], streaming: bool):
         started = time.perf_counter()
-        if not self._acquire(cancelled, emit):
+        owned = getattr(self.session_owner, 'active', False)
+        if not owned and not self._acquire(cancelled, emit):
             return
         queue_ms = (time.perf_counter() - started) * 1000
         try:
@@ -244,7 +260,8 @@ class StudioEngine:
             self._state('error', str(exc))
             raise
         finally:
-            self.gate.release()
+            if not owned:
+                self.gate.release()
 
 
 def flatten_audio(audio):

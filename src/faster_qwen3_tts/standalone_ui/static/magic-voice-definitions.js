@@ -184,7 +184,7 @@ export class MagicVoiceDefinitions {
   async saveForm() {
     const definition = this.readForm()
     const previous = this.selectedIndex >= 0 ? this.definitions[this.selectedIndex] : null
-    if (definition.scope === 'profile') {
+    if (definition.scope === 'profile' && previous?.scope === 'request') {
       if (!previous) {
         throw new Error(t(
           'magic.definitionGenerateFirst',

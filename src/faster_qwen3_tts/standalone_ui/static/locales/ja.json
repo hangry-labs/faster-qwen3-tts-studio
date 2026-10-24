@@ -66,7 +66,7 @@
   "composer.text": "入力テキスト",
   "composer.input": "合成するテキストまたはマークアップ",
   "composer.inputType": "入力形式",
-  "composer.defaultText": "VoxCPM2 は音声デザインとクローンで自然な多言語音声を生成します。",
+  "composer.defaultText": "Welcome back. It is a lovely day to give your ideas a voice.",
   "composer.newSample": "新しいサンプル",
   "composer.metrics": "{characters} 文字 · {words} 語",
   "magic.title": "マジック",

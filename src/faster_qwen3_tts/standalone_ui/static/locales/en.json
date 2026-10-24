@@ -66,7 +66,7 @@
   "composer.text": "Input text",
   "composer.input": "Text or markup to synthesize",
   "composer.inputType": "Input format",
-  "composer.defaultText": "VoxCPM2 generates natural multilingual speech with voice design and cloning.",
+  "composer.defaultText": "Welcome back. It is a lovely day to give your ideas a voice.",
   "composer.newSample": "New sample",
   "composer.metrics": "{characters} characters · {words} words",
   "magic.title": "Magic",

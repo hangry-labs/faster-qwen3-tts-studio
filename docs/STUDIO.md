@@ -22,7 +22,7 @@ a time; switching releases the previous model first.
 
 | View | Model | Workflow |
 | --- | --- | --- |
-| Generate | 0.6B or 1.7B CustomVoice | Nine built-in speakers. The 1.7B model also accepts style instructions. |
+| Generate | CustomVoice, Base and document-defined VoiceDesign | Magic dialogue, text, SSML and SSML-H; native or saved voices; locked takes and saved scripts. |
 | Voice design | 1.7B VoiceDesign | Describe a voice, generate a sample, then use or save it as a cloning reference. |
 | Voice clone | 0.6B or 1.7B Base | Upload, record, or choose a saved reference. Clone speaker identity alone or use an exact reference transcript, with optional delivery direction. |
 | API | Same inference engine | Inspect capabilities and endpoint documentation. |
@@ -32,6 +32,21 @@ All voice workflows offer complete WAV output and incremental playback. Qwen
 supports Chinese, English, Japanese, Korean, German, French, Russian, Portuguese,
 Spanish, and Italian, plus automatic language detection. Model capabilities drive
 the controls; unsupported combinations are rejected before loading.
+
+Generate uses a full-width left settings rail, central authoring surface and
+saved-script rail. Its toolbar holds actual Qwen model controls, seed and output
+processing. Magic turns support voice/language selection, direction, prosody,
+pauses, substitutions, preview, regeneration, lock, download and reordering.
+Switching between plain text and Magic preserves the text without adding dialogue.
+Keep individual Magic turns within 400 characters; longer text can be synthesized
+through the text/SSML modes with automatic splitting.
+
+Save a named script to keep its document, settings, takes and current output in
+the product volume. Imports/exports use SSML-H. Script folders, tags and search
+organize the library. Saving remains explicit; ordinary editing and synthesis do
+not automatically persist prompts or recordings. SSML-H `scope="profile"` is an
+explicit instruction to persist a designed voice after successful generation.
+See [SSML-H](SSML-H.md) for exact semantics and [API](API.md) for endpoint contracts.
 
 Generation settings include temperature, top K, repetition penalty, chunk size,
 maximum audio length, optional seed, and whole-text/incremental-text delivery.
@@ -116,8 +131,8 @@ It also reports queue/loading progress. With `?streaming=false`, the same progre
 route surrounds complete inference and returns one complete audio chunk; the
 ordinary `/studio/generate` route retains its JSON response.
 Both accept multipart data containing an `options` JSON field and an optional
-`reference` audio file. These Studio routes are not advertised as an OpenAI
-speech API or MCP server.
+`reference` audio file. Separate `/v1/audio/speech` and native `/tts/*` routes
+provide the new product API. MCP is not implemented.
 
 ## Migration and checks
 

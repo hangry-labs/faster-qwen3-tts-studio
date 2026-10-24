@@ -7,7 +7,7 @@ function speechBlocks(blocks) {
 function takeFile(block) {
   return new File(
     [block.preview.blob],
-    `voxcpmtts-turn-${block.id}.wav`,
+    `qwen3tts-turn-${block.id}.wav`,
     { type: block.preview.blob.type || 'audio/wav' },
   )
 }
@@ -34,6 +34,7 @@ async function unpackBundle(response) {
   }
   return {
     requestSeed: Number(manifest.request_seed),
+    metrics: manifest.metrics || {},
     sampleRate: Number(manifest.sample_rate),
     committedProfiles: manifest.committed_profiles && typeof manifest.committed_profiles === 'object'
       ? manifest.committed_profiles
@@ -69,7 +70,7 @@ export class MagicTakeStudio {
     retained.forEach((block) => form.append('takes', takeFile(block)))
     const response = await fetch('/tts/magic/render', {
       method: 'POST',
-      headers: requestId ? { 'X-VoxCPM-Request-ID': requestId } : {},
+      headers: requestId ? { 'X-Qwen-Request-ID': requestId } : {},
       body: form,
       signal,
     })
@@ -85,7 +86,7 @@ export class MagicTakeStudio {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(requestId ? { 'X-VoxCPM-Request-ID': requestId } : {}),
+        ...(requestId ? { 'X-Qwen-Request-ID': requestId } : {}),
       },
       body: JSON.stringify({ payload, speech_index: speechIndex }),
       signal,
@@ -93,8 +94,8 @@ export class MagicTakeStudio {
     if (!response.ok) throw new Error(await this.responseError(response))
     return {
       blob: await response.blob(),
-      extension: response.headers.get('X-VoxCPM-Format') || 'wav',
-      seed: Number(response.headers.get('X-VoxCPM-Seed')),
+      extension: response.headers.get('X-Qwen-Format') || 'wav',
+      seed: Number(response.headers.get('X-Qwen-Seed')),
     }
   }
 
@@ -124,7 +125,7 @@ export class MagicTakeStudio {
     if (!response.ok) throw new Error(await this.responseError(response))
     return {
       blob: await response.blob(),
-      extension: response.headers.get('X-VoxCPM-Format') || outputFormat,
+      extension: response.headers.get('X-Qwen-Format') || outputFormat,
     }
   }
 }

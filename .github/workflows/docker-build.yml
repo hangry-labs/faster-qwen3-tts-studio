@@ -1,0 +1,155 @@
+name: Build and Push Container Images
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*.*']
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Optional existing stable Git tag, such as v1.0 or v1.0.1'
+        required: false
+        type: string
+      checkout_ref:
+        description: 'Optional ref to build; defaults to image_tag, otherwise the selected workflow ref'
+        required: false
+        type: string
+      push_latest:
+        description: 'Also publish latest and latest_tiny'
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout_ref || inputs.image_tag || github.ref }}
+          persist-credentials: false
+      - name: Record the validated commit
+        id: source
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          enable-cache: false
+      - name: Check notices and publication rules
+        run: |
+          uv run --no-project --python 3.13 python scripts/check_licensing.py
+          uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_ci_images.py -q -p no:cacheprovider
+      - name: Check Python distribution notices and metadata
+        run: |
+          uv build
+          uv run --no-project --python 3.13 python scripts/check_licensing.py --artifact dist/*.whl --artifact dist/*.tar.gz
+          uvx twine check --strict dist/*
+
+  build:
+    needs: validate
+    if: github.event_name != 'pull_request' && github.repository == 'hangry-labs/faster-qwen3-tts-studio'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    concurrency:
+      group: qwen3-tts-container-publication
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Free hosted-runner disk space
+        shell: bash
+        run: |
+          df -h
+          # This job runs only on an ephemeral GitHub-hosted Linux runner.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
+          docker system prune -af
+          df -h
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Plan tags and check immutable release identity
+        id: images
+        env:
+          INPUT_IMAGE_TAG: ${{ inputs.image_tag }}
+          INPUT_PUSH_LATEST: ${{ inputs.push_latest }}
+        run: python3 scripts/ci_images.py --check-existing
+      - name: Validate the NVIDIA runtime on CPU before publication
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: checks
+          platforms: linux/amd64
+          push: false
+      - name: Build and publish the full image
+        id: baked
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: baked
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.images.outputs.baked_tags }}
+          provenance: mode=max
+          sbom: true
+          build-args: |
+            BUILD_DATE=${{ steps.images.outputs.build_date }}
+            VCS_REF=${{ steps.images.outputs.vcs_ref }}
+            IMAGE_VERSION=${{ steps.images.outputs.image_version }}
+      - name: Build and publish the tiny image
+        id: tiny
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: tiny
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.images.outputs.tiny_tags }}
+          provenance: mode=max
+          sbom: true
+          build-args: |
+            BUILD_DATE=${{ steps.images.outputs.build_date }}
+            VCS_REF=${{ steps.images.outputs.vcs_ref }}
+            IMAGE_VERSION=${{ steps.images.outputs.image_version }}
+      - name: Verify both registries report the built OCI indexes
+        env:
+          BAKED_DIGEST: ${{ steps.baked.outputs.digest }}
+          TINY_DIGEST: ${{ steps.tiny.outputs.digest }}
+        run: python3 scripts/ci_images.py --verify
+      - name: Export runtime notices and pinned model manifest
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          target: evidence
+          platforms: linux/amd64
+          outputs: type=local,dest=.ci-build/evidence
+      - name: Retain build and publication evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: container-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci-build/
+          retention-days: 30
+      - name: Report disk usage
+        if: always()
+        run: |
+          df -h
+          docker buildx du || true

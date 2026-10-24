@@ -7,7 +7,7 @@ import unittest
 import zipfile
 
 from scripts.check_licensing import ROOT, check_artifact, check_notice_text, check_source
-from scripts.collect_runtime_licenses import notice_name
+from scripts.collect_runtime_licenses import notice_name, supplemental_notice
 
 
 class LicensingTests(unittest.TestCase):
@@ -48,6 +48,17 @@ class LicensingTests(unittest.TestCase):
         self.assertTrue(notice_name("pkg/LICENCE"))
         self.assertTrue(notice_name("pkg/COPYING.LGPL"))
         self.assertFalse(notice_name("pkg/model.safetensors"))
+
+    def test_supplemental_notice_is_limited_to_verified_version_and_present_document(self):
+        document = ROOT / 'THIRD_PARTY_NOTICES.md'
+        self.assertTrue(supplemental_notice('gradio_client', '2.7.2', document))
+        self.assertFalse(supplemental_notice('gradio_client', '2.7.3', document))
+        self.assertFalse(supplemental_notice('unrelated', '2.7.2', document))
+        self.assertFalse(supplemental_notice('gradio_client', '2.7.2', document / 'absent'))
+        with tempfile.TemporaryDirectory() as folder:
+            unrelated = Path(folder) / 'NOTICE.md'
+            unrelated.write_text('An unrelated notice', encoding='utf-8')
+            self.assertFalse(supplemental_notice('gradio_client', '2.7.2', unrelated))
 
     def test_vendor_license_does_not_replace_or_duplicate_root_license(self):
         with tempfile.TemporaryDirectory() as folder:

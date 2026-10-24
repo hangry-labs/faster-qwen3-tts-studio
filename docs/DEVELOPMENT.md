@@ -23,7 +23,7 @@ task stop
 | `task start` | Recreate this project's container, mount local source read-only, and wait up to 45 seconds for the status endpoint. Models download when requested in the UI. |
 | `task stop` | Stop the container and retain the image, model cache, and other product data. Safe when already absent. |
 | `task nuke` | Remove this project's labelled container, development image, and **all contents of its data volume**, including cached models and assets. Source files stay in place. |
-| `task release` | Run local validation, build wheel/sdist artifacts in `dist/`, and verify their notices and metadata. Remote publication is not configured yet. |
+| `task release` | Run local validation, build wheel/sdist artifacts in `dist/`, and verify their notices and metadata. Does not publish images or create Git refs. |
 
 The development image uses Python 3.13 and matching Torch/TorchAudio 2.10.0 CUDA
 12.8 wheels. It installs the current checkout and serves the
@@ -32,8 +32,8 @@ The upstream demo has been replaced. No model weights are baked in;
 starting the container does not preload models.
 
 `requirements.dev.txt` pins the core runtime components. It is not a complete
-transitive lockfile. The base image and apt dependencies also remain moving
-development inputs. This local workflow does not qualify an image for release;
+transitive lockfile. The Python base image is pinned by digest; apt and transitive
+Python dependencies remain moving development inputs. This local workflow does not qualify an image for release;
 see [the licensing audit](LICENSING.md#container-release-requirements).
 
 ## Settings
@@ -100,6 +100,8 @@ remain separate work requiring appropriate model assets.
 
 `task release` currently prepares **local Python artifacts**. It does not tag,
 commit, push, upload to PyPI, or publish Docker images. The inherited upstream
-PyPI workflow is not the Hangry Labs Studio release procedure. A future Docker
-release workflow needs version policy, registries, pinned dependencies, exact
-image validation, and corresponding-source delivery before publication.
+PyPI publisher has been replaced by the [container workflow](RELEASING.md).
+Pushing main builds rolling full/tiny images to Docker Hub and GHCR; stable Git
+tags build versioned images. This does not change the local `task release`
+behavior. Review exact image validation and corresponding-source requirements
+before promoting a release.

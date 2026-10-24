@@ -78,11 +78,11 @@ tasks:
       - uv run --no-project --python 3.13 python -m compileall -q faster_qwen3_tts scripts
 
   test:
-    desc: Test task lifecycle and licensing without GPU dependencies
+    desc: Test task lifecycle, licensing and publication rules without GPU dependencies
     dir: '{{.TASKFILE_DIR}}'
     cmds:
       - pwsh -NoProfile -File tests/test_dev_tasks.ps1
-      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py -q -p no:cacheprovider
+      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_ci_images.py -q -p no:cacheprovider
 
   licenses:
     desc: Check source notices and licensing documentation

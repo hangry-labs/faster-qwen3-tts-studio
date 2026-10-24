@@ -78,6 +78,24 @@ not license the user's original recording or grant personality/privacy rights.
 
 ## Python runtime and native payloads
 
+### Supplemental notices for installed wheels
+
+The following inspected wheels omit their upstream license file. Their source
+revisions below supply Apache-2.0; the complete [Apache text](#apache-20-license-text)
+is included in this document. Preserve the upstream copyright headers carried
+in installed source files as well as this supplemental material.
+
+| Distribution | Upstream attribution and pinned license source |
+| --- | --- |
+| flatbuffers 25.12.19 | Google and FlatBuffers contributors; [license](https://github.com/google/flatbuffers/blob/7e163021e59cca4f8e1e35a7c828b5c6b7915953/LICENSE) |
+| gradio_client 2.7.2 | Gradio authors and contributors; [license](https://github.com/gradio-app/gradio/blob/8c71eaaff74b77ccf0a3e94afd7f9c06fe3d2abc/LICENSE) |
+| tokenizers 0.22.2 | Hugging Face and contributors; [license](https://github.com/huggingface/tokenizers/blob/f383101a26663708484cac0727792aad74f78234/LICENSE) |
+
+These entries supplement those exact inspected versions. They do not silently
+qualify future wheel revisions or replace their own bundled-component notices.
+
+### Installed component records
+
 Keep complete license, copyright, and bundled-component notices in the installed
 distributions, normally under `site-packages/*.dist-info/licenses/` or the
 package's own directory. Retain Python's own license as well. Preserve full

@@ -10,6 +10,8 @@ include docs/UI_MIGRATION.md
 include docs/ENGINE.md
 include docs/UPSTREAM_BENCHMARKS.md
 include docs/dockerhub.md
+include docs/RELEASING.md
+include .github/workflows/docker-build.yml
 include Taskfile.yml
 include Dockerfile
 include .dockerignore
@@ -17,6 +19,8 @@ include requirements.dev.txt
 include scripts/check_licensing.py
 include scripts/collect_runtime_licenses.py
 include scripts/smoke_studio.py
+include scripts/prefetch_models.py
+include scripts/ci_images.py
 recursive-include scripts *.ps1
 include tests/test_dev_tasks.ps1
 include benchmark.sh

@@ -13,9 +13,9 @@ together with audio editing, saved voices and NVIDIA GPU controls.
 
 ## Quick Start
 
-**Current status:** local development build. Registry publication and full/tiny
-release images are not configured yet. The commands below build this checkout;
-they do not pull a published Hangry Labs image.
+**Current status:** the [full/tiny container workflow](docs/RELEASING.md) is
+configured for Docker Hub and GHCR. Registry images become available after its
+first successful publishing run. You can build and run this checkout now:
 
 Install Git, Docker with Linux containers and NVIDIA GPU support, and a driver
 compatible with CUDA 12.8. No host Python environment or CUDA toolkit is needed.
@@ -100,9 +100,19 @@ checkpoints. See the [model revisions and licenses](docs/LICENSING.md).
 
 ### Image And GPU Selection
 
-`faster-qwen3-tts-studio:dev` is the local tag built above. There are no documented
-registry release tags or full/tiny variants for this checkout. The
-[Docker Hub description](docs/dockerhub.md) is prepared for later publication.
+`faster-qwen3-tts-studio:dev` is the local tiny target built above. The publishing
+workflow builds these variants to `hangrylabs/faster-qwen3-tts-studio` and
+`ghcr.io/hangry-labs/faster-qwen3-tts-studio`:
+
+| Variant | Rolling tag | Stable tag | Models |
+| --- | --- | --- | --- |
+| Full | `latest` | `vX.Y` or `vX.Y.Z` | All five pinned checkpoints included |
+| Tiny | `latest_tiny` | Matching version plus `_tiny` | Download into the volume on first use |
+
+These tags are publication rules, not a claim that the first run has finished.
+Full seeds its baked files into the same model cache used by tiny and defaults
+to offline operation. See [container builds and releases](docs/RELEASING.md) and
+the prepared [Docker Hub description](docs/dockerhub.md).
 
 Change `CUDA_VISIBLE_DEVICES=0` to another physical GPU index when needed. Allow
 headroom for other GPU workloads; memory needs depend on the selected checkpoint
@@ -226,7 +236,7 @@ generation against an explicitly configured ASR service.
 `task release` prepares local Python artifacts; it does not publish a Docker
 release. `task nuke` deletes this project's container, local image and **all data
 in its volume**. Core versions are pinned, but the development build is not a
-complete transitive or base-image lock. See [development tasks](docs/DEVELOPMENT.md).
+complete transitive Python/apt artifact lock. See [development tasks](docs/DEVELOPMENT.md).
 
 ## Benchmarks And Engine Reference
 

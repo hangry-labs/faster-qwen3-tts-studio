@@ -10,8 +10,11 @@ task start
 # Open http://127.0.0.1:7860
 ```
 
-The UI starts immediately. Generate downloads and loads the selected model when
-needed; the runtime badge shows its state. The five model revisions are fixed to
+Generate loads the selected model when needed; the runtime badge shows its state.
+Tiny downloads uncached models. Full seeds its baked files into an empty product
+cache before starting the UI and defaults to offline operation. See the
+[container workflow](RELEASING.md) for build targets and publishing rules.
+The five model revisions are fixed to
 the versions reviewed in the licensing audit. One TTS model occupies the GPU at
 a time; switching releases the previous model first.
 

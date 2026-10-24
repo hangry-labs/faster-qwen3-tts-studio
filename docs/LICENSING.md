@@ -142,6 +142,14 @@ variants or converted weights. NVIDIA/Torch is the supported product direction.
 
 ## Container release requirements
 
+The current [container workflow](RELEASING.md) pins the Python base image by
+digest, includes a runtime notice inventory and builds full/tiny targets. The
+full target records hashes for its pinned model files and retains upstream model
+cards. Supplemental Apache notices for three inspected wheels without license
+files are recorded in [Third-Party Notices](../THIRD_PARTY_NOTICES.md#supplemental-notices-for-installed-wheels).
+These packaging records support the exact-image review below; they are not a
+substitute for it.
+
 There is no newly qualified Hangry Labs Studio image from this audit. The
 now-retired demo recipe used Python 3.10, floating installs, a package version
 different from the checkout, Ubuntu media tools and NVIDIA runtimes. Its build

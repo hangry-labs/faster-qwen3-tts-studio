@@ -16,6 +16,19 @@ import shutil
 import subprocess
 import sys
 
+SUPPLEMENTAL_APACHE = {('flatbuffers', '25.12.19'), ('gradio-client', '2.7.2'),
+                       ('tokenizers', '0.22.2')}
+
+
+def supplemental_notice(name: str, version: str, document: Path) -> str:
+    normalized = re.sub(r'[-_.]+', '-', name).lower()
+    if (normalized, version) in SUPPLEMENTAL_APACHE and document.is_file():
+        listed_name = normalized.replace('gradio-client', 'gradio_client')
+        row = rf'^\| {re.escape(listed_name)} {re.escape(version)} \|'
+        if re.search(row, document.read_text(encoding='utf-8'), re.M):
+            return 'THIRD_PARTY_NOTICES.md#supplemental-notices-for-installed-wheels'
+    return ''
+
 
 def notice_name(path: str) -> bool:
     parts = PurePosixPath(path.replace("\\", "/")).parts
@@ -31,6 +44,9 @@ def save_notice(source: Path, destination: Path) -> str:
 
 def collect_python(output: Path) -> list[dict]:
     records = []
+    supplement = Path(__file__).resolve().parents[1] / 'THIRD_PARTY_NOTICES.md'
+    if supplement.is_file():
+        save_notice(supplement, output / 'supplemental/THIRD_PARTY_NOTICES.md')
     for dist in sorted(metadata.distributions(), key=lambda value: (value.metadata.get("Name") or "").lower()):
         name = dist.metadata.get("Name", "UNNAMED")
         slug = re.sub(r"[^a-zA-Z0-9_.-]", "_", name + "-" + dist.version)
@@ -51,13 +67,15 @@ def collect_python(output: Path) -> list[dict]:
             destination = output / "python" / slug / safe
             sha = save_notice(source, destination)
             notices.append({"file": destination.relative_to(output).as_posix(), "sha256": sha})
+        supplemental = supplemental_notice(name, dist.version, supplement)
         records.append({
             "name": name, "version": dist.version,
             "declared_license": dist.metadata.get("License-Expression") or dist.metadata.get("License") or "",
             "license_classifiers": [value for value in dist.metadata.get_all("Classifier", []) if value.startswith("License ::")],
             "declared_license_files": dist.metadata.get_all("License-File", []),
             "notices": notices, "native_members": native,
-            "review_required": not bool(notices),
+            "supplemental_notice": supplemental,
+            "review_required": not bool(notices or supplemental),
         })
     return records
 

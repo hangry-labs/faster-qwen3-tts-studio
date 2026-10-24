@@ -9,15 +9,16 @@
 Local Qwen3-TTS voice design, reference cloning and speech generation with a
 browser Studio, streaming playback and an HTTP API.
 
-**Publication status:** this description accompanies the local development build.
-Registry publication and full/tiny releases are not configured yet. Use the source
-build below; no registry pull command or release tag is advertised here.
+**Publication status:** the full/tiny build and publishing workflow is configured
+for Docker Hub and GHCR. Tags become available after its first successful run.
+The source-build commands below work before that publication.
 
 ## Project Links
 
 - [GitHub repository and README](https://github.com/hangry-labs/faster-qwen3-tts-studio)
 - [Studio guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/STUDIO.md)
 - [Development tasks](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/DEVELOPMENT.md)
+- [Container builds and releases](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/RELEASING.md)
 - [Original accelerated engine](https://github.com/andimarafioti/faster-qwen3-tts)
 - [Qwen3-TTS models and research](https://github.com/QwenLM/Qwen3-TTS)
 - [Hangry Labs](https://hangrylabs.app/)
@@ -41,6 +42,22 @@ and the schema is at **http://localhost:7860/openapi.json**.
 Model weights download on first use into the named volume. They are not baked
 into this development image. The browser opens without loading a model; generate
 speech to load the selected checkpoint. One TTS model is resident at a time.
+
+## Image Variants And Tags
+
+| Variant | Rolling tag | Stable release | Model assets |
+| --- | --- | --- | --- |
+| Full | `latest` | `vX.Y` or `vX.Y.Z` | All five pinned checkpoints baked in |
+| Tiny | `latest_tiny` | Matching stable version plus `_tiny` | Download on first use |
+
+Both variants are built to `hangrylabs/faster-qwen3-tts-studio` and mirrored to
+`ghcr.io/hangry-labs/faster-qwen3-tts-studio`. Full merges baked models into the
+same persistent cache and defaults to offline use. Tiny needs network access
+to populate its cache. Neither runs local ASR.
+
+`main` builds rolling tags; stable Git tags build fixed releases. After publishing,
+stable installation commands will use the verified tag and top-level OCI digest.
+The current commands intentionally use the local `:dev` target.
 
 ## What You Get
 

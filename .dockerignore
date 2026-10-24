@@ -16,3 +16,4 @@ build/
 outputs/
 artifacts/
 *.egg-info/
+.ci-build/

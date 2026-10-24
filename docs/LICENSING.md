@@ -81,7 +81,7 @@ Findings include:
   numerical runtimes and NVIDIA libraries.
 - Some wheels omit license files. Missing notices must be supplied from the
   applicable upstream, not treated as permission to discard attribution.
-- The existing demo's unconstrained apt/pip installs cannot identify a final
+- The inherited demo's unconstrained apt/pip installs could not identify a final
   release's exact payload in advance.
 
 Dependency notices belong with the exact installed distributions in the image.
@@ -91,6 +91,11 @@ supplemental notices, and the Apache-2.0 text. Research candidate notices and
 source archives are not shipped as if they qualified the eventual runtime.
 
 ### Optional ASR has an independent model license
+
+The default Studio image no longer installs nano-parakeet. Reference transcription
+uses an operator-configured service. The following audit and notices are retained
+for optional upstream benchmark utilities that still reference nano-parakeet;
+they do not describe an ASR model bundled with the Studio.
 
 `nano-parakeet` code is MIT, but the NVIDIA Parakeet v3 checkpoint and the
 SentencePiece model extracted from it are not MIT assets. The reviewed model
@@ -118,8 +123,9 @@ do not infer that the full NeMo dependency tree is installed here.
 Three source reference WAVs and 32 generated comparison WAVs had no independently
 documented recording/speaker provenance or specific generated-media grant in
 the reviewed materials. They were removed from the current distribution.
-Demo auto-downloads were removed and local reference presets now require an
-explicit operator opt-in. Public examples no longer embed the removed audio.
+Demo auto-downloads were initially disabled; the old demo and preset loader have
+since been removed. The Studio starts with an empty explicit voice library and
+does not fetch inherited recordings. Public examples no longer embed removed audio.
 
 This is a provenance gap, not a claim that the original publisher infringed a
 right. Existing Git history and old upstream artifacts were not rewritten.
@@ -137,9 +143,10 @@ variants or converted weights. NVIDIA/Torch is the supported product direction.
 ## Container release requirements
 
 There is no newly qualified Hangry Labs Studio image from this audit. The
-inherited demo recipe uses Python 3.10, floating installs, a package version
+now-retired demo recipe used Python 3.10, floating installs, a package version
 different from the checkout, Ubuntu media tools and NVIDIA runtimes. Its build
-and deployment instructions are not a production release approval.
+and deployment instructions were not a production release approval. The current
+Python 3.13 development image still requires the exact release review below.
 
 For the eventual pinned Python 3.13/NVIDIA candidate:
 

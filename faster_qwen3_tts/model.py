@@ -9,6 +9,9 @@ Wrapper class that provides a Qwen3-TTS API while using
 CUDA graphs for 6-10x speedup.
 """
 import logging
+import hashlib
+import time
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
@@ -19,6 +22,31 @@ import torch
 from .utils import suppress_flash_attn_warning
 
 logger = logging.getLogger(__name__)
+
+VOICE_CACHE_ENTRIES = 8
+VOICE_CACHE_BYTES = 8 * 1024 * 1024
+
+
+def _prompt_to(value, device):
+    if isinstance(value, torch.Tensor):
+        return value.detach().to(device=device, copy=True)
+    if isinstance(value, dict):
+        return {key: _prompt_to(item, device) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return type(value)(_prompt_to(item, device) for item in value)
+    return value
+
+
+def _prompt_bytes(value):
+    if isinstance(value, torch.Tensor):
+        return value.numel() * value.element_size()
+    if isinstance(value, np.ndarray):
+        return value.nbytes
+    if isinstance(value, dict):
+        return sum(_prompt_bytes(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return sum(_prompt_bytes(item) for item in value)
+    return 0
 
 
 
@@ -48,7 +76,12 @@ class FasterQwen3TTS:
         self.max_seq_len = max_seq_len
         self.sample_rate = self._infer_sample_rate(base_model)
         self._warmed_up = False
-        self._voice_prompt_cache = {}  # Cache (ref_audio, ref_text) -> (vcp, ref_ids)
+        # Prepared references only, bounded in system RAM; no uploaded audio is retained.
+        self._voice_prompt_cache = OrderedDict()
+        self._voice_prompt_cache_hits = 0
+        self._voice_prompt_cache_misses = 0
+        self.last_reference_preparation_ms = None
+        self.last_reference_cache_hit = None
 
     @staticmethod
     def _get_speech_tokenizer(base_model):
@@ -431,10 +464,20 @@ class FasterQwen3TTS:
         append_silence: bool,
     ) -> Tuple[Dict[str, Any], list, bool]:
         using_icl_mode = not xvec_only
-        cache_key = (str(ref_audio), ref_text, xvec_only, append_silence)
+        digest = hashlib.sha256()
+        with open(ref_audio, 'rb') as reference_file:
+            for block in iter(lambda: reference_file.read(1024 * 1024), b''):
+                digest.update(block)
+        cache_key = (digest.digest(), '' if xvec_only else ref_text, xvec_only, append_silence)
         if cache_key in self._voice_prompt_cache:
-            vcp, ref_ids = self._voice_prompt_cache[cache_key]
+            cached = self._voice_prompt_cache.pop(cache_key)
+            self._voice_prompt_cache[cache_key] = cached
+            self._voice_prompt_cache_hits += 1
+            self.last_reference_cache_hit = True
+            vcp, ref_ids = _prompt_to(cached, self.device)
             return vcp, ref_ids, using_icl_mode
+        self._voice_prompt_cache_misses += 1
+        self.last_reference_cache_hit = False
 
         if xvec_only:
             prompt_items = self.model.create_voice_clone_prompt(
@@ -450,7 +493,7 @@ class FasterQwen3TTS:
                 icl_mode=[False],
             )
             ref_ids = [None] * len(input_ids)
-            self._voice_prompt_cache[cache_key] = (vcp, ref_ids)
+            self._cache_voice_prompt(cache_key, (vcp, ref_ids))
             return vcp, ref_ids, using_icl_mode
 
         silence_secs = 0.5 if append_silence else 0.0
@@ -469,8 +512,25 @@ class FasterQwen3TTS:
         else:
             ref_ids.append(None)
 
-        self._voice_prompt_cache[cache_key] = (vcp, ref_ids)
+        self._cache_voice_prompt(cache_key, (vcp, ref_ids))
         return vcp, ref_ids, using_icl_mode
+
+    def _cache_voice_prompt(self, key, prompt):
+        if _prompt_bytes(prompt) > VOICE_CACHE_BYTES:
+            return
+        self._voice_prompt_cache[key] = _prompt_to(prompt, 'cpu')
+        while (len(self._voice_prompt_cache) > VOICE_CACHE_ENTRIES or
+               _prompt_bytes(self._voice_prompt_cache) > VOICE_CACHE_BYTES):
+            self._voice_prompt_cache.pop(next(iter(self._voice_prompt_cache)))
+
+    def voice_prompt_cache_info(self):
+        return {'entries': len(self._voice_prompt_cache), 'bytes': _prompt_bytes(self._voice_prompt_cache),
+                'hits': self._voice_prompt_cache_hits, 'misses': self._voice_prompt_cache_misses,
+                'max_entries': VOICE_CACHE_ENTRIES, 'max_bytes': VOICE_CACHE_BYTES, 'device': 'cpu'}
+
+    def clear_voice_prompt_cache(self):
+        self._voice_prompt_cache.clear()
+        self._voice_prompt_cache_hits = self._voice_prompt_cache_misses = 0
 
     def _prepare_generation(
         self,
@@ -508,6 +568,8 @@ class FasterQwen3TTS:
         if instruct:
             instruct_ids = [self.model._tokenize_texts([self.model._build_instruct_text(instruct)])[0]]
 
+        reference_started = time.perf_counter()
+        self.last_reference_cache_hit = None
         vcp, ref_ids, using_icl_mode = self._resolve_voice_clone_prompt(
             input_ids=input_ids,
             ref_audio=ref_audio,
@@ -516,6 +578,7 @@ class FasterQwen3TTS:
             append_silence=append_silence,
             voice_clone_prompt=voice_clone_prompt,
         )
+        self.last_reference_preparation_ms = (time.perf_counter() - reference_started) * 1000
 
         if instruct and not using_icl_mode:
             logger.warning(

@@ -2,6 +2,7 @@ models/
 sample_*.wav
 *.wav
 *.json
+!faster_qwen3_tts/standalone_ui/static/locales/*.json
 __pycache__/
 *.pyc
 .venv/
@@ -15,3 +16,4 @@ build/
 dist/
 *.egg-info/
 .task/
+.env

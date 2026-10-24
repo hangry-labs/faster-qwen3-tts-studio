@@ -1,8 +1,8 @@
 """Offline legal-artifact regression checks; no model/runtime dependencies."""
-import ast
+import io
 from pathlib import Path
 import tempfile
-import types
+import tarfile
 import unittest
 import zipfile
 
@@ -11,7 +11,7 @@ from scripts.collect_runtime_licenses import notice_name
 
 
 class LicensingTests(unittest.TestCase):
-    def test_source_notices_and_media_download_policy(self):
+    def test_source_notices(self):
         self.assertEqual([], check_source(ROOT))
 
     def test_consolidation_preserves_original_license_texts(self):
@@ -49,18 +49,24 @@ class LicensingTests(unittest.TestCase):
         self.assertTrue(notice_name("pkg/COPYING.LGPL"))
         self.assertFalse(notice_name("pkg/model.safetensors"))
 
-    def test_presets_do_not_read_unapproved_local_audio_by_default(self):
-        tree = ast.parse((ROOT / "demo/server.py").read_text(encoding="utf-8"))
-        function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_load_preset_refs")
-        module = ast.Module(body=[function], type_ignores=[])
-        presets = {"stale": {}}
-        def unexpected_read():
-            self.fail("Default startup must not read preset references")
-        namespace = {"os": types.SimpleNamespace(environ={}), "_preset_refs": presets,
-                     "_load_preset_transcripts": unexpected_read}
-        exec(compile(module, "demo/server.py", "exec"), namespace)
-        namespace["_load_preset_refs"]()
-        self.assertEqual({}, presets)
+    def test_vendor_license_does_not_replace_or_duplicate_root_license(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for root_license in (True, False):
+                with self.subTest(root_license=root_license):
+                    package = Path(folder) / 'package.tar.gz'
+                    with tarfile.open(package, 'w:gz') as archive:
+                        for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'docs/LICENSING.md', 'vendor/LICENSE'):
+                            if name == 'LICENSE' and not root_license:
+                                continue
+                            content = b'Vendor notice' if name == 'vendor/LICENSE' else (ROOT / name).read_bytes()
+                            member = tarfile.TarInfo('package-1/' + name)
+                            member.size = len(content)
+                            archive.addfile(member, io.BytesIO(content))
+                    errors = check_artifact(package)
+                    if root_license:
+                        self.assertEqual([], errors)
+                    else:
+                        self.assertTrue(any('LICENSE' in error for error in errors))
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ Exposes POST /v1/audio/speech compatible with OpenAI's TTS API, enabling
 integration with OpenWebUI, llama-swap, and other OpenAI-compatible clients.
 
 Usage:
-    pip install "faster-qwen3-tts[demo]"
+    pip install "faster-qwen3-tts[studio]"
 
     # Single default voice:
     python examples/openai_server.py \\

@@ -48,6 +48,10 @@ different tokenizer checkpoint under the same licensing conclusion.
 
 ## Optional reference transcription
 
+The default Studio image does not install nano-parakeet or its model/tokenizer.
+Studio transcription uses an operator-configured service. These notices remain
+for optional upstream benchmark utilities that reference nano-parakeet.
+
 - **nano-parakeet 0.2.1 code:** MIT, Copyright 2026 Andrés Marafioti.
   [Upstream](https://github.com/andimarafioti/nano-parakeet/tree/26ee76064235b95b92782ddd4bbd05f6d99550ae),
   [MIT notice](#nano-parakeet-mit-notice).
@@ -173,6 +177,19 @@ ownership, uniqueness, consent, or freedom from third-party rights. Commercial
 voice profiles and cloning references require their own documented provenance.
 
 ## Supplemental license texts
+
+### Hangry Labs Studio browser components
+
+The Studio shell, styles, media controls, and GPU monitor are adapted from
+[Hangry Labs VoxCPMTTS](https://github.com/hangry-labs/VoxCPMTTS) under
+Apache-2.0. Preserve NOTICE and the Apache text below.
+
+- Lucide icons: ISC, with Feather-derived MIT portions, Copyright 2013-present
+  Cole Bemis. The original combined notice is packaged at
+  `faster_qwen3_tts/standalone_ui/static/vendor/lucide/LICENSE`.
+- WaveSurfer.js: BSD-3-Clause, Copyright 2012-2023 katspaugh and contributors.
+  Its original notice is packaged at
+  `faster_qwen3_tts/standalone_ui/static/vendor/wavesurfer/LICENSE`.
 
 The texts below supply source and supplemental notices in one place. They do
 not replace the notices carried by other installed or bundled components.

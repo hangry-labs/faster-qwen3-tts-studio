@@ -5,18 +5,25 @@ include NOTICE
 include THIRD_PARTY_NOTICES.md
 include docs/LICENSING.md
 include docs/DEVELOPMENT.md
+include docs/STUDIO.md
+include docs/UI_MIGRATION.md
+include docs/ENGINE.md
+include docs/UPSTREAM_BENCHMARKS.md
+include docs/dockerhub.md
 include Taskfile.yml
 include Dockerfile
 include .dockerignore
 include requirements.dev.txt
 include scripts/check_licensing.py
 include scripts/collect_runtime_licenses.py
+include scripts/smoke_studio.py
 recursive-include scripts *.ps1
 include tests/test_dev_tasks.ps1
-recursive-include demo *.py *.html
 include benchmark.sh
 include setup.sh
 recursive-include faster_qwen3_tts *.py
+recursive-include faster_qwen3_tts/standalone_ui/static *.html *.css *.js *.json LICENSE *.woff2
+recursive-include faster_qwen3_tts/standalone_ui/assets *.webp *.svg
 recursive-include benchmarks *.py
 recursive-include examples *.py
 global-exclude *.pyc

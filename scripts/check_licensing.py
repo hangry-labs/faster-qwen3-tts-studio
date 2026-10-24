@@ -62,11 +62,6 @@ def check_source(root: Path) -> list[str]:
                 continue
             if not (document.parent / target.split("#", 1)[0]).exists():
                 errors.append(f"Broken licensing document link in {name}: {target}")
-    server = root / "demo/server.py"
-    if server.is_file():
-        text = server.read_text(encoding="utf-8")
-        if "_fetch_preset_assets" in text or "_PRESET_REMOTE" in text:
-            errors.append("Demo must not silently restore unreviewed upstream recordings")
     return errors
 
 
@@ -89,8 +84,12 @@ def check_artifact(path: Path) -> list[str]:
     else:
         with tarfile.open(path) as archive:
             names = [member.name for member in archive.getmembers() if member.isfile()]
+            roots = {PurePosixPath(member).parts[0] for member in names}
+            if len(roots) != 1:
+                errors.append('Source archive must contain one package root')
+            prefix = next(iter(roots), '') + '/'
             for name in REQUIRED:
-                matches = [member for member in names if member.endswith("/" + name)]
+                matches = [member for member in names if member == prefix + name]
                 if len(matches) != 1:
                     errors.append(f"Source archive missing licensing material or has duplicates: {name}")
                 elif name == "THIRD_PARTY_NOTICES.md":

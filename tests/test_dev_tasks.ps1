@@ -64,7 +64,7 @@ try {
     Assert-True ($run -contains '127.0.0.1:7860:7860') 'Start must bind locally by default.'
     Assert-True ($run -contains 'CUDA_VISIBLE_DEVICES=0') 'Start must select the configured NVIDIA GPU.'
     Assert-True ($run -contains 'type=volume,src=faster_qwen3_tts_studio_data,dst=/app/persistent') 'Start must persist product data.'
-    Assert-True (@($run | Where-Object { $_ -like 'type=bind,*readonly' }).Count -eq 2) 'Source mounts must remain separate native arguments and read-only.'
+    Assert-True (@($run | Where-Object { $_ -like 'type=bind,*readonly' }).Count -eq 1) 'Source must mount as a native read-only argument.'
     $global:mockChanges.Clear()
 
     & $devScript test-runtime | Out-Null
@@ -75,7 +75,7 @@ try {
     $global:mockChanges.Clear()
 
     $global:mockRunning = 'false'
-    Assert-Fails start 'Demo exited during startup'
+    Assert-Fails start 'Studio exited during startup'
     $global:mockRunning = 'true'
     $global:mockChanges.Clear()
 

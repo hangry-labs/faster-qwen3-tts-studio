@@ -71,14 +71,14 @@ function Initialize-Volume {
     }
 }
 
-function Wait-ForDemo {
+function Wait-ForStudio {
     $probeAddress = if ($bindAddress -eq '0.0.0.0') { '127.0.0.1' } else { $bindAddress }
     $deadline = [DateTime]::UtcNow.AddSeconds(45)
     while ([DateTime]::UtcNow -lt $deadline) {
         $running = (Invoke-Docker @('container', 'inspect', '--format', '{{.State.Running}}', $container) | Out-String).Trim()
         if ($running -ne 'true') {
             Invoke-Docker @('logs', '--tail', '40', $container)
-            throw 'Demo exited during startup. Inspect task logs.'
+            throw 'Studio exited during startup. Inspect task logs.'
         }
         try {
             $status = Invoke-RestMethod -Uri "http://${probeAddress}:$port/status" -TimeoutSec 2
@@ -88,7 +88,7 @@ function Wait-ForDemo {
         }
         Start-Sleep -Seconds 1
     }
-    throw 'Demo did not become ready within 45 seconds. Inspect task logs.'
+    throw 'Studio did not become ready within 45 seconds. Inspect task logs.'
 }
 
 $engine = (Invoke-Docker @('info', '--format', '{{.OSType}}') | Out-String).Trim()
@@ -117,8 +117,9 @@ switch ($Action) {
             '--publish', "${bindAddress}:${port}:7860", '--gpus', 'all',
             '--env', "CUDA_VISIBLE_DEVICES=$gpuDevice", '--mount', "type=volume,src=$dataVolume,dst=/app/persistent")
         if ($env:HF_TOKEN) { $runArgs += @('--env', 'HF_TOKEN') }
+        if ($env:QWEN_STUDIO_ASR_URL) { $runArgs += @('--env', 'QWEN_STUDIO_ASR_URL') }
         if ($devMount) {
-            foreach ($folder in @('faster_qwen3_tts', 'demo')) {
+            foreach ($folder in @('faster_qwen3_tts')) {
                 $source = Join-Path $repoRoot $folder
                 $runArgs += @('--mount', "type=bind,src=$source,dst=/app/$folder,readonly")
             }
@@ -126,7 +127,7 @@ switch ($Action) {
         Invoke-Change ($runArgs + $image)
         if ($dryRun) { Write-Host "Planned UI/API: http://${bindAddress}:$port. No Docker resources changed." }
         else {
-            Wait-ForDemo
+            Wait-ForStudio
             Write-Host "UI/API ready: http://${bindAddress}:$port (load a model in the UI)."
         }
     }
@@ -159,7 +160,7 @@ switch ($Action) {
         if ($null -eq (Get-OwnedResource 'image' $image)) { throw 'Development image is missing. Run task init first.' }
         $testArgs = @('run', '--rm', '--entrypoint', 'sh', '--workdir', '/workspace',
             '--env', 'PYTHONDONTWRITEBYTECODE=1')
-        foreach ($item in @('faster_qwen3_tts', 'demo', 'tests', 'scripts', 'docs',
+        foreach ($item in @('faster_qwen3_tts', 'tests', 'scripts', 'docs',
             'pyproject.toml', 'LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md')) {
             $source = Join-Path $repoRoot $item
             $testArgs += @('--mount', "type=bind,src=$source,dst=/workspace/$item,readonly")

@@ -12,6 +12,7 @@ dist/
 build/
 .cache/
 .task/
+.env
 outputs/
 artifacts/
 *.egg-info/

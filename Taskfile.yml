@@ -1,5 +1,7 @@
 version: '3'
 
+dotenv: ['.env']
+
 vars:
   IMAGE: faster-qwen3-tts-studio:dev
   CONTAINER: faster-qwen3-tts-studio
@@ -9,6 +11,7 @@ vars:
   GPU_DEVICE: '0'
   DEV_MOUNT: '1'
   DRY_RUN: '0'
+  ASR_URL: '{{.QWEN_STUDIO_ASR_URL | default ""}}'
 
 env:
   QWEN_TASK_IMAGE: '{{.IMAGE}}'
@@ -72,14 +75,14 @@ tasks:
     desc: Check Python syntax without loading model dependencies
     dir: '{{.TASKFILE_DIR}}'
     cmds:
-      - uv run --no-project --python 3.13 python -m compileall -q faster_qwen3_tts demo scripts
+      - uv run --no-project --python 3.13 python -m compileall -q faster_qwen3_tts scripts
 
   test:
-    desc: Test task lifecycle, licensing, and demo behavior without GPU dependencies
+    desc: Test task lifecycle and licensing without GPU dependencies
     dir: '{{.TASKFILE_DIR}}'
     cmds:
       - pwsh -NoProfile -File tests/test_dev_tasks.ps1
-      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_demo_ui.py tests/test_demo_entitlements.py -q -p no:cacheprovider
+      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py -q -p no:cacheprovider
 
   licenses:
     desc: Check source notices and licensing documentation
@@ -92,6 +95,12 @@ tasks:
     dir: '{{.TASKFILE_DIR}}'
     cmds:
       - pwsh -NoProfile -File scripts/dev.ps1 test-runtime
+
+  smoke:
+    desc: Generate real voice samples and check them with the configured ASR service
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - uv run --no-project --python 3.13 python scripts/smoke_studio.py --base-url http://127.0.0.1:{{.PORT}} --asr-url "{{.ASR_URL}}" {{.CLI_ARGS}}
 
   validate:
     desc: Run syntax, lightweight tests, and source notice checks

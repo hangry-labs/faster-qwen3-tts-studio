@@ -37,19 +37,28 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ggml = [
-    "qwentts-cpp-python>=0.5.0",
-]
-demo = [
+studio = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.24.0",
     "python-multipart>=0.0.7",
-    "huggingface-hub[oauth]>=1.5.0,<2.0",
+    "httpx>=0.27,<1",
+    "pydantic>=2,<3",
+]
+ggml = [
+    "qwentts-cpp-python>=0.5.0",
 ]
 
 [project.scripts]
+qwen3-tts-studio = "faster_qwen3_tts.standalone_ui.server:main"
 faster-qwen3-tts = "faster_qwen3_tts.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/andimarafioti/faster-qwen3-tts"
 Repository = "https://github.com/andimarafioti/faster-qwen3-tts"
+
+[tool.setuptools.package-data]
+"faster_qwen3_tts.standalone_ui" = [
+    "static/*.html", "static/*.css", "static/*.js", "static/locales/*.json",
+    "static/vendor/lucide/*", "static/vendor/wavesurfer/*",
+    "static/vendor/wavesurfer/plugins/*", "assets/*",
+]

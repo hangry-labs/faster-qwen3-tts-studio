@@ -75,7 +75,7 @@ tasks:
     desc: Check Python syntax without loading model dependencies
     dir: '{{.TASKFILE_DIR}}'
     cmds:
-      - uv run --no-project --python 3.13 python -m compileall -q faster_qwen3_tts scripts
+      - uv run --no-project --python 3.13 python -m compileall -q src scripts benchmarks
 
   test:
     desc: Test task lifecycle, licensing and publication rules without GPU dependencies
@@ -117,7 +117,7 @@ tasks:
       - pwsh -NoProfile -File scripts/check-packages.ps1
 
   release:
-    desc: Validate and prepare LOCAL release artifacts; remote publication is not configured
+    desc: Validate and prepare local Python artifacts without publishing
     cmds:
       - task: validate
       - task: package

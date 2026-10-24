@@ -4,11 +4,19 @@ Derived from Faster Qwen3-TTS by Andres Marafioti.
 Copyright (c) 2026 Andres Marafioti. Original wrapper code is MIT licensed.
 Modifications and distribution work are maintained by Hangry Labs.
 
-This distribution also contains adapted Apache-2.0 code from:
+This distribution also contains original and adapted Apache-2.0 code from:
 
   Qwen3-TTS, Copyright 2026 The Alibaba Qwen team; and, where indicated
   upstream, The Qwen team, Alibaba Group and the HuggingFace Inc. team.
   https://github.com/QwenLM/Qwen3-TTS
+
+  Transformers 5 compatibility changes by Andres Marafioti, incorporated from
+  https://github.com/andimarafioti/Qwen3-TTS/tree/distribution/qwen-tts-hf
+  including QwenLM/Qwen3-TTS pull request #360.
+  The Qwen model and 12 Hz inference code are maintained locally; Hangry Labs
+  omits the upstream demo and 25 Hz codec and adapts tokenizer exports/loading.
+  Exact incorporated revisions are recorded in the packaged upstreams.toml and
+  docs/UPSTREAMS.md. The separately published qwen-tts-hf wheel is not bundled.
 
   Qwen3-TTS-streaming, derived from Qwen3-TTS and maintained by dffdeeq
   and contributors.

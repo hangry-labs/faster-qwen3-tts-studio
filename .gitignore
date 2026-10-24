@@ -1,15 +1,13 @@
-models/
+/models/
 sample_*.wav
 *.wav
-*.json
-!faster_qwen3_tts/standalone_ui/static/locales/*.json
+bench_results_*.json
 __pycache__/
 *.pyc
 .venv/
 .cache/
 outputs/
 artifacts/
-packages/qwentts_cpp_python/
 .ai/
 AGENTS.md
 build/
@@ -18,3 +16,4 @@ dist/
 .task/
 .env
 .ci-build/
+benchmark-data/

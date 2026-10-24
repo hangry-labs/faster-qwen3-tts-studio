@@ -74,7 +74,8 @@ or model inference was performed as part of licensing research.
 
 Findings include:
 
-- `qwen-tts-hf` depends on Gradio even though this project's UI uses FastAPI.
+- The former `qwen-tts-hf` dependency brought Gradio for an unused demo. The
+  model source is now local and the demo/dependency are removed.
 - Librosa brings Python-SoXR/libsoxr, under LGPL-2.1-or-later.
 - MPL-covered components include certifi, tqdm, and portions carried by orjson.
 - Package labels alone miss native payloads and vendored code, including
@@ -90,33 +91,20 @@ See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for component detail,
 supplemental notices, and the Apache-2.0 text. Research candidate notices and
 source archives are not shipped as if they qualified the eventual runtime.
 
-### Optional ASR has an independent model license
+### Local inference source and removed optional runtimes
 
-The default Studio image no longer installs nano-parakeet. Reference transcription
-uses an operator-configured service. The following audit and notices are retained
-for optional upstream benchmark utilities that still reference nano-parakeet;
-they do not describe an ASR model bundled with the Studio.
+The model implementation and Transformers 5 compatibility changes are now
+maintained in this repository under their original Apache-2.0 terms. Exact
+revisions and all three synchronization sources are recorded in
+[upstream provenance](UPSTREAMS.md). Original source headers are retained and
+the modified 12 Hz wrapper/export/version files identify local changes. The
+existing accelerated wrapper retains its MIT and adapted Apache obligations.
 
-`nano-parakeet` code is MIT, but the NVIDIA Parakeet v3 checkpoint and the
-SentencePiece model extracted from it are not MIT assets. The reviewed model
-revision `541d1f99c6b0c3cd0b11a95167540bb8edefd82b` declares CC BY 4.0.
-The grant permits commercial use and redistribution with its attribution
-conditions. Keep the NVIDIA/model identity, license link and supplied notices,
-and identify any changes. The code wheel omits its own MIT license, so the
-missing upstream MIT text has also been supplied.
-
-The bundled tokenizer's 8192 vocabulary entries were independently compared
-with the official pinned NVIDIA tokenizer JSON and matched in order. The
-bundled `nano_parakeet/tokenizer.model` is 360916 bytes, SHA-256
-`eacec2b0a77f336d4a2ca4a25a7047575d3c2b74de47e997f4c205126ed3135e`.
-The comparison used the SentencePiece piece strings and the official tokenizer
-JSON. This proves vocabulary equivalence, not binary identity or a warranty of
-every possible underlying right.
-
-Primary evidence: [NVIDIA model card](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3/tree/541d1f99c6b0c3cd0b11a95167540bb8edefd82b),
-[CC BY 4.0 terms](https://creativecommons.org/licenses/by/4.0/legalcode.en),
-and the linked model card. No NeMo framework runtime is required by nano-parakeet;
-do not infer that the full NeMo dependency tree is installed here.
+The unused Gradio demo, 25 Hz codec, GGML/native adapter and local-ASR benchmark
+utilities have been removed. The runtime does not install `qwen-tts-hf`,
+Gradio, ONNX Runtime, Python SoX or TorchAudio. Historical candidate inventories
+describe the old dependency set, not the current container. Reference
+transcription uses a separately configured service and bundles no ASR assets.
 
 ### Historical recordings were not cleared by the code license
 
@@ -132,21 +120,13 @@ right. Existing Git history and old upstream artifacts were not rewritten.
 New examples should use a documented original recording or a newly generated
 voice with an explicit redistribution grant and recorded recipe.
 
-### GGML is not the supported qualification target
-
-The experimental adapter and converted-model repository were reviewed for
-orientation. Their reviewed declarations are MIT/Apache, but the native wheel
-omits some embedded-source notices. Supplemental qwentts.cpp, ggml and
-cpp-httplib notices are retained. This is not qualification of native build
-variants or converted weights. NVIDIA/Torch is the supported product direction.
-
 ## Container release requirements
 
 The current [container workflow](RELEASING.md) pins the Python base image by
 digest, includes a runtime notice inventory and builds full/tiny targets. The
 full target records hashes for its pinned model files and retains upstream model
-cards. Supplemental Apache notices for three inspected wheels without license
-files are recorded in [Third-Party Notices](../THIRD_PARTY_NOTICES.md#supplemental-notices-for-installed-wheels).
+cards. A supplemental Apache notice for the inspected Tokenizers wheel without a
+license file is recorded in [Third-Party Notices](../THIRD_PARTY_NOTICES.md#supplemental-notices-for-installed-wheels).
 These packaging records support the exact-image review below; they are not a
 substitute for it.
 

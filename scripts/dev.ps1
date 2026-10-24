@@ -119,7 +119,8 @@ switch ($Action) {
         if ($env:HF_TOKEN) { $runArgs += @('--env', 'HF_TOKEN') }
         if ($env:QWEN_STUDIO_ASR_URL) { $runArgs += @('--env', 'QWEN_STUDIO_ASR_URL') }
         if ($devMount) {
-            foreach ($folder in @('faster_qwen3_tts')) {
+            $runArgs += @('--env', 'PYTHONPATH=/app/src')
+            foreach ($folder in @('src')) {
                 $source = Join-Path $repoRoot $folder
                 $runArgs += @('--mount', "type=bind,src=$source,dst=/app/$folder,readonly")
             }
@@ -159,8 +160,8 @@ switch ($Action) {
     'test-runtime' {
         if ($null -eq (Get-OwnedResource 'image' $image)) { throw 'Development image is missing. Run task init first.' }
         $testArgs = @('run', '--rm', '--entrypoint', 'sh', '--workdir', '/workspace',
-            '--env', 'PYTHONDONTWRITEBYTECODE=1')
-        foreach ($item in @('faster_qwen3_tts', 'tests', 'scripts', 'docs',
+            '--env', 'PYTHONDONTWRITEBYTECODE=1', '--env', 'PYTHONPATH=/workspace/src:/workspace')
+        foreach ($item in @('src', 'tests', 'scripts', 'docs',
             'pyproject.toml', 'LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md')) {
             $source = Join-Path $repoRoot $item
             $testArgs += @('--mount', "type=bind,src=$source,dst=/workspace/$item,readonly")

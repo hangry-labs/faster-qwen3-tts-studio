@@ -17,7 +17,7 @@ class LicensingTests(unittest.TestCase):
     def test_consolidation_preserves_original_license_texts(self):
         notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
         self.assertEqual([], check_notice_text(notices.replace("\n", "\r\n")))
-        for original in ("Copyright (c) 2026 Andrés Marafioti", "3. Grant of Patent License."):
+        for original in ("Copyright (c) 2026 Thanh Sang", "3. Grant of Patent License."):
             with self.subTest(text=original):
                 self.assertTrue(check_notice_text(notices.replace(original, "removed")))
 
@@ -51,14 +51,14 @@ class LicensingTests(unittest.TestCase):
 
     def test_supplemental_notice_is_limited_to_verified_version_and_present_document(self):
         document = ROOT / 'THIRD_PARTY_NOTICES.md'
-        self.assertTrue(supplemental_notice('gradio_client', '2.7.2', document))
-        self.assertFalse(supplemental_notice('gradio_client', '2.7.3', document))
-        self.assertFalse(supplemental_notice('unrelated', '2.7.2', document))
-        self.assertFalse(supplemental_notice('gradio_client', '2.7.2', document / 'absent'))
+        self.assertTrue(supplemental_notice('tokenizers', '0.22.2', document))
+        self.assertFalse(supplemental_notice('tokenizers', '0.22.3', document))
+        self.assertFalse(supplemental_notice('unrelated', '0.22.2', document))
+        self.assertFalse(supplemental_notice('tokenizers', '0.22.2', document / 'absent'))
         with tempfile.TemporaryDirectory() as folder:
             unrelated = Path(folder) / 'NOTICE.md'
             unrelated.write_text('An unrelated notice', encoding='utf-8')
-            self.assertFalse(supplemental_notice('gradio_client', '2.7.2', unrelated))
+            self.assertFalse(supplemental_notice('tokenizers', '0.22.2', unrelated))
 
     def test_vendor_license_does_not_replace_or_duplicate_root_license(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -1,44 +1,16 @@
-include README.md
-include BLOG.md
-include LICENSE
-include NOTICE
-include THIRD_PARTY_NOTICES.md
-include docs/LICENSING.md
-include docs/DEVELOPMENT.md
-include docs/STUDIO.md
-include docs/UI_MIGRATION.md
-include docs/ENGINE.md
-include docs/UPSTREAM_BENCHMARKS.md
-include docs/dockerhub.md
-include docs/RELEASING.md
+include README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md
+include pyproject.toml Taskfile.yml Dockerfile .dockerignore requirements.runtime.txt
 include .github/workflows/docker-build.yml
-include Taskfile.yml
-include Dockerfile
-include .dockerignore
-include requirements.dev.txt
-include scripts/check_licensing.py
-include scripts/collect_runtime_licenses.py
-include scripts/smoke_studio.py
-include scripts/prefetch_models.py
-include scripts/ci_images.py
-recursive-include scripts *.ps1
-include tests/test_dev_tasks.ps1
-include benchmark.sh
-include setup.sh
-recursive-include faster_qwen3_tts *.py
-recursive-include faster_qwen3_tts/standalone_ui/static *.html *.css *.js *.json LICENSE *.woff2
-recursive-include faster_qwen3_tts/standalone_ui/assets *.webp *.svg
+include .github/buildkitd.toml
+recursive-include docs *.md
+recursive-include src *.py *.toml *.html *.css *.js *.json LICENSE *.woff2 *.webp *.svg
+recursive-include scripts *.py *.ps1
+recursive-include tests *.py *.ps1
 recursive-include benchmarks *.py
-recursive-include examples *.py
 global-exclude *.pyc
 global-exclude __pycache__/*
 exclude *.wav
-exclude bench_results_*.json
-exclude out.wav
-exclude ref_audio.wav
-exclude sample_*.wav
 prune .venv
-prune .ruff_cache
 prune .ai
 prune .idea
 global-exclude AGENTS.md

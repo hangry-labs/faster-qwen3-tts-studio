@@ -2,38 +2,40 @@
 requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["faster_qwen3_tts*"]
+where = ["src"]
+include = ["faster_qwen3_tts*", "qwen_tts*"]
 
 [project]
 name = "faster-qwen3-tts"
 version = "0.5.4"
-description = "Real-time Qwen3-TTS inference with CUDA graphs or GGML"
+description = "Hangry Labs Qwen3-TTS Studio with local model code and NVIDIA CUDA graph inference"
 readme = "README.md"
 license = "MIT AND Apache-2.0"
 license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Andres Marafioti" }]
-keywords = ["tts", "qwen", "cuda", "cudagraph", "ggml", "metal", "streaming"]
+maintainers = [{ name = "Hangry Labs" }]
+keywords = ["tts", "qwen", "cuda", "cudagraph", "streaming", "studio"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
-    "qwen-tts-hf>=0.1.1.post1,<0.2",
     "transformers>=5.15.1,<6",
-    "torch>=2.5.1",
+    "torch>=2.10,<3",
+    "accelerate>=1.12,<2",
+    "librosa>=1,<2",
     "numpy",
     "soundfile",
     "huggingface-hub>=1.5.0,<2.0",
-    "qwentts-cpp-python>=0.5.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
 
 [project.optional-dependencies]
@@ -44,19 +46,17 @@ studio = [
     "httpx>=0.27,<1",
     "pydantic>=2,<3",
 ]
-ggml = [
-    "qwentts-cpp-python>=0.5.0",
-]
-
 [project.scripts]
 qwen3-tts-studio = "faster_qwen3_tts.standalone_ui.server:main"
 faster-qwen3-tts = "faster_qwen3_tts.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/andimarafioti/faster-qwen3-tts"
-Repository = "https://github.com/andimarafioti/faster-qwen3-tts"
+Homepage = "https://github.com/hangry-labs/faster-qwen3-tts-studio"
+Repository = "https://github.com/hangry-labs/faster-qwen3-tts-studio"
+"Upstream sources" = "https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/UPSTREAMS.md"
 
 [tool.setuptools.package-data]
+"faster_qwen3_tts" = ["upstreams.toml"]
 "faster_qwen3_tts.standalone_ui" = [
     "static/*.html", "static/*.css", "static/*.js", "static/locales/*.json",
     "static/vendor/lucide/*", "static/vendor/wavesurfer/*",

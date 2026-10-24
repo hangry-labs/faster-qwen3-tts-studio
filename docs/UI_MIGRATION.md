@@ -1,7 +1,7 @@
 # Demo-to-Studio review
 
 Reviewed and updated on 2026-10-24 against the upstream demo HTML/server and
-the active `faster_qwen3_tts/standalone_ui/` implementation. All six gaps from the
+the active `src/faster_qwen3_tts/standalone_ui/` implementation. All six gaps from the
 initial review are now addressed. Studio additions, including Base delivery
 direction, saved voices, editing, GPU telemetry and expanded controls, are retained.
 After the final parity check, the original demo was removed on 2026-10-24 with
@@ -83,11 +83,9 @@ tests are removed. Documentation now points to the Studio. A real fresh-start
 test verifies the Studio starts without network access, models, accounts or
 inherited recordings.
 
-The direct nano-parakeet development dependency is removed. The installed Qwen
-package does not require it, and Studio transcription uses the configured remote
-service. Its attribution is retained because optional upstream benchmark scripts
-still reference it; it is not installed in the default Studio image. Those
-benchmark utilities are separate from the Studio test workflow.
+Local-ASR benchmark helpers and their unused notices have also been removed.
+Studio transcription uses the configured external service. Model inference is
+maintained locally; see [upstream sources](UPSTREAMS.md).
 
 Core GPU synthesis and remote-ASR checks during migration covered all five
 checkpoints and Base directions. The fixes add CPU regression tests and focused

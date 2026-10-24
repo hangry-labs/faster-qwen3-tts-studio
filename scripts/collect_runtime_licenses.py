@@ -16,14 +16,13 @@ import shutil
 import subprocess
 import sys
 
-SUPPLEMENTAL_APACHE = {('flatbuffers', '25.12.19'), ('gradio-client', '2.7.2'),
-                       ('tokenizers', '0.22.2')}
+SUPPLEMENTAL_APACHE = {('tokenizers', '0.22.2')}
 
 
 def supplemental_notice(name: str, version: str, document: Path) -> str:
     normalized = re.sub(r'[-_.]+', '-', name).lower()
     if (normalized, version) in SUPPLEMENTAL_APACHE and document.is_file():
-        listed_name = normalized.replace('gradio-client', 'gradio_client')
+        listed_name = normalized
         row = rf'^\| {re.escape(listed_name)} {re.escape(version)} \|'
         if re.search(row, document.read_text(encoding='utf-8'), re.M):
             return 'THIRD_PARTY_NOTICES.md#supplemental-notices-for-installed-wheels'

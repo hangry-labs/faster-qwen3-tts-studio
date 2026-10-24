@@ -12,7 +12,7 @@ from huggingface_hub import snapshot_download
 # Read the shared stdlib-only catalog without importing the inference package.
 # The asset stage needs Hub downloads, not Torch/model initialization.
 MODELS = runpy.run_path(str(Path(__file__).resolve().parents[1] /
-                           'faster_qwen3_tts/standalone_ui/model_catalog.py'))['MODELS']
+                           'src/faster_qwen3_tts/standalone_ui/model_catalog.py'))['MODELS']
 
 
 def prefetch(cache_root: Path, *, offline: bool = False) -> list[dict]:

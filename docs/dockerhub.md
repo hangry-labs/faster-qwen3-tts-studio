@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://hangrylabs.app/">
-    <img src="https://raw.githubusercontent.com/hangry-labs/faster-qwen3-tts-studio/main/faster_qwen3_tts/standalone_ui/assets/qwen3_tts_logo_horizontal.webp" alt="Hangry Labs Faster Qwen3-TTS Studio logo" width="900">
+    <img src="https://raw.githubusercontent.com/hangry-labs/faster-qwen3-tts-studio/main/src/faster_qwen3_tts/standalone_ui/assets/qwen3_tts_logo_horizontal.webp" alt="Hangry Labs Faster Qwen3-TTS Studio logo" width="900">
   </a>
 </p>
 
@@ -71,14 +71,15 @@ The current commands intentionally use the local `:dev` target.
 - Optional reference transcription through an existing ASR service
 - Queue progress, cancellation, timing diagnostics and content-based prompt reuse
 - System controls for model loading/unloading and on-demand GPU telemetry
-- Python 3.13 with Torch/TorchAudio 2.10.0 CUDA 12.8 wheels
+- Python 3.13 with Torch 2.10.0 CUDA 12.8 wheels
 
 **Languages:** Chinese, English, Japanese, Korean, German, French, Russian,
 Portuguese, Spanish and Italian, plus automatic selection.
 
-The maintained Studio supports NVIDIA/Torch. The inherited GGML adapter is not
-part of the product UI. CUDA graph acceleration uses official Qwen checkpoints,
-not a separate model family.
+The maintained Studio supports NVIDIA/Torch. CUDA graph acceleration uses the
+official Qwen checkpoints with locally maintained inference code. See
+[source provenance](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/UPSTREAMS.md)
+for all three upstreams and exact incorporated revisions.
 
 ## Persistent Data And Runtime Settings
 

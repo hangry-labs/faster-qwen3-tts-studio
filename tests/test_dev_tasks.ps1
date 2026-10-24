@@ -65,6 +65,8 @@ try {
     Assert-True ($run -contains 'CUDA_VISIBLE_DEVICES=0') 'Start must select the configured NVIDIA GPU.'
     Assert-True ($run -contains 'type=volume,src=faster_qwen3_tts_studio_data,dst=/app/persistent') 'Start must persist product data.'
     Assert-True (@($run | Where-Object { $_ -like 'type=bind,*readonly' }).Count -eq 1) 'Source must mount as a native read-only argument.'
+    Assert-True ($run -contains 'PYTHONPATH=/app/src') 'Development imports must use both mounted local packages.'
+    Assert-True (@($run | Where-Object { $_ -like 'type=bind,*dst=/app/src,readonly' }).Count -eq 1) 'The complete src tree must be mounted.'
     $global:mockChanges.Clear()
 
     & $devScript test-runtime | Out-Null

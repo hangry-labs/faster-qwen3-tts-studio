@@ -11,26 +11,26 @@ ENV PYTHONUNBUFFERED=1 \
     QWEN_STUDIO_DATA=/app/persistent/studio
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg libsndfile1 sox libgomp1 \
+    ffmpeg libsndfile1 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY requirements.dev.txt ./
-RUN python -m pip install --only-binary=:all: -r requirements.dev.txt
+COPY requirements.runtime.txt ./
+RUN python -m pip install --only-binary=:all: -r requirements.runtime.txt
 
 FROM dependencies AS model-assets
 COPY scripts/prefetch_models.py ./scripts/
-COPY faster_qwen3_tts/standalone_ui/model_catalog.py ./faster_qwen3_tts/standalone_ui/
+COPY src/faster_qwen3_tts/standalone_ui/model_catalog.py ./src/faster_qwen3_tts/standalone_ui/
 RUN python -u scripts/prefetch_models.py --cache-root /app/baked-models/huggingface
 
 FROM dependencies AS app
 COPY pyproject.toml README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
-COPY faster_qwen3_tts/ ./faster_qwen3_tts/
-RUN python -m pip install --only-binary=:all: -c requirements.dev.txt '.[studio]' \
+COPY src/ ./src/
+RUN python -m pip install --only-binary=:all: -c requirements.runtime.txt '.[studio]' \
     && python -m pip check
-RUN python -c "from importlib.metadata import distributions; print('\n'.join(sorted(d.metadata['Name'] + '==' + d.version for d in distributions())))" > /app/runtime-constraints.txt
+RUN python -c "from importlib.metadata import distributions; print('\n'.join(sorted({d.metadata['Name'] + '==' + d.version for d in distributions()})))" > /app/runtime-constraints.txt
 COPY scripts/collect_runtime_licenses.py ./scripts/
-COPY docs/LICENSING.md ./docs/
+COPY docs/LICENSING.md docs/UPSTREAMS.md ./docs/
 RUN python scripts/collect_runtime_licenses.py --output /app/licenses/runtime
 
 ARG BUILD_DATE=unknown

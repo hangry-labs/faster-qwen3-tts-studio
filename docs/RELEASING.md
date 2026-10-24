@@ -107,6 +107,14 @@ peak hosted-runner disk usage down. Its application install is constrained to
 the exact dependency versions resolved in the shared app stage, recorded in
 `/app/runtime-constraints.txt` and exported with the evidence.
 
+The isolated CI builder uses [BuildKit cache settings](../.github/buildkitd.toml)
+that reserve 40 GB for cache, allow up to 60 GB, and target 10 GB free space.
+The model snapshots and NVIDIA dependencies together exceed small default cache
+budgets. Keeping them through the full/tiny/evidence steps avoids downloading
+the checkpoints repeatedly within one publishing job. These settings do not
+change an operator's Docker daemon. Local full builds also need room for model
+layers, compressed image blobs and an initial writable model-cache copy.
+
 GitHub-hosted CPU runners do not qualify real GPU inference. Before promoting a
 release, exercise the packaged candidate with NVIDIA hardware, full with a fresh
 cache and no network, and tiny with an online cache fill followed by an offline

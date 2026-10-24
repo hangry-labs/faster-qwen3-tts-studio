@@ -1,8 +1,0 @@
-# Development image only. This pins the core pair, not the full transitive tree.
---extra-index-url https://download.pytorch.org/whl/cu128
-torch==2.10.0+cu128
-torchaudio==2.10.0+cu128
-qwen-tts-hf==0.1.1.post1
-transformers==5.15.1
-huggingface-hub==1.28.0
-tokenizers==0.22.2

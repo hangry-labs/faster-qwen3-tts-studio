@@ -1,2 +1,0 @@
-# Operator-supplied local preset transcripts may be placed here.
-# Format is preset_id followed by a colon and the exact permitted recording transcript.

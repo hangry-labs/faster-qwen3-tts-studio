@@ -7,12 +7,14 @@ import numpy as np
 import soundfile as sf
 from faster_qwen3_tts import FasterQwen3TTS
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.environ.get("QWEN_TTS_BENCH_OUTPUT", os.getcwd())
 MODEL_SIZE = os.environ.get('MODEL_SIZE', '0.6B')
 MODEL_ID = f'Qwen/Qwen3-TTS-12Hz-{MODEL_SIZE}-Base'
 text = "Ladies and gentlemen, I have just been informed that this speech is being generated faster than I can speak it. The robots have officially won. Please remain calm."
-ref_audio = os.path.join(PROJECT_DIR, 'ref_audio.wav')
-ref_text = "I'm confused why some people have super short timelines, yet at the same time are bullish on scaling up reinforcement learning atop LLMs. If we're actually close to a human-like learner, then this whole approach of training on verifiable outcomes."
+ref_audio = os.environ.get("QWEN_TTS_REF_AUDIO", "")
+ref_text = os.environ.get("QWEN_TTS_REF_TEXT", "")
+if not os.path.isfile(ref_audio) or not ref_text.strip():
+    raise RuntimeError("Set QWEN_TTS_REF_AUDIO and its exact QWEN_TTS_REF_TEXT before running this benchmark.")
 
 print("Loading model...")
 model = FasterQwen3TTS.from_pretrained(

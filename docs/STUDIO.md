@@ -127,8 +127,8 @@ methods, streaming/complete output, sampling controls and downloads. The saved
 voice library replaces fixed operator reference slots. The six migration gaps
 are closed; see the [migration review](UI_MIGRATION.md) for the comparison and
 deliberate differences. The old UI and its launch/package integration have been
-removed. HF Space login/quotas and
-experimental GGML comparison are outside the NVIDIA local Studio target.
+removed. Hosted Space login/quotas and the old GGML adapter are also removed;
+the maintained engine is NVIDIA/Torch with local model source.
 
 ```powershell
 task validate

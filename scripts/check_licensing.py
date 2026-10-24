@@ -20,12 +20,7 @@ LICENSE_EXPRESSION = "MIT AND Apache-2.0"
 # SHA-256 of the original upstream texts, with LF newlines and outer whitespace
 # removed. Keep the copyright, grant, and disclaimer intact when editing prose.
 LICENSE_TEXT_HASHES = {
-    "nano-parakeet MIT notice": "717aa5a6795bbd1367dbbf33c11e238a2923e379231de7a8b42c1bdae5f57af3",
     "nano-qwen3tts-vllm MIT notice": "cad241ce93ea8cf56730f2b9ca37950d8a11d845cfb0fb9d1b3a3ebbbd285435",
-    "qwentts-cpp-python MIT notice": "494d421b44f446c54097a4df290728144d644b8e0b6b451063bcc4cae03d5a3c",
-    "qwentts.cpp MIT notice": "557951720fe81d864f320e83c8d3fd1ba2a4a2af5cfcee5be1c504ab8878b3eb",
-    "ggml MIT notice": "3468798dd4eb1badf2d665d4afec49d424aa31fd4f0af91638ccd4b1a48615d0",
-    "cpp-httplib MIT notice": "d260e6eaf487837d051bb6dbb9bba4715e354470ba7d2db1e102aa8a75302041",
     "Apache-2.0 license text": "f843da8c75d96e7303bc6dc92ebf88926921d16d6bd3b8c04d8cbe3de810821f",
 }
 

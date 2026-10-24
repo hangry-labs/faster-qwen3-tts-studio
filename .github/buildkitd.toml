@@ -1,0 +1,7 @@
+# The five model snapshots and NVIDIA dependencies exceed small default caches.
+# This applies only to the isolated, ephemeral GitHub Actions builder.
+[worker.oci]
+gc = true
+reservedSpace = "40GB"
+maxUsedSpace = "60GB"
+minFreeSpace = "10GB"

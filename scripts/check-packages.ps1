@@ -15,4 +15,4 @@ foreach ($artifact in $artifacts) { $checkArgs += @('--artifact', $artifact.Full
 if ($LASTEXITCODE -ne 0) { throw 'Distribution notice checks failed.' }
 & uvx twine check --strict @($artifacts.FullName)
 if ($LASTEXITCODE -ne 0) { throw 'Distribution metadata checks failed.' }
-Write-Host 'Local artifacts are ready in dist/. Publication has not been configured.'
+Write-Host 'Local Python artifacts are ready in dist/. This task does not publish them.'

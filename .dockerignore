@@ -5,7 +5,6 @@
 AGENTS.md
 **/AGENTS.md
 ref_audio*.wav
-samples/
 .venv/
 **/__pycache__/
 dist/
@@ -16,4 +15,6 @@ build/
 outputs/
 artifacts/
 *.egg-info/
+**/*.egg-info/
 .ci-build/
+benchmark-data/

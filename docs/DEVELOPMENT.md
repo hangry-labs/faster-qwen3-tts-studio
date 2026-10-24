@@ -25,13 +25,13 @@ task stop
 | `task nuke` | Remove this project's labelled container, development image, and **all contents of its data volume**, including cached models and assets. Source files stay in place. |
 | `task release` | Run local validation, build wheel/sdist artifacts in `dist/`, and verify their notices and metadata. Does not publish images or create Git refs. |
 
-The development image uses Python 3.13 and matching Torch/TorchAudio 2.10.0 CUDA
+The development image uses Python 3.13 and matching Torch 2.10.0 CUDA
 12.8 wheels. It installs the current checkout and serves the
 [Hangry Labs Studio](STUDIO.md) with Torch as the only enabled backend.
 The upstream demo has been replaced. No model weights are baked in;
 starting the container does not preload models.
 
-`requirements.dev.txt` pins the core runtime components. It is not a complete
+`requirements.runtime.txt` pins the core runtime components. It is not a complete
 transitive lockfile. The Python base image is pinned by digest; apt and transitive
 Python dependencies remain moving development inputs. This local workflow does not qualify an image for release;
 see [the licensing audit](LICENSING.md#container-release-requirements).
@@ -94,7 +94,7 @@ task release
 It does not install Torch on Windows, run model
 inference, or measure GPU performance. After `task init`, `task test-runtime`
 runs the remaining CPU engine unit tests in an ephemeral container, including
-the mocked GGML adapter tests and fresh offline Studio startup. It installs pytest only in that temporary
+local model/codec compatibility checks and fresh offline Studio startup. It installs pytest only in that temporary
 container and excludes model parity tests. GPU parity tests and benchmarks
 remain separate work requiring appropriate model assets.
 

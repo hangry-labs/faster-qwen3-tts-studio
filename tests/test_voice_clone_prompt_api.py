@@ -60,8 +60,8 @@ def test_public_api_exposes_voice_clone_prompt_parameter():
     assert "voice_clone_prompt" in sig_clone.parameters
     assert "voice_clone_prompt" in sig_stream.parameters
     for name in ("ref_spk", "ref_rvq", "ref_spk_emb", "ref_codes"):
-        assert name in sig_clone.parameters
-        assert name in sig_stream.parameters
+        assert name not in sig_clone.parameters
+        assert name not in sig_stream.parameters
     assert list(sig_clone.parameters).index("max_new_tokens") == 5
     assert list(sig_stream.parameters).index("max_new_tokens") == 5
     assert list(sig_clone.parameters)[-1] == "voice_clone_prompt"
@@ -113,17 +113,17 @@ def test_private_warmup_alias_uses_public_api(monkeypatch):
     assert calls == [37]
 
 
-def test_torch_backend_rejects_ggml_cached_reference_args():
+def test_removed_native_reference_fields_are_rejected():
     model = _build_dummy_model()
 
-    with pytest.raises(NotImplementedError, match="backend='ggml'"):
+    with pytest.raises(TypeError, match="ref_spk"):
         model.generate_voice_clone(
             text="hello",
             language="English",
             ref_spk="speaker.spk",
         )
 
-    with pytest.raises(NotImplementedError, match="backend='ggml'"):
+    with pytest.raises(TypeError, match="ref_spk"):
         next(
             model.generate_voice_clone_streaming(
                 text="hello",

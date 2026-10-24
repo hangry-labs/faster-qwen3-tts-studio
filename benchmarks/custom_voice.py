@@ -7,7 +7,7 @@ import numpy as np
 import soundfile as sf
 from faster_qwen3_tts import FasterQwen3TTS
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.environ.get("QWEN_TTS_BENCH_OUTPUT", os.getcwd())
 MODEL_SIZE = os.environ.get('MODEL_SIZE', '0.6B')
 MODEL_ID = f'Qwen/Qwen3-TTS-12Hz-{MODEL_SIZE}-CustomVoice'
 text = os.environ.get(

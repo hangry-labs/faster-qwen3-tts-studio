@@ -1,0 +1,25 @@
+# Last incorporated revisions, not automatically downloaded build inputs.
+[[upstreams]]
+id = "qwen3-tts"
+repository = "https://github.com/QwenLM/Qwen3-TTS"
+branch = "main"
+revision = "022e286b98fbec7e1e916cb940cdf532cd9f488e"
+local_path = "src/qwen_tts"
+license = "Apache-2.0"
+
+[[upstreams]]
+id = "qwen-tts-hf"
+repository = "https://github.com/andimarafioti/Qwen3-TTS"
+branch = "distribution/qwen-tts-hf"
+revision = "af457d954d8ce797603c6f260c3f911a09b1d90a"
+compatibility_revision = "00969daa8064e23adc9e5f52cdf20cf247f94159"
+local_path = "src/qwen_tts"
+license = "Apache-2.0"
+
+[[upstreams]]
+id = "faster-qwen3-tts"
+repository = "https://github.com/andimarafioti/faster-qwen3-tts"
+branch = "main"
+revision = "1094aabd83b367b1b29942769141b0524bed245d"
+local_path = "src/faster_qwen3_tts"
+license = "MIT AND Apache-2.0"

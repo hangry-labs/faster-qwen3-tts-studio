@@ -79,7 +79,7 @@ Smaller chunks = lower latency but more decode overhead. `chunk_size=2` is the s
 
 ## Benchmark tooling
 
-Research scripts remain under `benchmarks/` and in the root benchmark helpers.
+NVIDIA research scripts remain under `benchmarks/`. See its [usage notes](../benchmarks/README.md); legacy root setup/benchmark launchers have been removed.
 They are separate from the maintained Studio workflow and may need their own
 dependencies or GPU allocations. Optional Parakeet utilities are not part of
 the default image or Studio tests. Do not start a local ASR model when using an

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="faster_qwen3_tts/standalone_ui/assets/qwen3_tts_logo_horizontal.webp" alt="Hangry Labs Faster Qwen3-TTS Studio logo" width="900">
+  <img src="src/faster_qwen3_tts/standalone_ui/assets/qwen3_tts_logo_horizontal.webp" alt="Hangry Labs Faster Qwen3-TTS Studio logo" width="900">
 </p>
 
 # Hangry Labs Faster Qwen3-TTS Studio
@@ -53,11 +53,10 @@ On Windows, the [Task workflow](docs/DEVELOPMENT.md) provides `task init`,
 - Optional reference transcription through an existing ASR service
 - FIFO generation progress, cancellation, timing diagnostics and bounded prompt reuse
 - On-demand model loading/unloading and GPU telemetry in System
-- Python 3.13, Torch/TorchAudio 2.10.0 and CUDA 12.8 wheels in the development image
+- Python 3.13, Torch 2.10.0 and CUDA 12.8 wheels in the development image
 
 The product targets **NVIDIA GPUs with the Torch backend**. It keeps one TTS
-model resident at a time and serializes inference. The inherited experimental
-GGML adapter is outside the Studio's supported product scope.
+model resident at a time and serializes inference.
 
 ## Browser UI
 
@@ -212,9 +211,8 @@ for queue/loading progress around a complete generation.
 | `POST /studio/models/load` | Load an official checkpoint |
 | `POST /studio/models/unload` | Release the active model |
 
-The [Studio guide](docs/STUDIO.md) covers the API contract. The inherited
-[separate OpenAI server example](examples/openai_server.py) is not the server
-started by the Docker image.
+The [Studio guide](docs/STUDIO.md) covers the native API contract. OpenAI-compatible
+routes are not implemented by this server yet.
 
 ## Local Development
 
@@ -254,7 +252,13 @@ the maintained Docker Studio workflow.
 [Faster Qwen3-TTS](https://github.com/andimarafioti/faster-qwen3-tts) by Andres
 Marafioti provides the accelerated inference engine. The
 [Qwen team](https://github.com/QwenLM/Qwen3-TTS) provides the model family and
-core research. Streaming adaptations also draw from
+core research. We maintain its inference implementation locally, including the
+Transformers 5 fixes from
+[andimarafioti/Qwen3-TTS](https://github.com/andimarafioti/Qwen3-TTS/tree/distribution/qwen-tts-hf).
+These are our three ongoing upstreams; [source provenance and synchronization](docs/UPSTREAMS.md)
+records exact revisions, package boundaries and the update procedure. Both the
+model and accelerated engine ship from this checkout, without an external Qwen
+inference package or Gradio demo. Streaming adaptations also draw from
 [Qwen3-TTS-streaming](https://github.com/dffdeeq/Qwen3-TTS-streaming), with CUDA
 graph inspiration acknowledged from
 [nano-qwen3tts-vllm](https://github.com/tsdocode/nano-qwen3tts-vllm).

@@ -6,17 +6,16 @@ import os
 import numpy as np
 from faster_qwen3_tts import FasterQwen3TTS
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.environ.get("QWEN_TTS_BENCH_OUTPUT", os.getcwd())
 TEXT = os.environ.get(
     'TEXT',
     "Ladies and gentlemen, I have just been informed that this speech is being generated faster than I can speak it."
 )
 LANG = os.environ.get('LANGUAGE', 'English')
-REF_AUDIO = os.path.join(PROJECT_DIR, 'ref_audio.wav')
-REF_TEXT = os.environ.get(
-    'REF_TEXT',
-    "I'm confused why some people have super short timelines, yet at the same time are bullish on scaling up reinforcement learning atop LLMs."
-)
+REF_AUDIO = os.environ.get("QWEN_TTS_REF_AUDIO", "")
+REF_TEXT = os.environ.get("QWEN_TTS_REF_TEXT", "")
+if not os.path.isfile(REF_AUDIO) or not REF_TEXT.strip():
+    raise RuntimeError("Set QWEN_TTS_REF_AUDIO and its exact QWEN_TTS_REF_TEXT before running this benchmark.")
 CHUNK_SIZE = int(os.environ.get('CHUNK_SIZE', '8'))
 TTFA_RUNS = int(os.environ.get('TTFA_RUNS', '10'))
 RTF_RUNS = int(os.environ.get('RTF_RUNS', '5'))

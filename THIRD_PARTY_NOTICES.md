@@ -4,7 +4,8 @@ Faster Qwen3-TTS Studio combines independently licensed code, model assets,
 Python packages, native libraries, and operating-system components. The root
 MIT license does not cover the complete combined runtime.
 
-This inventory was reviewed on 2026-10-23. See [the licensing audit](docs/LICENSING.md)
+The original inventory was reviewed on 2026-10-23 and updated for the local
+inference-source migration on 2026-10-24. See [the licensing audit](docs/LICENSING.md)
 for the commercial-use decisions, scope, findings, and remaining image-release
 requirements. Original license texts and notices take precedence over summaries.
 
@@ -13,12 +14,13 @@ requirements. Original license texts and notices take precedence over summaries.
 | Component | License | Attribution and source |
 | --- | --- | --- |
 | Faster Qwen3-TTS wrapper | MIT | Copyright 2026 Andres Marafioti; [upstream](https://github.com/andimarafioti/faster-qwen3-tts); text in [LICENSE](LICENSE) |
-| Qwen3-TTS input/model integration | Apache-2.0 | Copyright 2026 the Alibaba Qwen team; applicable upstream files also name Alibaba Group and HuggingFace Inc.; [source](https://github.com/QwenLM/Qwen3-TTS/tree/022e286b98fbec7e1e916cb940cdf532cd9f488e) |
+| Local Qwen3-TTS model/inference source | Apache-2.0 | Copyright 2026 the Alibaba Qwen team; applicable upstream files also name Alibaba Group and HuggingFace Inc.; [source](https://github.com/QwenLM/Qwen3-TTS/tree/022e286b98fbec7e1e916cb940cdf532cd9f488e) |
 | Qwen3-TTS-streaming adaptations | Apache-2.0 | Qwen authors, dffdeeq, and contributors; [reviewed source](https://github.com/dffdeeq/Qwen3-TTS-streaming/tree/13ef823ffe76aec4ac7e35d3fec28ecfc8d7427a) |
-| qwen-tts-hf 0.1.1.post1 | Apache-2.0 | Qwen authors; Transformers 5 compatibility distribution maintained by Andres Marafioti; [publishing source](https://github.com/andimarafioti/Qwen3-TTS/tree/af457d954d8ce797603c6f260c3f911a09b1d90a) |
+| Incorporated qwen-tts-hf compatibility source | Apache-2.0 | Qwen authors; Transformers 5 compatibility distribution maintained by Andres Marafioti; [publishing source](https://github.com/andimarafioti/Qwen3-TTS/tree/af457d954d8ce797603c6f260c3f911a09b1d90a) |
 | nano-qwen3tts-vllm, acknowledged inspiration | MIT | Copyright 2026 Thanh Sang; [source](https://github.com/tsdocode/nano-qwen3tts-vllm/tree/ea48202b8398128c6aa8109c3e0ceb1bfb2e7a6b) |
 
-[NOTICE](NOTICE) identifies adaptations. Preserve the source copyright headers,
+[NOTICE](NOTICE) identifies adaptations. [Upstream provenance](docs/UPSTREAMS.md)
+records all three synchronization sources and exact incorporated revisions. Preserve the source copyright headers,
 NOTICE, [Apache-2.0 text](#apache-20-license-text), and other applicable
 license files when distributing source, Python packages, or images. Apache
 attribution does not require turning the independent application into Apache-only
@@ -46,35 +48,11 @@ uses Transformers Mimi architecture classes; this does not mean Kyutai/Moshi
 model weights are downloaded or bundled by this project. Do not substitute a
 different tokenizer checkpoint under the same licensing conclusion.
 
-## Optional reference transcription
+## Reference transcription
 
-The default Studio image does not install nano-parakeet or its model/tokenizer.
-Studio transcription uses an operator-configured service. These notices remain
-for optional upstream benchmark utilities that reference nano-parakeet.
-
-- **nano-parakeet 0.2.1 code:** MIT, Copyright 2026 Andrés Marafioti.
-  [Upstream](https://github.com/andimarafioti/nano-parakeet/tree/26ee76064235b95b92782ddd4bbd05f6d99550ae),
-  [MIT notice](#nano-parakeet-mit-notice).
-  The inspected wheel omits its root license file. This bundle supplies the
-  upstream notice instead of assuming wheel packaging is complete.
-- **NVIDIA Parakeet TDT 0.6B v3 weights:** CC BY 4.0, NVIDIA.
-  [Model](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3/tree/541d1f99c6b0c3cd0b11a95167540bb8edefd82b),
-  [license](https://creativecommons.org/licenses/by/4.0/), and linked model card.
-  The nano-parakeet wheel also bundles a SentencePiece tokenizer extracted
-  from the NVIDIA checkpoint. Keep the NVIDIA attribution with that tokenizer,
-  not just with a separately downloaded weights file. Neither tokenizer nor
-  weights are relicensed under nano-parakeet's MIT code license.
-  All 8192 ordered vocabulary entries match the official pinned model's
-  tokenizer JSON; [the audit](docs/LICENSING.md#optional-asr-has-an-independent-model-license)
-  identifies the bundled artifact and the comparison's limits.
-  This project has not modified the NVIDIA weights or tokenizer. If a release
-  changes or converts them, identify those changes with the attribution.
-- **SentencePiece code:** Apache-2.0, Google and contributors; preserve its
-  installed notices in addition to the model-tokenizer attribution above.
-
-CC BY 4.0 permits commercial use and redistribution with attribution, a license
-link, retention of supplied notices, and identification of changes. It does
-not license the user's original recording or grant personality/privacy rights.
+Studio uses an operator-configured ASR service. No ASR implementation, weights
+or tokenizer is distributed in this project. The operator must review that
+independent service's terms and the rights to submitted recordings.
 
 ## Python runtime and native payloads
 
@@ -87,8 +65,6 @@ in installed source files as well as this supplemental material.
 
 | Distribution | Upstream attribution and pinned license source |
 | --- | --- |
-| flatbuffers 25.12.19 | Google and FlatBuffers contributors; [license](https://github.com/google/flatbuffers/blob/7e163021e59cca4f8e1e35a7c828b5c6b7915953/LICENSE) |
-| gradio_client 2.7.2 | Gradio authors and contributors; [license](https://github.com/gradio-app/gradio/blob/8c71eaaff74b77ccf0a3e94afd7f9c06fe3d2abc/LICENSE) |
 | tokenizers 0.22.2 | Hugging Face and contributors; [license](https://github.com/huggingface/tokenizers/blob/f383101a26663708484cac0727792aad74f78234/LICENSE) |
 
 These entries supplement those exact inspected versions. They do not silently
@@ -105,23 +81,19 @@ The audit inspected a licensing-only candidate, not a tested runtime or lockfile
 Its extracted dependency notices and source archives are not part of this
 source distribution. Collect the actual release image's inventory with
 `scripts/collect_runtime_licenses.py`; review missing notices and supply them
-from the matching upstream before release. The nano-parakeet and experimental
-native notices below supplement omissions in the inspected wheels.
+from the matching upstream before release. Only supplemental notices applicable to the current runtime are retained below.
 
 Important components and obligations:
 
 | Component | Terms to preserve or satisfy |
 | --- | --- |
-| PyTorch/TorchAudio, NumPy, SciPy, scikit-learn | BSD/permissive source plus bundled-component licenses; scientific wheels can contain GCC runtime libraries with runtime exceptions, OpenBLAS, LAPACK, and other notices |
-| Transformers, Accelerate, Hub, Tokenizers, ONNX Runtime | Primarily Apache-2.0 or MIT; retain exact package and bundled third-party notices |
-| FastAPI, Pydantic, Gradio, Uvicorn, HTTP libraries | Respective MIT/Apache/BSD terms; qwen-tts-hf pulls Gradio even though this project's UI is custom FastAPI |
+| PyTorch, NumPy, SciPy, scikit-learn | BSD/permissive source plus bundled-component licenses; scientific wheels can contain GCC runtime libraries with runtime exceptions, OpenBLAS, LAPACK, and other notices |
+| Transformers, Accelerate, Hub, Tokenizers | Primarily Apache-2.0 or MIT; retain exact package and bundled third-party notices |
+| FastAPI, Pydantic, Uvicorn, HTTP libraries | Respective MIT/Apache/BSD terms; preserve installed notices |
 | Librosa | ISC code; its transitive SoXR dependency has separate LGPL obligations |
 | Python-SoXR and bundled libsoxr/PFFFT | LGPL-2.1-or-later and PFFFT's notice; preserve licenses, corresponding source, and a usable replacement/relinking route for the exact distributed native build |
-| certifi, tqdm, and orjson's covered components | MPL-2.0 portions, alongside MIT/Apache alternatives or other covered portions as specified; retain notices and make corresponding covered source available |
+| certifi and tqdm's covered components | MPL-2.0 portions, alongside MIT/Apache alternatives or other covered portions as specified; retain notices and make corresponding covered source available |
 | SoundFile and libsndfile | SoundFile is BSD; an installed or wheel-bundled libsndfile is independently LGPL-2.1-or-later; inspect the actual binary, codec libraries, and how it was built |
-| Python sox package | BSD Python wrapper; does not relicense the separate SoX executable or libsox |
-| pydub, sounddevice | Optional MIT helpers; FFmpeg and platform PortAudio binaries have independent terms |
-| FlashAttention | Optional BSD-3-Clause component attempted by inherited setup scripts; review the selected wheel/source and bundled notices before shipping |
 
 Source archives for a research candidate do not satisfy source obligations for
 different versions, distribution patches, omitted build inputs, or other native
@@ -131,15 +103,15 @@ release-image compliance remains a separate build qualification.
 
 ## Operating system, codecs, and NVIDIA
 
-The inherited demo Dockerfile uses Ubuntu 24.04 with CUDA 12.8.1/cuDNN and
-installs FFmpeg, SoX, libsndfile, Git, and dependencies through apt. That is a
+The Python 3.13 Debian-based Docker image installs FFmpeg, libsndfile and
+libgomp through apt, with CUDA libraries supplied by Torch wheels. It is a
 mixed-license distribution, including GPL/LGPL components and NVIDIA terms.
 
 - Retain `/usr/share/doc/*/copyright`, `/usr/share/common-licenses/`, Python's
   license, package notices, NVIDIA EULAs/notices, and exact binary/source
   package/version identities. Do not strip these to reduce image size.
 - FFmpeg's license depends on its build configuration. An LGPL-only build,
-  GPL-enabled Ubuntu build, and nonfree build have different redistribution
+  GPL-enabled Debian build, and nonfree build have different redistribution
   consequences. Inspect `ffmpeg -version` and `ffmpeg -buildconf`; do not
   redistribute a nonfree build as if it were an ordinary GPL/LGPL build.
 - Supply the exact required corresponding source and build/patch materials
@@ -155,26 +127,6 @@ mixed-license distribution, including GPL/LGPL components and NVIDIA terms.
 Use [the runtime notice collector](scripts/collect_runtime_licenses.py) inside
 the actual candidate image. Its output is evidence collection, not automatic
 legal approval or a substitute for corresponding source.
-
-## Experimental GGML path
-
-The unsupported experimental extra is still present in source:
-
-- qwentts-cpp-python 0.5.0: MIT, Andres Marafioti.
-- Embedded qwentts.cpp revision `6fae92914045cd83364d2845ceaa0f7969727319`:
-  MIT, the omnivoice.cpp authors as named in its original license.
-- Embedded ggml revision `40e16e4a814f7fe851a0c486fb9e8c722e957830`:
-  retain the ggml and bundled-component notices.
-- cpp-httplib: retain its original MIT notice.
-- [`Serveurperso/Qwen3-TTS-GGUF`](https://huggingface.co/Serveurperso/Qwen3-TTS-GGUF/tree/b7ee2e8c7459c3bea99da23e3d178125a7d1713c)
-  declares Apache-2.0 at the reviewed revision. It is separate from the official
-  Qwen checkpoints.
-
-The inspected Linux CUDA wheel retained only the wrapper's MIT license, so
-supplemental native notices are needed. Native build variants, CUDA runtime
-contents, and converted-model provenance must be reviewed for an actual GGML
-release. This audit does not qualify a GGML or Apple Silicon product. The
-supported product direction is NVIDIA/Torch.
 
 ## Recordings and generated media
 
@@ -204,39 +156,13 @@ Apache-2.0. Preserve NOTICE and the Apache text below.
 
 - Lucide icons: ISC, with Feather-derived MIT portions, Copyright 2013-present
   Cole Bemis. The original combined notice is packaged at
-  `faster_qwen3_tts/standalone_ui/static/vendor/lucide/LICENSE`.
+  `src/faster_qwen3_tts/standalone_ui/static/vendor/lucide/LICENSE`.
 - WaveSurfer.js: BSD-3-Clause, Copyright 2012-2023 katspaugh and contributors.
   Its original notice is packaged at
-  `faster_qwen3_tts/standalone_ui/static/vendor/wavesurfer/LICENSE`.
+  `src/faster_qwen3_tts/standalone_ui/static/vendor/wavesurfer/LICENSE`.
 
 The texts below supply source and supplemental notices in one place. They do
 not replace the notices carried by other installed or bundled components.
-
-### nano-parakeet MIT notice
-
-```text
-MIT License
-
-Copyright (c) 2026 Andrés Marafioti
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
 
 ### nano-qwen3tts-vllm MIT notice
 
@@ -244,110 +170,6 @@ SOFTWARE.
 MIT License
 
 Copyright (c) 2026 Thanh Sang
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### qwentts-cpp-python MIT notice
-
-```text
-MIT License
-
-Copyright (c) 2026 Andres Marafioti
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### qwentts.cpp MIT notice
-
-```text
-MIT License
-
-Copyright (c) 2023-2026 The omnivoice.cpp authors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### ggml MIT notice
-
-```text
-MIT License
-
-Copyright (c) 2023-2026 The ggml authors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### cpp-httplib MIT notice
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2017 yhirose
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -62,10 +62,25 @@ curl http://localhost:7860/tts/generate \
 
 `POST /tts/generate` and `/tts/convert` return complete binary audio. Use
 `POST /tts/stream` for a progressive response and select `stream_format` from
-MP3, PCM, Opus, AAC, FLAC or Ogg. Plain text without effects streams codec
-chunks; markup/effected speech streams assembled speech units. Whole-recording
-loudness normalization buffers the recording before output. One encoder owns
-the entire response, preserving dialogue boundaries across compressed packets.
+MP3, PCM, Opus, AAC, FLAC or Ogg. Actual codec-chunk streaming requires exactly
+one compiled speech unit, neutral prosody, speed 1 and disabled loudness
+normalization. This can be plain text or a single neutral SSML/SSML-H turn.
+Delivery instructions do not by themselves disable this path.
+
+Multiple units, including automatically split long text, use complete model
+calls per unit. The boundary assembler holds the previous unit until the next
+one is ready, so first speech waits for two completed units when there are two
+or more. A two-unit request can therefore finish synthesis before any speech
+is sent. Audio effects buffer their speech unit; whole-recording loudness
+normalization buffers the entire recording.
+
+One encoder owns the entire progressive response, preserving dialogue boundaries
+across compressed packets. PCM forwards available samples directly. Compressed
+formats also incur encoder/muxer buffering; the current FFmpeg defaults can
+defer short MP3 output until synthesis finishes. The browser Stream mode uses
+this MP3 route, so its playback latency differs from native SSE benchmark TTFA.
+If the browser cannot use MP3 MediaSource playback, the UI collects the stream
+and plays the completed recording instead.
 
 `POST /tts/events` returns native SSE progress and base64 WAV chunks, followed
 by a `done` event containing metrics and committed profile ids. This is separate
@@ -87,11 +102,45 @@ to the exact reference words, or `xvec_only=true` for identity-only conditioning
 Do not send server filesystem paths or remote audio URLs. For saved references,
 set `voice_profile` to a saved id or unique name; the saved transcript is reused.
 
-`protect_long_audio=true` splits at natural boundaries, up to 400 characters per
-unit. With it disabled, each speech unit must fit 1000 characters. Requests are
-bounded to 6000 spoken characters, 64 speech units and 300 seconds of final
-audio. `max_new_tokens` applies per model call. Inspect the full plan before
-inference with `POST /tts/plan`; `POST /tts/metrics` reports text and plan counts.
+### Long text
+
+`protect_long_audio=true` is the default and splits each speech unit into at
+most 400 characters. Whitespace is collapsed. The chunker uses the last
+punctuation or whitespace boundary within that limit; it does not prefer an
+earlier sentence ending over a later word boundary. An uninterrupted long word
+is split at the character limit. With protection disabled, each speech unit
+must fit 1000 characters or validation fails.
+
+Native source input can contain up to 50000 characters, including markup;
+OpenAI `input` is limited to 4096. Both use the processor limits of 6000 spoken
+characters, 64 compiled speech units and 300 seconds of final audio. The audio
+limit is enforced during execution, including pauses and effects, so an
+overlong stream can fail after some audio has already been delivered.
+
+Each split is a fresh model call with the chosen voice/reference and a seed
+incremented by speech-unit index. Previous chunks are not supplied as narration
+context. Clone calls reuse the original reference; VoiceDesign repeats the
+description for each chunk. New SSML-H voice definitions are bootstrapped
+before dialogue synthesis starts. One FIFO GPU lease covers the whole request.
+
+Internal padding is compacted and adjacent speech receives a 120 ms handoff;
+an explicit SSML break replaces that gap. Outer recording edges are preserved.
+Streaming still retains audio for the completed result and takes; it is not a
+constant-memory long-form session.
+
+`max_new_tokens` applies per model call, not to the final joined recording.
+The default 360 codec frames represent roughly 30 seconds of raw speech;
+the maximum 600 represents roughly 50 seconds, before effects. Exhausting the
+token or model-context budget currently returns the generated portion without
+a termination-reason warning or automatic continuation. Character splitting
+does not guarantee that a unit will finish within this budget.
+
+Inspect the full plan before inference with `POST /tts/plan`;
+`POST /tts/metrics` reports text and plan counts. The legacy `/studio/generate`
+and `/studio/generate/stream` routes, used by the dedicated Design/Clone
+workflows, accept at most 1000 text characters in one model call and do not use
+this automatic splitting. Audio output streaming requires the complete input
+request first; incremental text input and bidirectional sessions are not exposed.
 
 ## Voices and saved scripts
 

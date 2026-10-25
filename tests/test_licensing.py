@@ -43,6 +43,26 @@ class LicensingTests(unittest.TestCase):
                     archive.writestr("package-1.dist-info/licenses/" + name, (ROOT / name).read_text(encoding="utf-8"))
             self.assertEqual([], check_artifact(wheel))
 
+    def test_internal_document_is_rejected_in_otherwise_valid_artifacts(self):
+        with tempfile.TemporaryDirectory() as folder:
+            wheel = Path(folder) / 'package.whl'
+            with zipfile.ZipFile(wheel, 'w') as archive:
+                archive.writestr('package-1.dist-info/METADATA', 'License-Expression: MIT AND Apache-2.0\n')
+                for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md'):
+                    archive.writestr('package-1.dist-info/licenses/' + name, (ROOT / name).read_bytes())
+                archive.writestr('docs/internal/review.md', 'Internal review')
+            self.assertEqual(['Private material in distribution: docs/internal/review.md'], check_artifact(wheel))
+
+            source = Path(folder) / 'package.tar.gz'
+            with tarfile.open(source, 'w:gz') as archive:
+                for name in ('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md', 'docs/LICENSING.md',
+                             'docs/internal/review.md'):
+                    content = b'Internal review' if name.endswith('review.md') else (ROOT / name).read_bytes()
+                    member = tarfile.TarInfo('package-1/' + name)
+                    member.size = len(content)
+                    archive.addfile(member, io.BytesIO(content))
+            self.assertEqual(['Private material in distribution: package-1/docs/internal/review.md'], check_artifact(source))
+
     def test_runtime_collector_recognizes_vendored_notice_paths(self):
         self.assertTrue(notice_name("pkg.dist-info/licenses/third_party/terms.txt"))
         self.assertTrue(notice_name("pkg/LICENCE"))

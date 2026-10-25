@@ -18,3 +18,4 @@ dist/
 .ci-build/
 benchmark-data/
 benchmark-artifacts/
+/docs/internal/

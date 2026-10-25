@@ -15,7 +15,7 @@ Tiny downloads uncached models. Full seeds its baked files into an empty product
 cache before starting the UI and defaults to offline operation. See the
 [container workflow](RELEASING.md) for build targets and publishing rules.
 The five model revisions are fixed to
-the versions reviewed in the licensing audit. System selects the default model
+the versions listed in the [licensing guide](LICENSING.md). System selects the default model
 for each workflow and whether it stays in GPU memory. By default, 0.6B Base,
 0.6B CustomVoice and 1.7B VoiceDesign load at startup. Kept models can coexist;
 other models are released after the complete request. A global toggle disables
@@ -79,6 +79,21 @@ names. Device changes and permission errors are reported beside recording.
 Audio chunk controls accept every integer from 1 to 64 codec frames and show
 approximate audio duration. Playback streaming is independent of text input.
 
+Generate's Stream mode uses progressive MP3 playback. Short, neutral requests
+can stream model codec chunks, while long text and multi-turn dialogue currently
+wait for complete speech units, including one unit of boundary-assembly
+lookahead. MP3 encoding adds buffering, and Normalize loudness waits for the
+whole recording. Browser playback can therefore start later than the native
+SSE first-audio measurements in the benchmark reports.
+
+Protect long audio splits Generate text into units of at most 400 characters.
+The Maximum audio length selection applies to each model call, not to the
+complete joined recording. A request supports up to 6000 spoken characters,
+64 speech units and five minutes of final audio. Dedicated Design/Clone tabs
+use a single call with up to 1000 characters. See the
+[API streaming and long-text details](API.md#long-text) for current limits and
+the independent-chunk behavior.
+
 Metrics report audio length, first-audio latency, generation time, and
 audio-seconds per generation-second. First-audio and generation timings begin
 after model loading; reference preparation and audio decoding are included.
@@ -137,16 +152,11 @@ Both accept multipart data containing an `options` JSON field and an optional
 `reference` audio file. Separate `/v1/audio/speech` and native `/tts/*` routes
 provide the new product API. MCP is not implemented.
 
-## Migration and checks
+## Validation
 
-The Studio provides model selection, all three voice modes, custom speakers
-and supported instructions, upload/recording, transcription, both cloning
-methods, streaming/complete output, sampling controls and downloads. The saved
-voice library replaces fixed operator reference slots. The six migration gaps
-are closed; see the [migration review](UI_MIGRATION.md) for the comparison and
-deliberate differences. The old UI and its launch/package integration have been
-removed. Hosted Space login/quotas and the old GGML adapter are also removed;
-the maintained engine is NVIDIA/Torch with local model source.
+The supported runtime is NVIDIA/Torch with local Qwen inference source. The
+Studio includes model selection, all three voice modes, upload/recording,
+transcription, cloning methods, sampling controls and downloadable output.
 
 ```powershell
 task validate

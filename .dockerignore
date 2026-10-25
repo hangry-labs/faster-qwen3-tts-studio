@@ -19,3 +19,4 @@ artifacts/
 .ci-build/
 benchmark-data/
 benchmark-artifacts/
+docs/internal/

@@ -5,9 +5,8 @@ Python packages, native libraries, and operating-system components. The root
 MIT license does not cover the complete combined runtime.
 
 The original inventory was reviewed on 2026-10-23 and updated for the local
-inference-source migration on 2026-10-24. See [the licensing audit](docs/LICENSING.md)
-for the commercial-use decisions, scope, findings, and remaining image-release
-requirements. Original license texts and notices take precedence over summaries.
+inference-source migration on 2026-10-24. See [the licensing guide](docs/LICENSING.md)
+for reviewed model terms, commercial-use findings and distribution requirements. Original license texts and notices take precedence over summaries.
 
 ## Source and adaptations
 

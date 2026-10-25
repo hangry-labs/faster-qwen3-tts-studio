@@ -2,7 +2,7 @@
 
 The supported product is the [NVIDIA Docker Studio](../README.md). Both the model
 implementation and faster generation path are maintained locally. See
-[upstream sources and synchronization](UPSTREAMS.md) for provenance and updates.
+[upstream source provenance](UPSTREAMS.md) for incorporated revisions.
 
 ## Source layout
 

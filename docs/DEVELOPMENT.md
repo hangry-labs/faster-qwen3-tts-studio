@@ -34,13 +34,14 @@ task stop
 The development image uses Python 3.13 and matching Torch 2.10.0 CUDA
 12.8 wheels. It installs the current checkout and serves the
 [Hangry Labs Studio](STUDIO.md) with Torch as the only enabled backend.
-The upstream demo has been replaced. No model weights are baked in;
-starting the container does not preload models.
+No model weights are baked into the development image. By default, startup
+loads 0.6B Base, 0.6B CustomVoice and 1.7B VoiceDesign into GPU memory.
+Change per-workflow defaults and residency in System.
 
 `requirements.runtime.txt` pins the core runtime components. It is not a complete
 transitive lockfile. The Python base image is pinned by digest; apt and transitive
 Python dependencies remain moving development inputs. This local workflow does not qualify an image for release;
-see [the licensing audit](LICENSING.md#container-release-requirements).
+see [the licensing guide](LICENSING.md#container-release-requirements).
 
 ## Settings
 

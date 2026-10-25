@@ -1,4 +1,4 @@
-# Upstream sources and synchronization
+# Upstream source provenance
 
 Hangry Labs maintains the model implementation and accelerated inference source
 in this repository. Builds install both local packages from this checkout. They
@@ -49,29 +49,6 @@ GGML/GGUF/native platform adapters, host setup scripts and local-ASR helpers are
 also removed. General libraries such as Torch, Transformers and Librosa remain
 ordinary dependencies. Gradio, ONNX Runtime, Python SoX and TorchAudio are not
 required by this runtime.
-
-## Reviewing an upstream update
-
-1. Compare each upstream against its recorded revision. Review model and
-   compatibility changes together; an official merge of PR #360 may make some
-   fork changes redundant. Do not blindly stack the same patch again.
-2. Bring relevant changes into the corresponding local package. Preserve local
-   delivery conditioning, reference caching, streaming, Studio behavior and the
-   deliberate NVIDIA/12 Hz scope. Do not restore demos or obsolete dependencies
-   through a wholesale metadata replacement.
-3. Retain original copyright/license headers and identify modifications. Review
-   new embedded code, model assets and dependency terms. See
-   [licensing](LICENSING.md) and [notices](../THIRD_PARTY_NOTICES.md).
-4. Run `task validate`, `task package` and the Docker `checks` target. Verify
-   both packages are in the wheel and imports belong to this distribution,
-   without a separately installed Qwen wheel masking a missing local file.
-5. Compare current and candidate packaged engines with identical weights,
-   prompts and settings. Exercise Base ICL/x-vector cloning with direction,
-   CustomVoice, VoiceDesign and streaming. Check audio/text correctness, voice
-   identity, latency and VRAM; a successful import is insufficient.
-6. Update the manifest and this guide only for changes actually incorporated.
-   Record validation limits and follow the [release procedure](RELEASING.md)
-   before publishing new images.
 
 The streaming fork and other inspiration credited in [NOTICE](../NOTICE) remain
 part of our source attribution. They are distinct from these three ongoing

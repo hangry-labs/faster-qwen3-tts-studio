@@ -6,8 +6,7 @@ memory and transcript fidelity separately. The [first 0.6B baseline](BASELINE_RE
 completed 310 measured requests with one checkpoint loaded at a time.
 The [1.7B baseline](BASELINE_1.7B_RESULTS.md) adds 510 requests across CustomVoice,
 Base and VoiceDesign, including directed SSML-H completion checks.
-The initial [shared-GPU smoke](SMOKE_RESULTS.md)
-covered the original five suites. The product baseline uses Faster Qwen only;
+The product baseline uses Faster Qwen only;
 standard-engine comparisons are optional historical diagnostics. Planning,
 synthetic HTTP tests and CPU adapter tests do not establish GPU performance.
 

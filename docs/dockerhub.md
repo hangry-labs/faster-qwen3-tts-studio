@@ -186,6 +186,6 @@ corresponding-source qualification before release distribution.
 
 See [NOTICE](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/NOTICE),
 [Third-Party Notices](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/THIRD_PARTY_NOTICES.md)
-and the [licensing audit](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/LICENSING.md).
+and the [licensing guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/LICENSING.md).
 Report product issues in the
 [GitHub issue tracker](https://github.com/hangry-labs/faster-qwen3-tts-studio/issues).

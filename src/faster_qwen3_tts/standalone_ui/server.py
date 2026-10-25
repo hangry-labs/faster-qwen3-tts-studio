@@ -25,7 +25,7 @@ import soundfile as sf
 
 from .gpu import GpuMonitor
 from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS, StudioEngine, start_request_thread
-from .profiles import VoiceStore
+from .profiles import VoiceStore, public_profile
 from .model_policy import ModelPolicy
 from faster_qwen3_tts import __version__
 
@@ -38,9 +38,9 @@ class ModelSelection(BaseModel):
     model: str
 
 
-def wav_bytes(audio, rate):
+def wav_bytes(audio, rate, subtype='PCM_16'):
     output = io.BytesIO()
-    sf.write(output, audio, rate, format='WAV', subtype='PCM_16')
+    sf.write(output, audio, rate, format='WAV', subtype=subtype)
     return output.getvalue()
 
 
@@ -169,7 +169,7 @@ def create_app(engine=None, data_root: Path | None = None):
             raise HTTPException(422, 'Choose an audio file smaller than 10 MB.')
         return content
 
-    def decode_audio(content: bytes):
+    def decode_audio(content: bytes, preserve_float=False):
         try:
             info = sf.info(io.BytesIO(content))
             if info.duration > 120 or info.channels > 2 or info.samplerate > 48000:
@@ -184,11 +184,11 @@ def create_app(engine=None, data_root: Path | None = None):
             samples, rate = sf.read(io.BytesIO(process.stdout), dtype='float32', always_2d=True)
         if not len(samples) or len(samples) / rate > 120 or not np.isfinite(samples).all():
             raise ValueError('Reference audio must contain valid audio up to two minutes long.')
-        return wav_bytes(samples.mean(axis=1), rate)
+        return wav_bytes(samples.mean(axis=1), rate, subtype='FLOAT' if preserve_float else 'PCM_16')
 
-    async def canonical_audio(upload: UploadFile):
+    async def canonical_audio(upload: UploadFile, *, preserve_float=False):
         try:
-            return await asyncio.to_thread(decode_audio, await read_audio(upload))
+            return await asyncio.to_thread(decode_audio, await read_audio(upload), preserve_float)
         except (ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
             raise HTTPException(422, str(exc)) from exc
 
@@ -220,7 +220,7 @@ def create_app(engine=None, data_root: Path | None = None):
 
     @app.get('/studio/voices')
     def voice_list():
-        return {'voices': [{k: v for k, v in record.items() if k != 'audio_folder' and not k.startswith('_')} for record in voice_store.list()]}
+        return {'voices': [public_profile(record) for record in voice_store.list()]}
 
     @app.post('/studio/voices')
     async def save_voice(name: str = Form(...), transcript: str = Form(''),
@@ -229,7 +229,7 @@ def create_app(engine=None, data_root: Path | None = None):
             raise HTTPException(422, 'Provide a voice name up to 80 characters and a transcript up to 4000 characters.')
         audio = await canonical_audio(file)
         metadata = voice_store.commit([({'name': name.strip(), 'transcript': transcript}, audio, False)])[name.strip()]
-        return {k: v for k, v in metadata.items() if k != 'audio_folder' and not k.startswith('_')}
+        return public_profile(metadata)
 
     @app.get('/studio/voices/{voice_id}/audio')
     def voice_audio(voice_id: str):

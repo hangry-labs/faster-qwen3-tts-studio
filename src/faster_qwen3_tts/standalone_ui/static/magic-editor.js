@@ -164,10 +164,10 @@ export class MagicEditor {
     this.toolbar = new MagicToolbar(root)
     this.definitionEditor = new MagicVoiceDefinitions(document.querySelector('#magic-voice-definitions-dialog'), {
       onChange: (definitions, detail) => this.updateVoiceDefinitions(definitions, detail),
-      onPersist: (definition, previous) => this.persistVoiceDefinition(definition, previous),
+      onPersist: (definition, previous, metadata) => this.persistVoiceDefinition(definition, previous, metadata),
       onError: this.onError,
     })
-    this.blocks = [this.createSpeech(t('composer.defaultText', {}, 'Qwen2 generates natural multilingual speech with voice design and cloning.'))]
+    this.blocks = [this.createSpeech(t('composer.defaultText', {}, 'Qwen3 generates natural multilingual speech with voice design and cloning.'))]
     this.activeId = this.blocks[0].id
     this.bind()
     this.render()
@@ -500,7 +500,7 @@ export class MagicEditor {
     this.changed()
   }
 
-  async persistVoiceDefinition(definition, previous) {
+  async persistVoiceDefinition(definition, previous, metadata = {}) {
     const sourceName = String(previous?.name || '').toLowerCase()
     const block = this.blocks.find((item) => (
       item.type === 'speech'
@@ -517,6 +517,7 @@ export class MagicEditor {
     return this.onPersistCharacter({
       definition: { ...definition },
       previous: { ...previous },
+      metadata,
       block,
     })
   }

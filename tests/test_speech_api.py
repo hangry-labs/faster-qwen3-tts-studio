@@ -217,6 +217,11 @@ def test_dynamic_voice_bootstrap_reused_and_profile_published_after_success(api,
     document = xml('<voice name="Mara">First.</voice><break time="0ms"/><voice name="Mara" h:direction="Calm">Second.</voice>', definition(scope='profile', extra='seed="72"'))
     payload = {'text': document, 'input_type': 'ssml-h', 'seed': 20}
     response = client.post('/tts/events' if streaming else '/tts/generate', json=payload)
+    saved = service.voices.resolve('Mara')
+    assert saved['profile_type'] == 'design'
+    assert saved['recipe']['workflow'] == 'design'
+    assert saved['recipe']['settings']['seed'] == 72
+    assert saved['recipe']['settings']['mode'] == 'design'
     assert response.status_code == 200, response.text
     assert [r.model for r, _, _ in engine.requests] == [DESIGN, BASE, BASE]
     assert engine.requests[0][0].seed == 72

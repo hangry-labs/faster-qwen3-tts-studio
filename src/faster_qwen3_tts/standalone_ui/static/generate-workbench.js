@@ -35,6 +35,7 @@ export class GenerateWorkbench {
         const watching = this.watchProgress(requestId, monitor.signal)
         try {
           const result = await this.takes.take(this.payload(), index, { signal, requestId })
+          this.latestTakeGenerationTime = performance.now()
           monitor.abort(); await watching
           $('#last-generated-seed').value = result.seed; this.toolbar.sync()
           this.progress('complete', 'Turn ready', 'The completed dialogue will be assembled automatically')
@@ -43,16 +44,30 @@ export class GenerateWorkbench {
       }),
       onSaveCharacter: async block => {
         const preview = await this.editor.ensurePreview(block.id)
-        saveVoice(new File([preview.blob], 'character.wav', { type: 'audio/wav' }), renderedSpeechText(block))
+        saveVoice(new File([preview.blob], 'character.wav', { type: 'audio/wav' }), renderedSpeechText(block),
+          { metrics: { seed: preview.seed }, recipe: { workflow: 'custom', settings: {
+            ...this.payload(), text: this.editor.toSSMLH([block], { preview: true }), ui_input_type: 'magic',
+          } }, finishing: { options: {} } })
       },
-      onPersistCharacter: async ({ definition, block }) => {
+      onPersistCharacter: async ({ definition, block, metadata }) => {
         if (!block.preview?.blob) throw new Error('Generate a character turn before saving its voice.')
         const form = new FormData()
         form.set('name', definition.name); form.set('ref_text', renderedSpeechText(block))
         form.set('reference_audio', block.preview.blob, 'voice.wav')
         form.set('description', definition.description || '')
+        form.set('replace', String(!!definition.replace))
+        form.set('language', block.language || this.payload().language || 'English')
+        form.set('tags', JSON.stringify(metadata?.tags || []))
+        if (metadata?.portrait) form.set('portrait', metadata.portrait)
+        form.set('recipe', JSON.stringify({ version: 1, workflow: 'custom', character: definition,
+          settings: { ...this.payload(), text: this.editor.toSSMLH([block], { preview: true }),
+            seed: block.preview.seed, randomize_seed: false, ui_input_type: 'magic' },
+          selected_version: 'original' }))
+        if (definition.replace && !confirm(`Replace the saved voice “${definition.name}” with this generated character recording?`)) {
+          throw new Error('Voice replacement cancelled.')
+        }
         const profile = await fetchJson('/tts/voice-profiles', { method: 'POST', body: form })
-        await this.refreshVoices()
+        await this.refreshVoices(); window.dispatchEvent(new Event('voice-library-changed'))
         return { profileId: profile.id }
       },
       onError: error => toast(error.message || error),
@@ -211,7 +226,7 @@ export class GenerateWorkbench {
 
   showOutput(visible) {
     $('#generate-finishing').hidden = !visible
-    for (const selector of ['#generation-metrics', '#generation-diagnostics', '.studio-output-actions']) $(selector).hidden = !visible
+    for (const selector of ['#generation-metrics', '#generation-diagnostics', '#generation-actions']) $(selector).hidden = !visible
   }
 
   async present(blob, extension, text, metrics = {}, { streaming = false, resumeAt = null } = {}) {
@@ -257,6 +272,8 @@ export class GenerateWorkbench {
         const result = await this.takes.assemble(this.editor.blocks, { outputFormat: $('#output-format').value,
           normalizeLoudness: $('#normalize-loudness').checked, signal: controller.signal })
         if (revision !== this.assemblyRevision || this.controller) return
+        this.lastCreation = { generatedAt: this.latestTakeGenerationTime, recipe: { version: 1, workflow: 'custom',
+          settings: { ...this.payload(), ui_input_type: this.inputType } } }
         await this.present(result.blob, result.extension, this.editor.plainText())
         this.library.markDirty()
       } catch (error) { if (error.name !== 'AbortError') this.toast(error.message) }
@@ -296,6 +313,7 @@ export class GenerateWorkbench {
       this.toolbar.sync(); this.defaultVoice()
       this.editor.restoreWorkspaceTakes(workspace.takes)
       if (workspace.output?.blob) {
+        this.lastCreation = { generatedAt: null, recipe: { version: 1, workflow: 'custom', settings: structuredClone(settings) } }
         await this.present(workspace.output.blob, workspace.output.extension, this.inputType === 'magic' ? this.editor.plainText() : settings.text || '', {},
           { streaming: this.generationMode === 'stream' })
         await this.finisher.restore({ source: this.finisher.source, processed: workspace.processed, ...workspace.finishing })
@@ -403,6 +421,10 @@ export class GenerateWorkbench {
         monitor.abort(); await watching
         signal.throwIfAborted()
         this.progress('encoding', 'Preparing the player', 'Decoding the completed recording')
+        this.lastCreation = { generatedAt: performance.now(), recipe: { version: 1, workflow: 'custom',
+          settings: { ...structuredClone(payload), seed: metrics.seed, randomize_seed: false,
+            ui_input_type: this.inputType, ui_generation_mode: this.generationMode,
+            ui_generate_format: this.generateFormat } } }
         await this.present(blob, extension, text, metrics, { streaming, resumeAt })
         $('#last-generated-seed').value = metrics.seed ?? ''; this.toolbar.sync()
         this.progress('complete', 'Generation complete', streaming ? 'MP3 stream ready to replay or finish' : 'Audio ready to play, save or finish')

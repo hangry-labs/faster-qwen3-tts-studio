@@ -192,7 +192,10 @@ export class MagicVoiceDefinitions {
           'Keep this character in the script and generate one of its turns before saving it as a voice.',
         ))
       }
-      const committed = await this.onPersist(definition, { ...previous })
+      const committed = await this.onPersist(definition, { ...previous }, {
+        tags: (this.form.elements.promotionTags?.value || '').split(',').map(value => value.trim()).filter(Boolean),
+        portrait: this.form.elements.promotionPortrait?.files[0] || null,
+      })
       if (!committed?.profileId) {
         throw new Error(t('magic.definitionSaveFailed', {}, 'The character could not be saved as a voice.'))
       }

@@ -72,6 +72,7 @@
     <button class="tab-button active" type="button" role="tab" aria-selected="true" data-tab="custom">Generate</button>
     <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="design">Voice design</button>
     <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="clone">Voice clone</button>
+    <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="voices">Voices</button>
     <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="api">API</button>
     <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="system">System</button>
   </div>
@@ -114,6 +115,7 @@
       <p class="field-help">NVIDIA CUDA graphs · 24 kHz speech</p>
     </aside>
     <section class="content-panel" id="workflow-content">
+      <div class="voice-refinement-banner" id="voice-refinement" hidden role="status"><span id="voice-refinement-label"></span><button class="secondary-button compact-command" id="end-refinement" type="button">Finish refining</button></div>
 <div class="generate-workspace-grid" id="generate-authoring"><div class="generate-primary-column" id="generate-primary">      <section class="composer workflow-pane" data-workflow="custom">        <div class="composer-heading">
           <div class="composer-title-tools">
             <div class="section-title"><i class="icon-message-square-text"></i><span id="composer-title" data-i18n="scripts.name">Script name</span></div>
@@ -279,7 +281,7 @@
           </section>
         </section>        <div class="studio-metrics" id="generation-metrics" aria-live="polite"><span>Generation metrics appear here.</span></div>
         <details class="settings-details" id="generation-diagnostics"><summary>Generation diagnostics</summary><dl class="studio-diagnostics" id="diagnostic-values"><dt>Timing details</dt><dd>Generate speech to see timings.</dd></dl><p class="field-help">Server first audio includes reference preparation and audio decoding after model loading. Model TTFA covers model prefill and token generation when reported by streaming. Playback start is scheduled by the browser; it does not measure speaker hardware latency.</p></details>
-        <div class="studio-output-actions"><button class="secondary-button compact-command" id="use-as-reference" type="button" disabled><i class="icon-arrow-right"></i> Use as cloning reference</button><button class="secondary-button compact-command" id="save-output" type="button" disabled><i class="icon-save"></i> Save voice</button></div>
+        <div class="studio-output-actions" id="generation-actions"><button class="secondary-button compact-command" id="use-as-reference" type="button" disabled><i class="icon-arrow-right"></i> Use as cloning reference</button><button class="secondary-button compact-command" id="save-output" type="button" disabled><i class="icon-save"></i> Save voice</button></div>
 </section>
 <div id="stream-surface" hidden><strong id="stream-state"></strong><span id="stream-detail"></span><canvas id="stream-canvas" height="70"></canvas></div></div>
       <aside class="script-library" aria-labelledby="script-library-title">
@@ -312,10 +314,16 @@
         <label class="compact-field"><span>New text to speak</span><textarea id="text-clone" maxlength="1000" rows="4" placeholder="The words you want the cloned voice to say."></textarea></label>
         <label class="compact-field" id="clone-instruction-field"><span>Delivery direction <small>(optional)</small></span><textarea id="clone-instruct" maxlength="1500" rows="2" aria-describedby="clone-instruction-help" placeholder="For example: Speak slowly and gently, with a reassuring tone."></textarea></label>
         <p class="field-help" id="clone-instruction-help" role="status">Delivery direction is experimental. Choose Speaker and reference transcript for best results; speaker identity only may ignore the direction. Leave blank to clone without direction.</p>
-        <details class="settings-details"><summary>Saved voices <span id="voice-count"></span></summary><div id="voice-library" class="voice-library"></div><button class="secondary-button" id="save-reference" type="button" disabled>Save this reference</button></details>
+        <div class="studio-output-actions"><button class="secondary-button" id="save-reference" type="button" disabled>Save this reference</button><button class="secondary-button" type="button" data-open-voices>Browse saved voices</button></div>
         <p class="field-help">Only clone speakers who have authorized it. Do not use cloned voices for deceptive impersonation.</p>
       </section>
 
+    </section>
+    <section class="content-panel standalone-view" id="voices-view" hidden aria-labelledby="voice-library-title">
+      <div class="section-heading-row"><div class="section-title"><i class="icon-mic"></i><span id="voice-library-title">Voice library</span><span id="voice-count" class="count-badge">0</span></div><button class="secondary-button" id="refresh-voices" type="button">Refresh</button></div>
+      <p class="field-help">Saved references, portraits and creation settings remain in your local product volume. Use a voice for speech, or refine its original creation settings.</p>
+      <label class="profile-search"><span class="visually-hidden">Search voices, descriptions, languages and tags</span><input id="voice-filter" type="search" placeholder="Search voices, languages or tags"></label>
+      <div id="voice-library" class="voice-library-grid"></div>
     </section>
     <section class="content-panel standalone-view" id="api-view" hidden>
       <div class="section-title"><i class="icon-code"></i><span>Studio API</span></div><p class="workflow-description">The browser and API use the same serialized inference engine.</p>
@@ -353,7 +361,19 @@
       </div>
     </section>
   </main>
-  <dialog class="studio-dialog" id="save-voice-dialog"><form id="save-voice-form"><div class="section-heading-row"><h2>Save voice reference</h2><button class="icon-button" id="close-save" type="button" aria-label="Close dialog"><i class="icon-x"></i></button></div><p class="field-help">This explicitly stores the audio and transcript in your local voice library.</p><label class="compact-field"><span>Voice name</span><input id="voice-name" maxlength="80" required></label><label class="compact-field"><span>Reference transcript</span><textarea id="voice-transcript" rows="3" maxlength="4000"></textarea></label><button class="primary-button" type="submit">Save voice</button></form></dialog>
+  <dialog class="studio-dialog" id="save-voice-dialog" aria-labelledby="save-voice-title"><form id="save-voice-form">
+    <div class="section-heading-row"><h2 id="save-voice-title">Save voice reference</h2><button class="icon-button" id="close-save" type="button" aria-label="Close dialog"><i class="icon-x"></i></button></div>
+    <p class="field-help" id="save-voice-help">Store the selected reference, original recording and creation settings in your local library.</p>
+    <label class="compact-field"><span>Voice name</span><input id="voice-name" maxlength="80" required></label>
+    <div class="field-grid"><label class="compact-field"><span>Language</span><select id="voice-language"></select></label><label class="compact-field" id="voice-version-field"><span>Cloning reference</span><select id="voice-version"><option value="original">Original recording</option><option value="processed">Processed recording</option></select></label></div>
+    <label class="compact-field"><span>Description</span><textarea id="voice-description" rows="2" maxlength="1500"></textarea></label>
+    <label class="compact-field"><span>Tags <small>(comma separated)</small></span><input id="voice-tags" maxlength="395" placeholder="narrator, warm, character"></label>
+    <label class="compact-field"><span>Reference transcript</span><textarea id="voice-transcript" rows="3" maxlength="4000"></textarea></label>
+    <div class="voice-portrait-field"><img id="voice-portrait-preview" alt="Voice portrait preview" width="64" height="64" hidden><label class="compact-field"><span>Portrait <small>(PNG, JPEG or WebP, up to 5 MB)</small></span><input id="voice-portrait" type="file" accept="image/png,image/jpeg,image/webp"></label></div>
+    <label class="toggle-field" id="voice-clear-portrait-field" hidden><span>Remove existing portrait</span><input id="voice-clear-portrait" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
+    <label class="toggle-field" id="voice-replace-field" hidden><span>Replace the voice being refined with this new recording</span><input id="voice-replace" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
+    <p id="voice-save-error" class="field-help" role="alert" hidden></p><button class="primary-button" id="voice-submit" type="submit">Save voice</button>
+  </form></dialog>
 <dialog class="guide-dialog compact-dialog" id="magic-substitution-dialog">
     <form id="magic-substitution-form" method="dialog">
       <div class="dialog-heading"><h2 data-i18n="magic.pronunciationTitle">Pronunciation override</h2><button class="icon-button" id="magic-substitution-close" type="button" title="Close" aria-label="Close" data-i18n-title="common.close" data-i18n-aria-label="common.close"><i class="icon-x"></i></button></div>
@@ -388,6 +408,8 @@
           <label class="field magic-definition-wide"><span data-i18n="magic.sampleText">Design sample text</span><input name="sample" type="text" maxlength="500" placeholder="My name is Captain Marek. The ship is ready." data-i18n-placeholder="magic.samplePlaceholder"></label>
           <label class="field"><span data-i18n="magic.sampleLanguage">Sample language</span><input name="sampleLanguage" type="text" maxlength="40" placeholder="en-US" data-i18n-placeholder="magic.sampleLanguagePlaceholder"></label>
           <label class="toggle-field magic-definition-replace"><input name="replace" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span data-i18n="magic.definitionReplace">Replace an existing saved voice with this name</span></label>
+          <label class="field"><span>Saved voice tags <small>(promotion only)</small></span><input name="promotionTags" maxlength="395" placeholder="character, narrator"></label>
+          <label class="field"><span>Saved voice portrait <small>(promotion only)</small></span><input name="promotionPortrait" type="file" accept="image/png,image/jpeg,image/webp"></label>
         </div>
         <div class="dialog-status" id="magic-definition-error" role="alert" hidden></div>
         <div class="dialog-actions"><button class="primary-button" type="submit"><i class="icon-check"></i><span data-i18n="magic.definitionApply">Apply character</span></button></div>

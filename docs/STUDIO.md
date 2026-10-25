@@ -28,6 +28,7 @@ keeping weights. These settings survive browser and container replacement.
 | Generate | CustomVoice, Base and document-defined VoiceDesign | Magic dialogue, text, SSML and SSML-H; native or saved voices; locked takes and saved scripts. |
 | Voice design | 1.7B VoiceDesign | Describe a voice, generate a sample, then use or save it as a cloning reference. |
 | Voice clone | 0.6B or 1.7B Base | Upload, record, or choose a saved reference. Clone speaker identity alone or use an exact reference transcript, with optional delivery direction. |
+| Voices | Saved audio-backed voices | Search metadata, preview references, add portraits, use voices and restore their creation workflow for refinement. |
 | API | Same inference engine | Inspect capabilities and endpoint documentation. |
 | System | Operator controls | Load/unload models, configure ASR, and inspect demand-driven GPU telemetry. |
 
@@ -35,6 +36,33 @@ All voice workflows offer complete WAV output and incremental playback. Qwen
 supports Chinese, English, Japanese, Korean, German, French, Russian, Portuguese,
 Spanish, and Italian, plus automatic language detection. Model capabilities drive
 the controls; unsupported combinations are rejected before loading.
+
+## Voice library and refinement
+
+Save a generated recording or an uploaded reference explicitly. The save dialog
+accepts a description, up to twelve tags and an optional portrait. Search the
+Voices tab by name, description, tags or language. **Use voice** selects the saved
+reference in Generate; **Edit details** changes metadata and portraits without
+replacing audio.
+
+**Refine** restores the original creation workflow, model, text, direction,
+sampling controls and recorded seed when those settings were saved. Clones also
+restore their source reference and transcript. Original and processed recordings
+remain separate, with saved finishing settings restored alongside them. Older
+voices without a recipe open as cloning references.
+
+Generate fresh audio to enable replacement of the voice being refined. Saving
+offers the original or a current processed preview as the cloning reference;
+stale processed previews cannot be selected. Replacing a voice requires the
+replacement toggle and confirmation. Leaving it unchecked saves a separate voice
+under a unique name. **Finish refining** ends the replacement context.
+
+Magic character promotion includes tags, an optional portrait, the generated
+turn transcript and creation recipe. Existing names require explicit replacement;
+failed saves leave the script character intact. Saved voices are audio-backed
+Base cloning references even when their original creation used VoiceDesign or
+CustomVoice. Restored settings aid repeatability, but model/runtime changes can
+change the resulting audio.
 
 Generate uses a full-width left settings rail, central authoring surface and
 saved-script rail. Its toolbar holds actual Qwen model controls, seed and output

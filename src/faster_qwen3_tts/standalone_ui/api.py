@@ -460,51 +460,8 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     async def purge():
         return await asyncio.to_thread(engine.unload)
 
-    def public_profile(v):
-        return {**{k: val for k, val in v.items() if k != 'audio_folder' and not k.startswith('_')},
-                'ref_text': v.get('transcript', ''), 'profile_type': 'clone',
-                'language': v.get('language', 'English'), 'description': v.get('description', ''),
-                'tags': v.get('tags', []), 'portrait_url': None}
-
-    @router.get('/tts/voice-profiles')
-    def profile_list():
-        records = [public_profile(v) for v in store.list()]
-        return {'object': 'list', 'data': records, 'count': len(records)}
-
-    async def profile_metadata(name, ref_text, language, description, tags, recipe):
-        parsed_tags, parsed_recipe = json.loads(tags or '[]'), json.loads(recipe or '{}')
-        if not isinstance(parsed_tags, list) or len(parsed_tags) > 12 or any(not isinstance(t, str) or len(t) > 32 for t in parsed_tags):
-            raise ValueError('Use a JSON array of up to 12 tags, each up to 32 characters.')
-        if not isinstance(parsed_recipe, dict) or len(recipe) > 16000 or len(description) > 1500:
-            raise ValueError('Recipe must be a JSON object up to 16000 characters; description up to 1500 characters.')
-        from .speech import language as resolve_language
-        return {'name': name, 'transcript': ref_text, 'language': resolve_language(language or 'English'),
-                'description': description, 'tags': parsed_tags, 'recipe': parsed_recipe, 'profile_type': 'clone'}
-
-    @router.post('/tts/voice-profiles')
-    async def save_profile(name: str = Form(...), profile_type: str = Form('clone'), ref_text: str = Form(''),
-        language: str = Form('English'), description: str = Form(''), tags: str = Form('[]'), recipe: str = Form('{}'),
-        reference_audio: UploadFile = File(...)):
-        if profile_type not in {'clone', 'reference', 'design'}:
-            raise ValueError('Save an audio-backed clone, reference or design profile.')
-        metadata = await profile_metadata(name, ref_text, language, description, tags, recipe)
-        records = store.commit([(metadata, await canonical_audio(reference_audio), False)])
-        return public_profile(records[name.strip()])
-
-    @router.put('/tts/voice-profiles/{identity}')
-    async def edit_profile(identity: str, name: str = Form(...), ref_text: str = Form(''),
-        language: str = Form('English'), description: str = Form(''), tags: str = Form('[]'), recipe: str = Form('{}'),
-        reference_audio: UploadFile | None = File(None)):
-        metadata = await profile_metadata(name, ref_text, language, description, tags, recipe)
-        return public_profile(store.update(identity, metadata, await canonical_audio(reference_audio) if reference_audio else None))
-
-    @router.get('/tts/voice-profiles/{identity}/audio')
-    def profile_audio(identity: str):
-        return Response(store.audio(store.resolve(identity)), media_type='audio/wav')
-
-    @router.delete('/tts/voice-profiles/{identity}')
-    def remove_profile(identity: str):
-        return {'deleted': True, 'id': store.delete(identity)['id']}
+    from .profile_api import attach_profiles
+    profile_list = attach_profiles(router, store, canonical_audio)
 
     @router.post('/tts/transcribe-upload')
     async def transcribe_upload(reference_audio: UploadFile = File(...)):

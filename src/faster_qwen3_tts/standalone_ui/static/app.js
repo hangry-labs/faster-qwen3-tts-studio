@@ -7,11 +7,12 @@ import { encodeWav } from './audio-utils.js'
 import { decodePcmWav, PcmPlayer } from './pcm-player.js'
 import { closeDialogOnBackdrop } from './dialog-utils.js'
 import { GenerateWorkbench } from './generate-workbench.js'
+import { VoiceLibrary, refinementDocument } from './voice-library.js'
 
 const $ = (selector) => document.querySelector(selector)
 const $$ = (selector) => [...document.querySelectorAll(selector)]
 const state = { tab: 'custom', mode: 'custom', capabilities: null, busy: false,
-  controller: null, player: null, outputs: {}, models: {}, textFeed: {}, saveFile: null, toastTimer: null }
+  controller: null, player: null, outputs: {}, models: {}, textFeed: {}, toastTimer: null }
 const names = { custom: 'Generate speech', design: 'Design voice', clone: 'Clone voice' }
 const examples = {
   custom: 'Good morning! It is a lovely day to give your ideas a voice.',
@@ -164,6 +165,7 @@ async function activateTab(tab) {
   $('#workflow-content').hidden = !workflow
   $('#api-view').hidden = tab !== 'api'
   $('#system-view').hidden = tab !== 'system'
+  $('#voices-view').hidden = tab !== 'voices'
   $('.script-library').hidden = tab !== 'custom'
   $('#saved-voice-field').hidden = tab !== 'custom'
   $('#output-format-field').hidden = tab !== 'custom'
@@ -276,6 +278,8 @@ async function generate() {
     return
   }
   const options = requestOptions(), mode = options.mode, streaming = $('#streaming').checked
+  if (options.seed == null) options.seed = crypto.getRandomValues(new Uint32Array(1))[0]
+  const sourceReference = mode === 'clone' ? reference.currentFile() : null
   const chunkLimits = state.capabilities.chunk_size
   if (!Number.isInteger(options.chunk_size) || options.chunk_size < chunkLimits.min || options.chunk_size > chunkLimits.max) return toast(`Choose a whole chunk size from ${chunkLimits.min} to ${chunkLimits.max}.`)
   if (!options.text) return toast('Enter text to speak.')
@@ -338,7 +342,10 @@ async function generate() {
     let offset = 0
     chunks.forEach((chunk) => { all.set(chunk, offset); offset += chunk.length })
     const file = new File([encodeWav([all], rate)], `qwen-${mode}-${Date.now()}.wav`, { type: 'audio/wav' })
-    state.outputs[mode] = { file, text: options.text, metrics: { ...metrics, ...clientMetrics } }
+    state.outputs[mode] = { file, text: options.text, metrics: { ...metrics, ...clientMetrics, seed: options.seed },
+      recipe: { version: 1, workflow: mode, settings: structuredClone(options) },
+      source: sourceReference, generatedAt: performance.now() }
+    $('#last-generated-seed').value = options.seed; workbench.toolbar.sync()
     if (state.mode === mode && ['custom','design','clone'].includes(state.tab)) {
       workbench.showOutput(true)
       $('#generate-result').hidden = false; $('#stream-result').hidden = true
@@ -388,37 +395,69 @@ async function refreshAsr() {
 }
 
 async function refreshVoices() {
-  const { voices } = await fetchJson('/studio/voices')
-  $('#voice-count').textContent = `(${voices.length})`
-  $('#voice-library').replaceChildren()
-  if (!voices.length) $('#voice-library').textContent = 'No saved voices yet. Save a reference or a designed voice when you want to keep it.'
-  for (const voice of voices) {
-    const item = document.createElement('div'); item.className = 'voice-library-item'
-    const name = document.createElement('strong'); name.textContent = voice.name
-    const actions = document.createElement('div'); actions.className = 'studio-output-actions'
-    const use = document.createElement('button'); use.type = 'button'; use.className = 'secondary-button'; use.textContent = 'Use voice'
-    use.addEventListener('click', async () => {
-      try {
-        const response = await fetch(voice.audio_url)
-        if (!response.ok) throw new Error('Voice reference could not be loaded.')
-        await reference.load(new File([await response.blob()], voice.name + '.wav', { type: 'audio/wav' }))
-        $('#reference-text').value = voice.transcript || ''; await activateTab('clone')
-      } catch (error) { toast(error.message) }
-    })
-    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.innerHTML = '<i class="icon-trash-2"></i>'; remove.setAttribute('aria-label', `Delete ${voice.name}`)
-    remove.addEventListener('click', async () => {
-      if (!confirm(`Delete the saved voice “${voice.name}”?`)) return
-      try { await fetchJson(`/studio/voices/${voice.id}`, { method: 'DELETE' }); await refreshVoices() } catch (error) { toast(error.message) }
-    })
-    actions.append(use, remove); item.append(name, actions); $('#voice-library').append(item)
-  }
-  await workbench.refreshVoices()
+  await voiceLibrary.refresh()
 }
 
-function openSave(file, transcript) {
-  if (!file) return
-  state.saveFile = file; $('#voice-name').value = ''; $('#voice-transcript').value = transcript || ''
-  $('#save-voice-dialog').showModal(); $('#voice-name').focus()
+function openSave(file, transcript, context = null) {
+  voiceLibrary.open(file, transcript, context)
+}
+
+function captureVoice() {
+  const generated = state.outputs[state.mode] || {}
+  const finishing = workbench.finisher.snapshot()
+  return { ...generated, original: state.mode === 'custom' ? workbench.currentFile() : output.currentFile(),
+    finishing, recipe: generated.recipe || { workflow: state.mode, settings: requestOptions() } }
+}
+
+async function voiceFile(url, name = 'reference.wav') {
+  const response = await fetch(url, { cache: 'no-store' })
+  if (!response.ok) throw new Error('Saved voice audio could not be loaded.')
+  return new File([await response.blob()], name, { type: 'audio/wav' })
+}
+
+async function refineVoice(profile) {
+  const recipe = structuredClone(profile.recipe || {}), settings = recipe.settings || {}
+  const mode = ['custom', 'design', 'clone'].includes(recipe.workflow) ? recipe.workflow : 'clone'
+  // Load every asset before changing the current workspace so a failed read leaves it intact.
+  const [original, processed, source] = await Promise.all([
+    voiceFile(profile.original_url || profile.audio_url),
+    profile.processed_url ? voiceFile(profile.processed_url, 'processed.wav') : null,
+    profile.source_url ? voiceFile(profile.source_url, 'source.wav') : mode === 'clone' ? voiceFile(profile.audio_url) : null,
+  ])
+  if (mode === 'custom') {
+    if (settings.ui_input_type === 'magic' || settings.input_type === 'ssml-h') {
+      settings.text = refinementDocument(settings.text || '', voiceLibrary.records.map(voice => voice.name))
+    }
+    if (settings.ui_input_type === 'magic') workbench.editor.loadSSMLH(settings.text || '')
+    await workbench.restoreWorkspace({ settings, output: { blob: original, extension: 'wav' },
+      processed: processed ? { blob: processed, extension: 'wav' } : null, finishing: recipe.finishing })
+  } else {
+    if (settings.model) state.models[mode] = settings.model
+    await activateTab(mode)
+    for (const [key, id] of Object.entries({ language: 'language', temperature: 'temperature', top_k: 'top-k',
+      repetition_penalty: 'repetition', chunk_size: 'chunk-size', max_new_tokens: 'max-tokens' })) {
+      if (settings[key] != null) { $('#' + id).value = settings[key]; $('#' + id).dispatchEvent(new Event('input', { bubbles: true })) }
+    }
+    $(`#text-${mode}`).value = settings.text || profile.ref_text || ''
+    $(`#${mode}-instruct`).value = settings.instruct || ''
+    $('#random-seed').checked = settings.seed == null; $('#seed').disabled = settings.seed == null
+    if (settings.seed != null) $('#seed').value = settings.seed
+    $('#text-feed').value = String(settings.non_streaming_mode ?? mode !== 'clone')
+    if (mode === 'clone') {
+      await reference.load(source)
+      $('#reference-text').value = settings.ref_text ?? profile.ref_text ?? ''
+      $('#clone-method').value = String(settings.xvec_only ?? !$('#reference-text').value)
+      updateCloneGuidance()
+    }
+    await output.load(original); workbench.showOutput(true)
+    await workbench.finisher.restore({ source: { blob: original, extension: 'wav' },
+      processed: processed ? { blob: processed, extension: 'wav' } : null, ...recipe.finishing })
+  }
+  state.outputs[mode] = { file: original, text: settings.text || profile.ref_text || '',
+    recipe: structuredClone(recipe), source, generatedAt: null, metrics: { seed: settings.seed },
+    finishing: workbench.finisher.snapshot() }
+  updateCount(); workbench.toolbar.sync()
+  toast(`Refining ${profile.name}. Generate a new recording to enable replacement; the saved voice remains available.`)
 }
 
 async function setHeaderCollapsed(collapsed, animate = true) {
@@ -449,10 +488,27 @@ const workbench = new GenerateWorkbench({ options: requestOptions, fetchJson, to
     $('#generate-button').dataset.running = String(busy)
   },
   onOutput: async (file, text, metrics) => {
-    state.outputs.custom = { file, text, metrics }
+    const created = workbench.lastCreation
+    state.outputs.custom = { file, text, metrics,
+      recipe: created?.recipe, generatedAt: created?.generatedAt }
     if (!file) delete state.outputs.custom
   },
 })
+const voiceLibrary = new VoiceLibrary({ fetchJson, toast, capture: captureVoice,
+  isBusy: () => state.busy,
+  onRefresh: async () => {
+    const selected = $('#saved-voice').value
+    await workbench.refreshVoices()
+    if (selected !== $('#saved-voice').value && state.capabilities && state.tab === 'custom') await activateTab('custom')
+  },
+  onUse: async profile => {
+    await activateTab('custom'); $('#saved-voice').value = profile.id
+    await activateTab('custom'); workbench.defaultVoice()
+  },
+  onRefine: refineVoice,
+})
+window.addEventListener('voice-library-changed', () => refreshVoices().catch(error => toast(error.message)))
+$$('[data-open-voices]').forEach(button => button.addEventListener('click', () => activateTab('voices')))
 $('#saved-voice').addEventListener('change', () => activateTab('custom').catch(error => toast(error.message)))
 $('#speaker').addEventListener('change', () => workbench.defaultVoice())
 $('#generate-button').addEventListener('click', () => generate().catch((error) => toast(error.message)))
@@ -502,16 +558,8 @@ $('#transcribe-reference').addEventListener('click', async () => {
 })
 $('#use-as-reference').addEventListener('click', async () => { const file = state.mode === 'custom' ? workbench.currentFile() : output.currentFile(); if (!file) return; const saved = state.outputs[state.mode]; await reference.load(file); $('#reference-text').value = saved?.text || ''; await activateTab('clone') })
 $('#save-output').addEventListener('click', () => openSave(state.mode === 'custom' ? workbench.currentFile() : output.currentFile(), state.outputs[state.mode]?.text))
-$('#save-reference').addEventListener('click', () => openSave(reference.currentFile(), $('#reference-text').value))
-$('#close-save').addEventListener('click', () => $('#save-voice-dialog').close())
-closeDialogOnBackdrop($('#save-voice-dialog'), () => $('#save-voice-dialog').close())
-$('#save-voice-form').addEventListener('submit', async (event) => {
-  event.preventDefault(); const button = event.submitter; button.disabled = true
-  try {
-    const form = new FormData(); form.set('file', state.saveFile); form.set('name', $('#voice-name').value); form.set('transcript', $('#voice-transcript').value)
-    await fetchJson('/studio/voices', { method: 'POST', body: form }); $('#save-voice-dialog').close(); await refreshVoices(); await workbench.refreshVoices(); toast('Voice saved to your local library.')
-  } catch (error) { toast(error.message) } finally { button.disabled = false }
-})
+$('#save-reference').addEventListener('click', () => openSave(reference.currentFile(), $('#reference-text').value,
+  { recipe: { version: 1, workflow: 'reference', settings: { language: $('#language').value } }, finishing: { options: {} } }))
 $('#save-asr').addEventListener('click', async () => {
   try { await fetchJson('/system/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asr_url: $('#asr-url').value }) }); await refreshAsr() } catch (error) { toast(error.message) }
 })
@@ -530,7 +578,7 @@ document.addEventListener('keydown', (event) => { if ((event.ctrlKey || event.me
 window.addEventListener('beforeunload', () => { gpu.stop(); recorder.dispose(); state.controller?.abort(); state.player?.stop().catch(() => {}) })
 window.addEventListener('hashchange', () => {
   const tab = location.hash.slice(1)
-  if (state.capabilities && ['custom','design','clone','api','system'].includes(tab) && tab !== state.tab) activateTab(tab).catch((error) => toast(error.message))
+  if (state.capabilities && ['custom','design','clone','voices','api','system'].includes(tab) && tab !== state.tab) activateTab(tab).catch((error) => toast(error.message))
 })
 
 function renderModelPolicy(policy) {
@@ -581,6 +629,7 @@ async function initialize() {
   for (const id of ['chunk-size', 'chunk-size-slider']) { $('#' + id).min = capabilities.chunk_size.min; $('#' + id).max = capabilities.chunk_size.max }
   updateChunkHelp()
   selectOptions($('#language'), capabilities.languages, 'English')
+  selectOptions($('#voice-language'), capabilities.languages, 'English')
   selectOptions($('#speaker'), capabilities.speakers, 'Ryan')
   selectOptions($('#system-model'), capabilities.models)
   renderModelPolicy(settings.model_policy)
@@ -590,7 +639,7 @@ async function initialize() {
   let saved = null
   try { saved = JSON.parse(sessionStorage.getItem('qwen3tts-ui-state-v1') || 'null') } catch {}
   setHeaderCollapsed(!!saved?.headerCollapsed, false)
-  const views = ['custom','design','clone','api','system']
+  const views = ['custom','design','clone','voices','api','system']
   const requested = location.hash.slice(1)
   const tab = views.includes(requested) ? requested : views.includes(saved?.tab) ? saved.tab : 'custom'
   await activateTab(tab)

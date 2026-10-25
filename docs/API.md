@@ -146,10 +146,31 @@ request first; incremental text input and bidirectional sessions are not exposed
 
 `GET/POST /tts/voice-profiles` lists or explicitly saves references. POST takes
 multipart `name`, `reference_audio`, optional `ref_text`, `language`,
-`description`, JSON `tags`, and JSON `recipe`. PUT the same metadata to
-`/tts/voice-profiles/{id}` to edit or replace reference audio. GET its `/audio`
-child to download; DELETE the profile to remove it. Names must be unique.
-Profiles remain compatible with the existing `/studio/voices` library.
+`description`, JSON `tags`, JSON `recipe`, and `profile_type` (`clone`, `reference`
+or `design`). Names are unique ignoring case. `GET /tts/voice-profiles?q=warm`
+searches names, descriptions, tags and languages.
+
+Optional `original_audio`, `processed_audio` and `design_audio` uploads retain
+the creation recording, processed alternative and source cloning reference.
+Audio is stored as mono float WAV without changing its sample rate. Each upload
+must fit the reference limits: 10 MB and two minutes. The selected
+`reference_audio` is what synthesis uses. `portrait` accepts PNG/JPEG/WebP up to
+5 MB and 25 megapixels, normalized to a 100×100 lossless WebP.
+
+PUT metadata to `/tts/voice-profiles/{id}` to edit it. Omitted fields, audio and
+creation assets remain intact. Replacing `reference_audio` requires
+`replace_audio=true`; send the replacement creation assets alongside it.
+Unspecified processed/source recordings are cleared on audio replacement to
+avoid retaining an unrelated creation history. Portraits persist unless replaced
+or explicitly removed with `clear_portrait=true`. POST `replace=true` also allows
+explicit replacement by an existing unique name, preserving its profile id.
+
+Responses include `audio_url`, optional `original_url`, `processed_url`,
+`source_url` and `portrait_url`, plus recipe and timestamps. GET these URLs to
+retrieve assets; DELETE `/tts/voice-profiles/{id}` removes the profile and assets.
+Old saved voices and `/studio/voices` remain compatible. Recipes record creation
+settings; matching a seed alone does not guarantee identical audio across model
+or runtime changes.
 
 `GET/POST /tts/dialogue-scripts`, `GET/PUT/DELETE /tts/dialogue-scripts/{id}`,
 and GET its `/download` child manage SSML-H scripts. Scripts contain a `name`,

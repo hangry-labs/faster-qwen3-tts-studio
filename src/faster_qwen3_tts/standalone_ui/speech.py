@@ -342,8 +342,10 @@ class SpeechService:
                                                     reference=reference, transcript=sample)
                 if definition.scope == 'profile':
                     pending.append(({'name': definition.name, 'transcript': sample, 'language': voice_language,
-                                     'profile_type': 'clone', 'description': design_description(definition),
-                                     'recipe': asdict(definition)}, reference, definition.replace))
+                                     'profile_type': 'design', 'description': design_description(definition),
+                                     'recipe': {'version': 1, 'workflow': 'design', 'selected_version': 'original',
+                                                'settings': config.model_dump(), 'character': asdict(definition)}},
+                                    reference, definition.replace))
 
             speech = [u for u in plan.units if u.kind == 'speech']
             if speech_index is not None:

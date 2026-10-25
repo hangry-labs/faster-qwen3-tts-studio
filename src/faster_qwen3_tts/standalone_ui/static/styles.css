@@ -721,6 +721,20 @@ button.magic-turn-portrait.ready:hover, button.magic-turn-portrait.ready:focus-v
 .clone-profile-card .secondary-button { width: 100%; min-height: 31px; padding: 0 8px; font-size: 0.65rem; }
 .clone-profile-actions .icon-button { width: 31px; height: 31px; }
 .clone-profile-empty { padding: 20px 10px; border: 1px dashed var(--line); color: var(--muted); font-size: 0.7rem; line-height: 1.5; text-align: center; }
+.voice-library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 10px; margin-top: 12px; }
+.voice-library-grid .clone-profile-card { min-width: 0; align-content: start; }
+.voice-library-grid .clone-profile-copy span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.voice-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.voice-portrait-field { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.voice-portrait-field img { flex: 0 0 64px; object-fit: cover; border: 1px solid var(--line); border-radius: 4px; }
+.voice-portrait-field .compact-field { min-width: 0; flex: 1; }
+.voice-portrait-field input { width: 100%; min-width: 0; font-size: .72rem; }
+#save-voice-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+#save-voice-form { display: grid; gap: 10px; }
+.workspace[data-view="voices"] { grid-template-columns: minmax(0, 1fr); }
+.voice-refinement-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px; margin-bottom: 10px; border: 1px solid #4b765f; background: #142019; color: #bcebd2; font-size: .74rem; }
+.voice-refinement-banner span { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 600px) { .voice-refinement-banner { flex-direction: column; align-items: stretch; } }
 .clone-store-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--green); background: #151b18; }
 .clone-store-row[hidden] { display: none; }
 .clone-store-row > div { display: grid; gap: 3px; }

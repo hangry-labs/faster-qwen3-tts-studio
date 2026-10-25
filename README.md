@@ -54,7 +54,8 @@ On Windows, the [Task workflow](docs/DEVELOPMENT.md) provides `task init`,
 - Saved script folders, locked/reusable takes and explicit workspace snapshots
 - Reference upload, drag and drop, microphone selection and recording
 - Waveform playback, trimming, download and browser-supported sharing
-- An explicit saved-voice library that survives container replacement
+- A searchable saved-voice library with portraits, tags and restorable creation
+  settings, original/processed references and confirmed voice replacement
 - Optional reference transcription through an existing ASR service
 - FIFO generation progress, cancellation, timing diagnostics and bounded prompt reuse
 - Per-workflow default models, configurable GPU residency and GPU telemetry in System
@@ -343,6 +344,10 @@ or change the rolling Docker image tags.
 
 - Bound inference admission with explicit HTTP 429 overload responses, FIFO
   cancellation and queue telemetry; keep single-request GPU inference.
+- Add searchable voice cards, editable metadata and normalized portraits. Preserve
+  source/original/processed audio with creation recipes; restore voices for
+  refinement and confirm fresh-audio replacements. Extend Magic character saving
+  with metadata, portraits and explicit name-collision handling.
 - Plan protected long text around sentence/clause boundaries and word/CJK budgets.
   Report token/context cutoffs; complete native generation can retry smaller
   sections before delivering audio.

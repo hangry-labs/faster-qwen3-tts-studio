@@ -1,6 +1,21 @@
 # Qwen3-TTS Studio
 
 The Hangry Labs Studio is the default browser UI in the root Docker image.
+
+## Interface languages
+
+The interface supports English (`/en`), Norwegian Bokmål (`/nb`), Polish (`/pl`),
+Japanese (`/ja`), Simplified Chinese (`/zh`) and Spanish (`/es`). English is the
+default. The header picker updates the interface without reloading, preserving
+unsaved dialogue, reference recordings, takes, output audio and operator edits.
+The preference stays in browser local storage. Opening `/` restores it; an
+explicit language URL takes precedence. Missing translations fall back to English.
+
+Interface language does not change the synthesis language. Qwen's ten speech
+languages remain the same; Norwegian and Polish are interface translations only.
+Example buttons use the selected speech language, or English when Auto is selected.
+Changing interface language never translates user text, voice names, saved scripts
+or protocol/model identifiers. Language switching is paused during generation.
 It adapts the VoxCPMTTS shell, audio editor, recording controls, and GPU monitor
 to Qwen's generation capabilities. It replaces the upstream demo.
 

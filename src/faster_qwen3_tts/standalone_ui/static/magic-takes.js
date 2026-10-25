@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 const BUNDLE_MEDIA_TYPE = 'application/vnd.hangrylabs.magic-takes'
 
 function speechBlocks(blocks) {
@@ -14,21 +15,21 @@ function takeFile(block) {
 
 async function unpackBundle(response) {
   const buffer = await response.arrayBuffer()
-  if (buffer.byteLength < 4) throw new Error('Magic take response is incomplete.')
+  if (buffer.byteLength < 4) throw new Error(msg('Magic take response is incomplete.'))
   const view = new DataView(buffer)
   const manifestLength = view.getUint32(0, true)
   const manifestEnd = 4 + manifestLength
-  if (manifestEnd > buffer.byteLength) throw new Error('Magic take manifest is incomplete.')
+  if (manifestEnd > buffer.byteLength) throw new Error(msg('Magic take manifest is incomplete.'))
   const manifest = JSON.parse(new TextDecoder().decode(buffer.slice(4, manifestEnd)))
   if (manifest.version !== 1 || !Array.isArray(manifest.takes) || !manifest.output) {
-    throw new Error('Magic take response uses an unsupported format.')
+    throw new Error(msg('Magic take response uses an unsupported format.'))
   }
   const payload = buffer.slice(manifestEnd)
   const extract = (item) => {
     const start = Number(item.offset)
     const end = start + Number(item.length)
     if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > payload.byteLength) {
-      throw new Error('Magic take response contains an invalid audio range.')
+      throw new Error(msg('Magic take response contains an invalid audio range.'))
     }
     return new Blob([payload.slice(start, end)], { type: item.media_type || 'application/octet-stream' })
   }
@@ -58,7 +59,7 @@ export class MagicTakeStudio {
 
   async render(payload, blocks, { signal, requestId } = {}) {
     const speech = speechBlocks(blocks)
-    if (!speech.length) throw new Error('Add at least one speech turn before generating.')
+    if (!speech.length) throw new Error(msg('Add at least one speech turn before generating.'))
     const retained = speech.filter((block) => block.locked && block.preview)
     const form = new FormData()
     form.append('payload', JSON.stringify(payload))
@@ -76,7 +77,7 @@ export class MagicTakeStudio {
     })
     if (!response.ok) throw new Error(await this.responseError(response))
     if (!response.headers.get('Content-Type')?.startsWith(BUNDLE_MEDIA_TYPE)) {
-      throw new Error('Magic render returned an unexpected response type.')
+      throw new Error(msg('Magic render returned an unexpected response type.'))
     }
     return unpackBundle(response)
   }
@@ -102,7 +103,7 @@ export class MagicTakeStudio {
   async assemble(blocks, { outputFormat = 'wav', normalizeLoudness = false, signal } = {}) {
     const speech = speechBlocks(blocks)
     if (!speech.length || speech.some((block) => !block.preview)) {
-      throw new Error('Generate every speech turn before assembling the dialogue.')
+      throw new Error(msg('Generate every speech turn before assembling the dialogue.'))
     }
     const timeline = blocks.flatMap((block) => {
       if (block.type === 'break') return [{ type: 'break', milliseconds: block.milliseconds }]

@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 // PCM-WAV chunk playback for the Qwen engine; no MP3 codec or CDN dependency.
 export function decodePcmWav(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
@@ -12,14 +13,14 @@ export function decodePcmWav(bytes) {
       bits = view.getUint16(start + 14, true)
     }
     if (name === 'data') {
-      if (channels !== 1 || bits !== 16 || start + size > view.byteLength) throw new Error('Unexpected audio chunk format.')
+      if (channels !== 1 || bits !== 16 || start + size > view.byteLength) throw new Error(msg('Unexpected audio chunk format.'))
       const samples = new Float32Array(size / 2)
       for (let index = 0; index < samples.length; index++) samples[index] = view.getInt16(start + index * 2, true) / 32768
       return { samples, rate }
     }
     offset = start + size + (size % 2)
   }
-  throw new Error('The audio chunk has no samples.')
+  throw new Error(msg('The audio chunk has no samples.'))
 }
 
 export class PcmPlayer {

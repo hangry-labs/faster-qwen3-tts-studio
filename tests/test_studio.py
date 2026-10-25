@@ -78,6 +78,57 @@ def test_shell_assets_and_capabilities_are_local_and_complete(studio):
         assert set(client.get(f'/static/locales/{locale}.json').json()) == english_keys
 
 
+@pytest.mark.parametrize('locale', ['en', 'nb', 'pl', 'ja', 'zh', 'es'])
+def test_locale_routes_bootstrap_translations_without_changing_speech_capabilities(studio, locale):
+    client, engine = studio
+    response = client.get('/' + locale + '?locale=unsupported')
+    assert response.status_code == 200
+    assert f'<html lang="{locale}"' in response.text
+    bootstrap = json.loads(re.search(r'window\.__QWEN3TTS_UI__ = (\{.*\})', response.text)[1])
+    assert bootstrap['locale'] == locale
+    assert {item['code'] for item in bootstrap['locales']} == {'en', 'nb', 'pl', 'ja', 'zh', 'es'}
+    assert bootstrap['messages']['text:Generate speech']
+    if locale != 'en':
+        assert bootstrap['messages']['text:Generate speech'] != 'Generate speech'
+    assert 'Norwegian' not in client.get('/studio/capabilities').json()['languages']
+    assert 'Polish' not in client.get('/studio/capabilities').json()['languages']
+    assert engine.requests == []
+    assert response.headers['cache-control'] == 'no-store'
+    assert client.get('/' + locale + '/').status_code == 200
+
+
+def test_unsupported_locale_paths_do_not_become_files_or_api_routes(studio):
+    client, _ = studio
+    assert client.get('/unsupported').status_code == 404
+    assert client.get('/pt').status_code == 404
+    assert not any(path in client.get('/openapi.json').json()['paths'] for path in ['/en', '/nb', '/pl', '/ja', '/zh', '/es'])
+
+
+def test_locale_bootstrap_falls_back_and_escapes_script_markup(studio, monkeypatch):
+    from faster_qwen3_tts.standalone_ui import server
+    original = server.locale_catalog
+    monkeypatch.setattr(server, 'locale_catalog', lambda locale: {**original(locale), 'test': '</script><script>alert(1)</script>'})
+    client, _ = studio
+    response = client.get('/ja')
+    assert '</script><script>alert(1)</script>' not in response.text
+    assert r'\u003c/script>' in response.text
+    assert original('ja')['text:Generate speech'] == '音声を生成'
+
+
+def test_server_locale_catalog_falls_back_for_missing_and_blank_entries(tmp_path, monkeypatch):
+    from faster_qwen3_tts.standalone_ui import server
+    catalogs = tmp_path / 'static/locales'
+    catalogs.mkdir(parents=True)
+    (catalogs / 'en.json').write_text(json.dumps({'shared': 'English', 'new': 'New control', 'blank': 'Fallback'}))
+    (catalogs / 'ja.json').write_text(json.dumps({'shared': '日本語', 'blank': ''}))
+    monkeypatch.setattr(server, 'ROOT', tmp_path)
+    server.locale_catalog.cache_clear()
+    try:
+        assert server.locale_catalog('ja') == {'shared': '日本語', 'new': 'New control', 'blank': 'Fallback'}
+    finally:
+        server.locale_catalog.cache_clear()
+
+
 @pytest.mark.parametrize('overrides', [
     {'mode': 'unknown'}, {'model': 'other/model'}, {'text': ' '}, {'text': 'x' * 1001},
     {'language': 'Norwegian'}, {'speaker': 'invented'}, {'temperature': -1},

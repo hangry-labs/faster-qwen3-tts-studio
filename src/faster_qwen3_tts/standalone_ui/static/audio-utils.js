@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 export function formatTime(value) {
   const seconds = Number.isFinite(value) ? Math.max(0, value) : 0
   const minutes = Math.floor(seconds / 60)
@@ -54,7 +55,7 @@ export async function trimAudio(blob, startSeconds, endSeconds) {
     const decoded = await context.decodeAudioData(await blob.arrayBuffer())
     const startFrame = Math.max(0, Math.floor(startSeconds * decoded.sampleRate))
     const endFrame = Math.min(decoded.length, Math.ceil(endSeconds * decoded.sampleRate))
-    if (endFrame <= startFrame) throw new Error('The selected audio range is empty.')
+    if (endFrame <= startFrame) throw new Error(msg('The selected audio range is empty.'))
     const channels = []
     for (let index = 0; index < decoded.numberOfChannels; index += 1) {
       channels.push(decoded.getChannelData(index).slice(startFrame, endFrame))

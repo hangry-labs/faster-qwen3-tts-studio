@@ -1,3 +1,4 @@
+import { msg, retranslate } from './i18n.js'
 // Adapted from VoxCPMTTS: selectable inputs, device refresh and disconnect handling.
 import { encodeWav, fileFromBlob, formatTime } from './audio-utils.js'
 
@@ -59,23 +60,23 @@ export class AudioRecorder {
     if (this.refreshButton) this.refreshButton.disabled = true
     try {
       const devices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'audioinput')
-      const choices = [{ deviceId: '', label: 'System default' }, ...devices.filter(device => device.deviceId && device.deviceId !== 'default')]
+      const choices = [{ deviceId: '', label: msg('System default') }, ...devices.filter(device => device.deviceId && device.deviceId !== 'default')]
       this.deviceSelect.replaceChildren(...choices.map((device, index) => {
         const option = document.createElement('option')
         option.value = device.deviceId
-        option.textContent = device.label || `Microphone ${index}`
+        option.textContent = device.label || msg`Microphone ${index}`
         return option
       }))
       if (choices.some(device => device.deviceId === selected)) this.deviceSelect.value = selected
       else if (selected) {
         if (this.recorder?.state === 'recording') {
-          this.status.textContent = 'Selected microphone disconnected. Preparing the recorded audio.'
+          this.status.textContent = msg('Selected microphone disconnected. Preparing the recorded audio.')
           this.setButton(true, true)
           this.recorder.stop()
-        } else if (!this.busy) this.status.textContent = 'Selected microphone disconnected. Using system default.'
+        } else if (!this.busy) this.status.textContent = msg('Selected microphone disconnected. Using system default.')
       }
     } catch (error) {
-      this.onError(new Error(`Unable to refresh microphones: ${error.message}`))
+      this.onError(new Error(msg`Unable to refresh microphones: ${error.message}`))
     } finally {
       if (this.refreshButton) this.refreshButton.disabled = this.busy || !this.available
     }
@@ -91,6 +92,16 @@ export class AudioRecorder {
     this.button.innerHTML = recording
       ? `<i class="icon-square"></i><span>${this.labels.stop}</span>`
       : `<i class="icon-mic"></i><span>${this.labels.record}</span>`
+  }
+
+  relocalize() {
+    for (const key of Object.keys(this.labels)) this.labels[key] = retranslate(this.labels[key])
+    const unavailable = !this.available
+    this.setButton(this.recorder?.state === 'recording', this.button.disabled)
+    if (unavailable) { this.status.textContent = this.labels.unavailable; this.button.title = this.labels.unavailable }
+    else if (!this.busy) this.status.textContent = this.labels.ready
+    const defaultOption = this.deviceSelect?.querySelector('option[value=""]')
+    if (defaultOption) defaultOption.textContent = msg('System default')
   }
 
   updateElapsed() {
@@ -119,7 +130,7 @@ export class AudioRecorder {
       await this.refreshDevices()
       for (const track of this.stream.getAudioTracks()) track.addEventListener('ended', () => {
         if (this.recorder?.state === 'recording') {
-          this.status.textContent = 'Microphone disconnected. Preparing the recorded audio.'
+          this.status.textContent = msg('Microphone disconnected. Preparing the recorded audio.')
           this.setButton(true, true)
           this.recorder.stop()
         }
@@ -148,9 +159,9 @@ export class AudioRecorder {
       this.cleanup()
       this.setButton(false)
       this.status.textContent = this.labels.ready
-      const messages = { NotAllowedError: 'Microphone permission was denied. Allow access in your browser and try again.',
-        NotFoundError: 'No microphone is available. Connect one and refresh the device list.',
-        OverconstrainedError: 'Selected microphone is unavailable. Refresh microphones or choose System default.' }
+      const messages = { NotAllowedError: msg('Microphone permission was denied. Allow access in your browser and try again.'),
+        NotFoundError: msg('No microphone is available. Connect one and refresh the device list.'),
+        OverconstrainedError: msg('Selected microphone is unavailable. Refresh microphones or choose System default.') }
       this.status.textContent = messages[error.name] || error.message
       this.onError(new Error(this.status.textContent))
     }

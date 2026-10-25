@@ -1,6 +1,6 @@
 import { t } from './i18n.js'
 
-const REPOSITORY = 'Hangry-Labs/VoxCPMTTS'
+const REPOSITORY = 'hangry-labs/faster-qwen3-tts-studio'
 const CACHE_KEY = 'voxcpmtts-version-check-v2'
 const CACHE_MAX_AGE_MS = 60 * 60 * 1000
 const RELEASES_URL = `https://github.com/${REPOSITORY}/releases`
@@ -107,7 +107,7 @@ export class VersionCheck {
         ? t('updates.releaseAvailable', {}, 'New version available')
         : t('updates.snapshotAvailable', {}, 'New snapshot build')
       const title = release
-        ? t('updates.releaseTitle', {}, 'Open the latest VoxCPMTTS release')
+        ? t('updates.releaseTitle', {}, 'Open the latest Qwen3-TTS Studio release')
         : t('updates.snapshotTitle', {}, 'View the newer snapshot source')
       this.element.href = update.url
       this.element.title = title

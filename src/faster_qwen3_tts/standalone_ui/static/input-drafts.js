@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 // Mode ownership follows the VoxCPMTTS workbench. Drafts stay in memory only.
 export class InputDrafts {
   constructor({ text = '', ssml = '', serializeMagic, loadMagic }) {
@@ -9,7 +10,7 @@ export class InputDrafts {
   }
 
   switchTo(next, currentText, { syncSsmlH = true } = {}) {
-    if (!['magic', 'text', 'ssml', 'ssml-h'].includes(next)) throw new Error('Unknown input mode.')
+    if (!['magic', 'text', 'ssml', 'ssml-h'].includes(next)) throw new Error(msg('Unknown input mode.'))
     const previous = this.mode
     if (next === previous) return previous === 'magic' ? null : currentText
     if (previous !== 'magic') this.drafts[previous] = currentText

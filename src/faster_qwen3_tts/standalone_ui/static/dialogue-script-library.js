@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 import { t } from './i18n.js'
 import { closeDialogOnBackdrop } from './dialog-utils.js?v=pointerdown-v1'
 import { serializeMagicDocument } from './magic-document.js'
@@ -164,7 +165,7 @@ export class DialogueScriptLibrary {
     if (mode === 'text') return serializeMagicDocument([{ type: 'speech', text: $('#text-custom').value, prosody: {} }])
     if (mode === 'ssml' || mode === 'ssml-h') {
       const parsed = new DOMParser().parseFromString($('#text-custom').value, 'application/xml')
-      if (parsed.querySelector('parsererror') || parsed.documentElement.localName !== 'speak') throw new Error('Enter a valid speak document before saving.')
+      if (parsed.querySelector('parsererror') || parsed.documentElement.localName !== 'speak') throw new Error(msg('Enter a valid speak document before saving.'))
       if (mode === 'ssml') parsed.documentElement.setAttribute('version', '1.1')
       return new XMLSerializer().serializeToString(parsed)
     }
@@ -196,7 +197,7 @@ export class DialogueScriptLibrary {
   async fetchAsset(asset) {
     if (!asset?.url) return null
     const response = await fetch(asset.url, { cache: 'no-store' })
-    if (!response.ok) throw new Error(`Unable to load saved workspace audio (${response.status}).`)
+    if (!response.ok) throw new Error(msg`Unable to load saved workspace audio (${response.status}).`)
     return { ...asset, blob: await response.blob() }
   }
 

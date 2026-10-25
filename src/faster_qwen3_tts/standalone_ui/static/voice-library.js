@@ -1,3 +1,4 @@
+import { msg, languageLabel } from './i18n.js'
 // Shared audio-backed library for Qwen Design, Clone and Generate.
 import { closeDialogOnBackdrop } from './dialog-utils.js'
 
@@ -23,7 +24,7 @@ export function canReplaceVoice(context, refinement) {
 
 export function refinementDocument(source, existingNames) {
   const xml = new DOMParser().parseFromString(source, 'application/xml')
-  if (xml.querySelector('parsererror')) throw new Error('Saved creation markup is invalid.')
+  if (xml.querySelector('parsererror')) throw new Error(msg('Saved creation markup is invalid.'))
   const occupied = new Set(existingNames.map(value => value.toLowerCase()))
   const definitions = [...xml.getElementsByTagNameNS('https://hangrylabs.app/ns/ssml-h/1.0', 'voice-definition')]
   for (const node of definitions) occupied.add(node.getAttribute('name').toLowerCase())
@@ -76,7 +77,7 @@ export class VoiceLibrary {
     const list = $('#voice-library'); list.replaceChildren()
     if (!records.length) {
       const empty = document.createElement('p'); empty.className = 'clone-profile-empty'
-      empty.textContent = this.records.length ? 'No voices match this search.' : 'Save a designed voice or permitted reference to start your library.'
+      empty.textContent = this.records.length ? msg('No voices match this search.') : msg('Save a designed voice or permitted reference to start your library.')
       list.append(empty)
     }
     for (const voice of records) {
@@ -84,32 +85,33 @@ export class VoiceLibrary {
       if (this.refinement?.profile.id === voice.id) card.classList.add('editing')
       const copy = document.createElement('div'); copy.className = 'clone-profile-copy'
       const name = document.createElement('strong'); name.textContent = voice.name
-      const description = document.createElement('span'); description.textContent = voice.description || voice.ref_text || 'Audio reference'
+      const description = document.createElement('span'); description.textContent = voice.description || voice.ref_text || msg('Audio reference')
       copy.append(name, description)
       const portrait = document.createElement('button'); portrait.type = 'button'; portrait.className = 'clone-profile-portrait'
-      portrait.setAttribute('aria-label', `Edit portrait for ${voice.name}`)
+      portrait.setAttribute('aria-label', msg`Edit portrait for ${voice.name}`)
       if (voice.portrait_url) {
         const img = document.createElement('img'); img.src = voice.portrait_url + '?v=' + encodeURIComponent(voice.updated_at || ''); img.alt = ''; img.loading = 'lazy'; portrait.append(img)
       } else portrait.textContent = voice.name.slice(0, 1).toUpperCase()
       portrait.addEventListener('click', () => this.edit(voice))
       const tags = document.createElement('div'); tags.className = 'clone-profile-metadata'
-      for (const text of [voice.language, voice.profile_type, ...(voice.tags || [])]) {
+      const typeLabel = { design: msg('Voice design'), clone: msg('Voice clone'), reference: msg('Audio reference') }[voice.profile_type] || voice.profile_type
+      for (const text of [languageLabel(voice.language), typeLabel, ...(voice.tags || [])]) {
         const span = document.createElement('span'); span.textContent = text; tags.append(span)
       }
       const audio = document.createElement('audio'); audio.controls = true; audio.preload = 'none'; audio.src = voice.audio_url
-      audio.className = 'clone-profile-audio'; audio.setAttribute('aria-label', `Preview ${voice.name}`)
+      audio.className = 'clone-profile-audio'; audio.setAttribute('aria-label', msg`Preview ${voice.name}`)
       audio.addEventListener('play', () => list.querySelectorAll('audio').forEach(other => { if (other !== audio) other.pause() }))
       const actions = document.createElement('div'); actions.className = 'voice-card-actions'
       for (const [label, action] of [
-        ['Use voice', () => this.onUse(voice)],
-        ['Refine', async () => {
+        [msg('Use voice'), () => this.onUse(voice)],
+        [msg('Refine'), async () => {
           await this.onRefine(voice); this.refinement = { profile: voice, startedAt: performance.now() }
-          $('#voice-refinement-label').textContent = `Refining ${voice.name}. Generate fresh audio before replacing its saved reference.`
+          $('#voice-refinement-label').textContent = msg`Refining ${voice.name}. Generate fresh audio before replacing its saved reference.`
           $('#voice-refinement').hidden = false; this.render()
         }],
-        ['Edit details', () => this.edit(voice)],
-        ['Delete', async () => {
-          if (!confirm(`Delete the saved voice “${voice.name}” and its saved assets?`)) return
+        [msg('Edit details'), () => this.edit(voice)],
+        [msg('Delete'), async () => {
+          if (!confirm(msg`Delete the saved voice “${voice.name}” and its saved assets?`)) return
           await this.fetchJson('/tts/voice-profiles/' + voice.id, { method: 'DELETE' })
           if (this.refinement?.profile.id === voice.id) this.finishRefinement()
           await this.refresh()
@@ -117,7 +119,7 @@ export class VoiceLibrary {
       ]) {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary-button compact-command'; button.textContent = label
         button.addEventListener('click', async () => {
-          if (this.isBusy() || this.working) return this.toast('Wait for the current operation to finish first.')
+          if (this.isBusy() || this.working) return this.toast(msg('Wait for the current operation to finish first.'))
           button.disabled = true; this.working = true
           const generation = $('#generate-button'), disabled = generation.disabled
           generation.disabled = true
@@ -131,6 +133,18 @@ export class VoiceLibrary {
 
   finishRefinement() {
     this.refinement = null; $('#voice-refinement').hidden = true; this.render()
+  }
+
+  relocalize() {
+    this.render()
+    if (this.refinement) $('#voice-refinement-label').textContent = msg`Refining ${this.refinement.profile.name}. Generate fresh audio before replacing its saved reference.`
+    if ($('#save-voice-dialog').open) {
+      $('#save-voice-title').textContent = this.editing ? msg('Edit voice details') : msg('Save voice reference')
+      $('#save-voice-help').textContent = this.editing
+        ? msg('Update metadata and portrait. The saved audio and creation settings stay intact.')
+        : msg('Store the selected reference, original recording, source reference and creation settings. A processed recording is available only when its preview matches the current settings.')
+      $('#voice-submit').textContent = this.editing ? msg('Save details') : msg('Save voice')
+    }
   }
 
   fill(profile = {}) {
@@ -148,13 +162,13 @@ export class VoiceLibrary {
   }
 
   edit(profile) {
-    if (this.isBusy()) return this.toast('Wait for generation to finish first.')
+    if (this.isBusy()) return this.toast(msg('Wait for generation to finish first.'))
     this.editing = profile; this.context = null
     this.fill(profile)
-    $('#save-voice-title').textContent = 'Edit voice details'
-    $('#save-voice-help').textContent = 'Update metadata and portrait. The saved audio and creation settings stay intact.'
+    $('#save-voice-title').textContent = msg('Edit voice details')
+    $('#save-voice-help').textContent = msg('Update metadata and portrait. The saved audio and creation settings stay intact.')
     $('#voice-version-field').hidden = true; $('#voice-replace-field').hidden = true
-    $('#voice-submit').textContent = 'Save details'
+    $('#voice-submit').textContent = msg('Save details')
     $('#save-voice-dialog').showModal(); $('#voice-name').focus()
   }
 
@@ -173,9 +187,9 @@ export class VoiceLibrary {
     $('#voice-version').querySelector('[value=processed]').disabled = !processed
     $('#voice-version').value = 'original'
     $('#voice-replace-field').hidden = !refining
-    $('#save-voice-title').textContent = 'Save voice reference'
-    $('#save-voice-help').textContent = 'Store the selected reference, original recording, source reference and creation settings. A processed recording is available only when its preview matches the current settings.'
-    $('#voice-submit').textContent = 'Save voice'
+    $('#save-voice-title').textContent = msg('Save voice reference')
+    $('#save-voice-help').textContent = msg('Store the selected reference, original recording, source reference and creation settings. A processed recording is available only when its preview matches the current settings.')
+    $('#voice-submit').textContent = msg('Save voice')
     $('#save-voice-dialog').showModal(); $('#voice-name').focus()
   }
 
@@ -189,7 +203,7 @@ export class VoiceLibrary {
       if (portrait) form.set('portrait', portrait)
       else if (!this.editing && !$('#voice-replace').checked && !$('#voice-clear-portrait').checked && this.context.inheritedPortrait) {
         const response = await fetch(this.context.inheritedPortrait, { cache: 'no-store' })
-        if (!response.ok) throw new Error('The original portrait could not be loaded for this copy.')
+        if (!response.ok) throw new Error(msg('The original portrait could not be loaded for this copy.'))
         form.set('portrait', await response.blob(), 'portrait.webp')
       }
       form.set('clear_portrait', String($('#voice-clear-portrait').checked))
@@ -197,7 +211,7 @@ export class VoiceLibrary {
       if (!target) {
         const context = this.context, finishing = context.finishing || { options: {} }
         const version = $('#voice-version').value
-        if (version === 'processed' && (!finishing.processed || finishing.stale)) throw new Error('Create a current processed preview first.')
+        if (version === 'processed' && (!finishing.processed || finishing.stale)) throw new Error(msg('Create a current processed preview first.'))
         const original = context.original || context.file
         const selected = version === 'processed' ? finishing.processed.blob : original
         form.set('reference_audio', selected, 'reference.wav'); form.set('original_audio', original, 'original.wav')
@@ -206,15 +220,15 @@ export class VoiceLibrary {
         form.set('recipe', JSON.stringify(voiceRecipe(context, finishing, version)))
         form.set('profile_type', context.recipe?.workflow === 'design' ? 'design' : context.recipe?.workflow === 'reference' ? 'reference' : 'clone')
         if ($('#voice-replace').checked) {
-          if (!canReplaceVoice(context, this.refinement)) throw new Error('Generate fresh audio before replacing a saved voice.')
+          if (!canReplaceVoice(context, this.refinement)) throw new Error(msg('Generate fresh audio before replacing a saved voice.'))
           target = this.refinement.profile
-          if (!confirm(`Replace the saved voice “${target.name}” with this newly generated recording?`)) return
+          if (!confirm(msg`Replace the saved voice “${target.name}” with this newly generated recording?`)) return
           form.set('replace_audio', 'true')
         }
       }
       await this.fetchJson('/tts/voice-profiles' + (target ? '/' + target.id : ''), { method: target ? 'PUT' : 'POST', body: form })
       $('#save-voice-dialog').close(); this.finishRefinement()
-      await this.refresh(); this.toast(target ? 'Voice updated in your local library.' : 'Voice saved to your local library.')
+      await this.refresh(); this.toast(target ? msg('Voice updated in your local library.') : msg('Voice saved to your local library.'))
     } catch (error) {
       $('#voice-save-error').textContent = error.message; $('#voice-save-error').hidden = false
     } finally { button.disabled = false }

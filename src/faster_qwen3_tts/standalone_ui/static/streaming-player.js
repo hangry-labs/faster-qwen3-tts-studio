@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 import { t } from './i18n.js'
 
 function formatClock(seconds) {
@@ -125,8 +126,8 @@ export class IncrementalAudioPlayback {
           signal?.removeEventListener('abort', aborted)
         }
         const opened = () => { cleanup(); resolve() }
-        const failed = () => { cleanup(); reject(new Error('Browser streaming unavailable.')) }
-        const aborted = () => { cleanup(); reject(new DOMException('Stopped', 'AbortError')) }
+        const failed = () => { cleanup(); reject(new Error(msg('Browser streaming unavailable.'))) }
+        const aborted = () => { cleanup(); reject(new DOMException(msg('Stopped'), 'AbortError')) }
         const timer = setTimeout(failed, 5000)
         mediaSource.addEventListener('sourceopen', opened, { once: true })
         mediaSource.addEventListener('error', failed, { once: true })

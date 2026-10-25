@@ -9,13 +9,17 @@
 Local Qwen3-TTS voice design, reference cloning and speech generation with a
 browser Studio, streaming playback and an HTTP API.
 
-**Publication status:** the full/tiny build and publishing workflow is configured
-for Docker Hub and GHCR. Tags become available after its first successful run.
-The source-build commands below work before that publication.
+The interface supports English, Norwegian Bokmål, Polish, Japanese, Simplified
+Chinese and Spanish. Change interface language without discarding browser work.
+Speech language is a separate choice; Qwen supports ten synthesis languages.
+
+**Publication status:** rolling `latest` and `latest_tiny` images are available
+on Docker Hub and GHCR. Versioned tags follow stable Git releases.
 
 ## Project Links
 
 - [GitHub repository and README](https://github.com/hangry-labs/faster-qwen3-tts-studio)
+- Read the introduction in [Norsk bokmål](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.nb.md), [Polski](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.pl.md), [日本語](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.ja.md), [简体中文](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.zh.md) or [Español](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.es.md).
 - [Studio guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/STUDIO.md)
 - [Development tasks](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/DEVELOPMENT.md)
 - [Container builds and releases](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/RELEASING.md)
@@ -25,24 +29,34 @@ The source-build commands below work before that publication.
 
 ## Quick Start
 
-Use Docker with Linux containers, NVIDIA GPU support and a driver compatible
-with CUDA 12.8. Build the development image from source:
+With Docker, NVIDIA GPU support and a CUDA 12.8-compatible driver installed, run:
 
 ```bash
-git clone https://github.com/hangry-labs/faster-qwen3-tts-studio.git
-cd faster-qwen3-tts-studio
-docker build -t faster-qwen3-tts-studio:dev .
-docker volume create --label app.hangrylabs.project=faster-qwen3-tts-studio faster_qwen3_tts_studio_data
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent faster-qwen3-tts-studio:dev
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
 ```
 
 Open **http://localhost:7860**. API documentation is at **http://localhost:7860/docs**
 and the schema is at **http://localhost:7860/openapi.json**.
 
-Model weights download into the named volume. They are not baked into this
-development image. The Studio keeps 0.6B Base, 0.6B CustomVoice and 1.7B VoiceDesign
-ready by default. In System, choose each workflow's default and whether it stays
-loaded, or disable keeping weights to release them after each complete request.
+The full image includes all five pinned checkpoints and can run offline after
+the image pull. The named volume preserves models, saved voices and scripts.
+
+For a smaller download, use the tiny image instead:
+
+```bash
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+```
+
+Tiny downloads its models into the same volume on first use. Keep it online
+until the selected models are cached. Choose either full or tiny.
+
+## Browser UI
+
+<p align="center">
+  <a href="https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/assets/screenshots/generate-ui.webp">
+    <img src="https://raw.githubusercontent.com/hangry-labs/faster-qwen3-tts-studio/main/assets/screenshots/generate-ui.webp" alt="Qwen3-TTS Studio Generate workspace with Magic dialogue editing, voice settings and saved scripts" width="1200">
+  </a>
+</p>
 
 ## Image Variants And Tags
 
@@ -58,7 +72,8 @@ to populate its cache. Neither runs local ASR.
 
 `main` builds rolling tags; stable Git tags build fixed releases. After publishing,
 stable installation commands will use the verified tag and top-level OCI digest.
-The current commands intentionally use the local `:dev` target.
+The Quick Start uses rolling tags. See the repository's development guide for
+local source builds.
 
 ## What You Get
 

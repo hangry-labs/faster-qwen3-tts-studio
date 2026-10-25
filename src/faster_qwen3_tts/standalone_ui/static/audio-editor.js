@@ -1,3 +1,4 @@
+import { msg, retranslate } from './i18n.js'
 // Adapted from VoxCPMTTS: current failures clear invalid audio; stale loads are ignored.
 import WaveSurfer from './vendor/wavesurfer/wavesurfer.esm.js'
 import Regions from './vendor/wavesurfer/plugins/regions.esm.js'
@@ -5,21 +6,21 @@ import { fileFromBlob, formatTime, trimAudio } from './audio-utils.js'
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const DEFAULT_LABELS = {
-  noAudio: 'No audio selected',
-  download: 'Download audio',
-  share: 'Share audio',
-  remove: 'Remove audio',
-  mute: 'Mute or unmute',
-  volume: 'Volume',
-  playbackSpeed: 'Playback speed',
-  backward: 'Seek backward 5 seconds',
-  play: 'Play',
-  pause: 'Pause',
-  forward: 'Seek forward 5 seconds',
-  restart: 'Return to start',
-  trim: 'Select and trim audio',
-  cancel: 'Cancel',
-  applySelection: 'Apply selection',
+  noAudio: msg('No audio selected'),
+  download: msg('Download audio'),
+  share: msg('Share audio'),
+  remove: msg('Remove audio'),
+  mute: msg('Mute or unmute'),
+  volume: msg('Volume'),
+  playbackSpeed: msg('Playback speed'),
+  backward: msg('Seek backward 5 seconds'),
+  play: msg('Play'),
+  pause: msg('Pause'),
+  forward: msg('Seek forward 5 seconds'),
+  restart: msg('Return to start'),
+  trim: msg('Select and trim audio'),
+  cancel: msg('Cancel'),
+  applySelection: msg('Apply selection'),
 }
 
 function iconButton(icon, title, action, requiresAudio = true) {
@@ -28,9 +29,9 @@ function iconButton(icon, title, action, requiresAudio = true) {
 
 export class AudioEditor {
   constructor(container, {
-    label = 'Audio',
-    emptyTitle = 'Audio output',
-    emptyDescription = 'Ready for synthesis',
+    label = msg('Audio'),
+    emptyTitle = msg('Audio output'),
+    emptyDescription = msg('Ready for synthesis'),
     labels = {},
     onChange = () => {},
   } = {}) {
@@ -47,6 +48,28 @@ export class AudioEditor {
     this.dragSelectionCleanup = null
     this.speedIndex = SPEEDS.indexOf(1)
     this.build()
+    this.localeListener = () => this.relocalize()
+    globalThis.window?.addEventListener?.('ui-locale-changed', this.localeListener)
+  }
+
+  relocalize() {
+    for (const key of ['label', 'emptyTitle', 'emptyDescription']) this[key] = retranslate(this[key])
+    for (const key of Object.keys(this.labels)) this.labels[key] = retranslate(this.labels[key])
+    this.container.querySelector('.audio-label > span').textContent = this.label
+    this.emptyElement.querySelector('strong').textContent = this.emptyTitle
+    this.emptyElement.querySelector('span').textContent = this.emptyDescription
+    if (!this.file) this.filenameElement.textContent = this.labels.noAudio
+    const actions = { download: 'download', share: 'share', remove: 'remove', mute: 'mute', speed: 'playbackSpeed',
+      back: 'backward', forward: 'forward', restart: 'restart', trim: 'trim' }
+    for (const [action, key] of Object.entries(actions)) {
+      const button = this.container.querySelector(`[data-action="${action}"]`)
+      button.title = this.labels[key]; button.setAttribute('aria-label', this.labels[key])
+    }
+    this.container.querySelector('[data-role="volume"]').setAttribute('aria-label', this.labels.volume)
+    this.container.querySelector('[data-action="cancel-trim"]').textContent = this.labels.cancel
+    const apply = this.container.querySelector('[data-action="apply-trim"]')
+    apply.replaceChildren(Object.assign(document.createElement('i'), { className: 'icon-check' }), ' ' + this.labels.applySelection)
+    this.setPlayIcon(this.wave.isPlaying())
   }
 
   build() {
@@ -304,6 +327,7 @@ export class AudioEditor {
   }
 
   destroy() {
+    globalThis.window?.removeEventListener?.('ui-locale-changed', this.localeListener)
     this.loadRevision = (this.loadRevision || 0) + 1
     this.disableTrim()
     if (this.objectUrl) URL.revokeObjectURL(this.objectUrl)

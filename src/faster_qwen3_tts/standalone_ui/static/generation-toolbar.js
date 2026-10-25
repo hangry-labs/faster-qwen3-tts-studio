@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 // Shared VoxCPMTTS menu behavior, mapped to Qwen's actual sampling controls.
 const CONTROL_IDS = {
   temperature: 'temperature', topK: 'top-k', repetition: 'repetition',
@@ -9,7 +10,7 @@ const CONTROL_IDS = {
 }
 
 export class GenerationToolbar {
-  constructor(root, { randomLabel = 'Randomize' } = {}) {
+  constructor(root, { randomLabel = msg('Randomize') } = {}) {
     this.root = root
     this.randomLabel = randomLabel
     this.openName = null

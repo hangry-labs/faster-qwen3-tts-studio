@@ -1,4 +1,5 @@
-import { t } from './i18n.js'
+import { t, languageLabel } from './i18n.js'
+import { speechSample } from './speech-samples.js'
 import { closeDialogOnBackdrop } from './dialog-utils.js?v=pointerdown-v1'
 import { parseMagicDocument, renderedSpeechText, serializeMagicDocument } from './magic-document.js'
 import { MagicToolbar } from './magic-toolbar.js'
@@ -167,7 +168,7 @@ export class MagicEditor {
       onPersist: (definition, previous, metadata) => this.persistVoiceDefinition(definition, previous, metadata),
       onError: this.onError,
     })
-    this.blocks = [this.createSpeech(t('composer.defaultText', {}, 'Qwen3 generates natural multilingual speech with voice design and cloning.'))]
+    this.blocks = [this.createSpeech(speechSample('English'))]
     this.activeId = this.blocks[0].id
     this.bind()
     this.render()
@@ -1010,6 +1011,14 @@ export class MagicEditor {
     this.root.querySelector('#magic-definition-count').textContent = String(this.documentMeta.voiceDefinitions.length)
   }
 
+  relocalize() {
+    this.toolbar.close()
+    for (const control of [this.directionControl, this.rateControl, this.pitchControl,
+      this.volumeControl, this.expressionControl, this.sayAsControl]) control.replaceChildren()
+    this.render()
+    this.definitionEditor.renderList()
+  }
+
   renderVoiceOptions() {
     const selected = this.voiceControl.value
     const dynamic = this.documentMeta.voiceDefinitions.map((definition) => ({
@@ -1041,7 +1050,7 @@ export class MagicEditor {
     const selected = this.languageControl.value
     const options = [
       { value: '', label: t('magic.languageInherit', {}, 'Document language') },
-      ...this.languages,
+      ...this.languages.map(item => ({ ...item, label: languageLabel(item.value) })),
     ]
     this.languageControl.replaceChildren(...options.map((language) => {
       const option = document.createElement('option')

@@ -1,3 +1,6 @@
+import { msg } from './i18n.js'
+import { retranslate, t } from './i18n.js'
+import { speechSample } from './speech-samples.js'
 // Qwen adapter for the shared VoxCPMTTS dialogue editor and workspace contracts.
 import { MagicEditor } from './magic-editor.js'
 import { MagicTakeStudio } from './magic-takes.js'
@@ -38,7 +41,7 @@ export class GenerateWorkbench {
           this.latestTakeGenerationTime = performance.now()
           monitor.abort(); await watching
           $('#last-generated-seed').value = result.seed; this.toolbar.sync()
-          this.progress('complete', 'Turn ready', 'The completed dialogue will be assembled automatically')
+          this.progress('complete', msg('Turn ready'), msg('The completed dialogue will be assembled automatically'))
           return result
         } finally { monitor.abort(); await watching; signal.removeEventListener('abort', stop) }
       }),
@@ -50,7 +53,7 @@ export class GenerateWorkbench {
           } }, finishing: { options: {} } })
       },
       onPersistCharacter: async ({ definition, block, metadata }) => {
-        if (!block.preview?.blob) throw new Error('Generate a character turn before saving its voice.')
+        if (!block.preview?.blob) throw new Error(msg('Generate a character turn before saving its voice.'))
         const form = new FormData()
         form.set('name', definition.name); form.set('ref_text', renderedSpeechText(block))
         form.set('reference_audio', block.preview.blob, 'voice.wav')
@@ -63,8 +66,8 @@ export class GenerateWorkbench {
           settings: { ...this.payload(), text: this.editor.toSSMLH([block], { preview: true }),
             seed: block.preview.seed, randomize_seed: false, ui_input_type: 'magic' },
           selected_version: 'original' }))
-        if (definition.replace && !confirm(`Replace the saved voice “${definition.name}” with this generated character recording?`)) {
-          throw new Error('Voice replacement cancelled.')
+        if (definition.replace && !confirm(msg`Replace the saved voice “${definition.name}” with this generated character recording?`)) {
+          throw new Error(msg('Voice replacement cancelled.'))
         }
         const profile = await fetchJson('/tts/voice-profiles', { method: 'POST', body: form })
         await this.refreshVoices(); window.dispatchEvent(new Event('voice-library-changed'))
@@ -92,11 +95,11 @@ export class GenerateWorkbench {
     this.drafts = new InputDrafts({ text: '', ssml: '<speak>Hello from Hangry Labs.</speak>',
       serializeMagic: () => this.editor.toSSMLH(), loadMagic: source => this.editor.loadSSMLH(source) })
     this.toolbar = new GenerationToolbar($('#generation-toolbar'))
-    this.streamOutput = new AudioEditor($('#stream-output'), { label: 'Streamed audio', onChange: file => { this.outputChanged(file); if (this.resultStreaming) this.sourceEdited(file) } })
+    this.streamOutput = new AudioEditor($('#stream-output'), { label: msg('Streamed audio'), onChange: file => { this.outputChanged(file); if (this.resultStreaming) this.sourceEdited(file) } })
     this.finisher = new AudioFinisher($('#generate-finishing'), {
-      labels: { processed: 'Processed audio', emptyTitle: 'Processed preview', ready: 'Adjust and create a preview',
-        ffmpeg: 'FFmpeg Studio', signalsmith: 'FFmpeg Voice Shape', generateFirst: 'Generate audio first.',
-        processFirst: 'Create a processed preview first.', processing: 'Processing with {method}', complete: 'Processed preview ready' },
+      labels: { processed: msg('Processed audio'), emptyTitle: msg('Processed preview'), ready: msg('Adjust and create a preview'),
+        ffmpeg: 'FFmpeg Studio', signalsmith: 'FFmpeg Voice Shape', generateFirst: msg('Generate audio first.'),
+        processFirst: msg('Create a processed preview first.'), processing: msg('Processing with {method}'), complete: msg('Processed preview ready') },
       responseError: response => this.responseError(response), onError: error => toast(error.message || error),
       onChange: () => { if (!this.restoring && !this.presenting) this.library?.markDirty() },
     })
@@ -125,7 +128,7 @@ export class GenerateWorkbench {
     this.voices = [...data.saved_profiles, ...data.voices]
     this.editor.setVoices(this.voices)
     const previous = $('#saved-voice').value
-    $('#saved-voice').replaceChildren(new Option('Built-in', ''), ...data.saved_profiles.map(v => new Option(v.name, v.id)))
+    $('#saved-voice').replaceChildren(new Option(msg('Built-in'), ''), ...data.saved_profiles.map(v => new Option(v.name, v.id)))
     if ([...$('#saved-voice').options].some(o => o.value === previous)) $('#saved-voice').value = previous
     this.defaultVoice()
   }
@@ -152,12 +155,12 @@ export class GenerateWorkbench {
 
   count() {
     const text = this.inputType === 'magic' ? this.editor.plainText() : $('#text-custom').value
-    $('#text-metrics').textContent = `${text.length} characters · ${text.trim().split(/\s+/).filter(Boolean).length} words`
+    $('#text-metrics').textContent = msg`${text.length} characters · ${text.trim().split(/\s+/).filter(Boolean).length} words`
     return text
   }
 
   loadExample() {
-    const text = 'Good morning! It is a lovely day to give your ideas a voice.'
+    const text = speechSample($('#language').value)
     if (this.inputType === 'magic') this.loadText(text)
     else {
       const value = this.inputType === 'text' ? text : this.inputType === 'ssml' ? `<speak>${text}</speak>` : serializeMagicDocument([{ type: 'speech', text, prosody: {} }])
@@ -184,7 +187,7 @@ export class GenerateWorkbench {
 
   async responseError(response) {
     const data = await response.json().catch(() => ({}))
-    return typeof data.detail === 'string' ? data.detail : data.error?.message || `Request failed (${response.status})`
+    return typeof data.detail === 'string' ? data.detail : data.error?.message || msg`Request failed (${response.status})`
   }
 
   setGenerationMode(mode) {
@@ -194,7 +197,7 @@ export class GenerateWorkbench {
     if (mode === 'generate' && this.generationMode === 'stream') format.value = this.generateFormat || 'wav'
     if (mode === 'stream') format.value = 'mp3'
     format.disabled = mode === 'stream'
-    format.title = mode === 'stream' ? 'Stream preview and download use MP3. Generate uses your selected format.' : ''
+    format.title = mode === 'stream' ? msg('Stream preview and download use MP3. Generate uses your selected format.') : ''
     this.generationMode = mode
     $('#streaming').checked = mode === 'stream'
     document.querySelectorAll('[data-generation-mode]').forEach(button => {
@@ -210,6 +213,26 @@ export class GenerateWorkbench {
   outputChanged(file) {
     $('#use-as-reference').disabled = !file
     $('#save-output').disabled = !file
+  }
+
+  relocalize() {
+    this.editor.relocalize()
+    this.library.render(); this.library.renderSaveState()
+    this.toolbar.randomLabel = msg('Randomize'); this.toolbar.sync()
+    for (const key of Object.keys(this.finisher.labels)) this.finisher.labels[key] = retranslate(this.finisher.labels[key])
+    this.finisher.renderMethod()
+    const status = this.finisher.$('status'); status.textContent = retranslate(status.textContent)
+    if (this.lastProgress) {
+      const { phase, title, detail } = this.lastProgress
+      this.progress(phase, retranslate(title), retranslate(detail))
+    }
+    this.count()
+    $('#saved-voice').querySelector('option[value=""]').textContent = msg('Built-in')
+    $('#output-format').title = this.generationMode === 'stream'
+      ? msg('Stream preview and download use MP3. Generate uses your selected format.') : ''
+    for (const id of ['stream-live-state', 'stream-live-detail']) {
+      const node = $('#' + id); node.textContent = retranslate(node.textContent)
+    }
   }
 
   sourceEdited(file) {
@@ -322,6 +345,7 @@ export class GenerateWorkbench {
   }
 
   progress(phase, title, detail = '') {
+    this.lastProgress = { phase, title, detail }
     const root = $('#generate-progress')
     root.hidden = false; root.dataset.phase = phase
     root.querySelector('strong').textContent = title; root.querySelector('.progress-copy > span').textContent = detail
@@ -332,7 +356,7 @@ export class GenerateWorkbench {
   }
 
   async job(callback) {
-    if (this.controller) throw new Error('Wait for the current generation or stop it first.')
+    if (this.controller) throw new Error(msg('Wait for the current generation or stop it first.'))
     clearTimeout(this.assemblyTimer); this.assemblyController?.abort()
     this.assemblyRevision = (this.assemblyRevision || 0) + 1
     this.controller = new AbortController()
@@ -341,10 +365,10 @@ export class GenerateWorkbench {
     document.querySelectorAll('[data-input-type], [data-generation-mode], .tab-button, #script-new, #script-import, #script-save').forEach(button => { button.disabled = true })
     $('#text-custom').readOnly = true
     $('#stream-stop').hidden = this.generationMode !== 'stream'; $('#stream-stop').disabled = false
-    this.progress('preparing', 'Preparing request', 'Checking the script and selected voices')
+    this.progress('preparing', msg('Preparing request'), msg('Checking the script and selected voices'))
     try { return await callback(this.controller.signal) }
     catch (error) {
-      this.progress('failed', error.name === 'AbortError' ? 'Generation stopped' : 'Generation failed', error.name === 'AbortError' ? 'You can edit and try again.' : error.message)
+      this.progress('failed', error.name === 'AbortError' ? msg('Generation stopped') : msg('Generation failed'), error.name === 'AbortError' ? msg('You can edit and try again.') : error.message)
       throw error
     } finally {
       this.controller = null; this.onBusy(false, null); this.editor.setBusy(false)
@@ -358,7 +382,13 @@ export class GenerateWorkbench {
     while (!signal.aborted) {
       try {
         const activity = await this.fetchJson('/tts/activity?request_id=' + encodeURIComponent(requestId), { signal })
-        if (activity.phase) this.progress(activity.phase, activity.title, activity.detail)
+        if (activity.phase) {
+          let detail = t('text:' + activity.detail, {}, activity.detail)
+          if (activity.phase === 'queued' && activity.queue_position > 0) detail = msg`Waiting for inference. Requests ahead: ${activity.queue_position}`
+          const turn = /^Speech turn (\d+)$/.exec(activity.detail || '')
+          if (turn) detail = t('text:Speech turn {0}', { 0: turn[1] }, activity.detail)
+          this.progress(activity.phase, t('text:' + activity.title, {}, activity.title), detail)
+        }
         await new Promise(resolve => {
           const done = () => { clearTimeout(timer); signal.removeEventListener('abort', done); resolve() }
           const timer = setTimeout(done, 600); signal.addEventListener('abort', done, { once: true })
@@ -404,7 +434,7 @@ export class GenerateWorkbench {
               this.visualizer.update(size, playback?.currentTime() || 0)
             }
             signal.throwIfAborted()
-            if (!size) throw new Error('The stream ended without audio.')
+            if (!size) throw new Error(msg('The stream ended without audio.'))
             await playback?.finish()
             resumeAt = playback?.currentTime() ?? 0
             blob = new Blob(chunks, { type: 'audio/mpeg' })
@@ -420,14 +450,14 @@ export class GenerateWorkbench {
         }
         monitor.abort(); await watching
         signal.throwIfAborted()
-        this.progress('encoding', 'Preparing the player', 'Decoding the completed recording')
+        this.progress('encoding', msg('Preparing the player'), msg('Decoding the completed recording'))
         this.lastCreation = { generatedAt: performance.now(), recipe: { version: 1, workflow: 'custom',
           settings: { ...structuredClone(payload), seed: metrics.seed, randomize_seed: false,
             ui_input_type: this.inputType, ui_generation_mode: this.generationMode,
             ui_generate_format: this.generateFormat } } }
         await this.present(blob, extension, text, metrics, { streaming, resumeAt })
         $('#last-generated-seed').value = metrics.seed ?? ''; this.toolbar.sync()
-        this.progress('complete', 'Generation complete', streaming ? 'MP3 stream ready to replay or finish' : 'Audio ready to play, save or finish')
+        this.progress('complete', msg('Generation complete'), streaming ? msg('MP3 stream ready to replay or finish') : msg('Audio ready to play, save or finish'))
         this.library.markDirty(); await this.refreshVoices()
       } finally { monitor.abort(); await watching }
     })

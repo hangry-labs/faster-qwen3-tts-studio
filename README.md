@@ -2,6 +2,8 @@
   <img src="src/faster_qwen3_tts/standalone_ui/assets/qwen3_tts_logo_horizontal.webp" alt="Hangry Labs Faster Qwen3-TTS Studio logo" width="900">
 </p>
 
+<p align="center"><strong>English</strong> · <a href="README.nb.md">Norsk bokmål</a> · <a href="README.pl.md">Polski</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh.md">简体中文</a> · <a href="README.es.md">Español</a></p>
+
 # Hangry Labs Faster Qwen3-TTS Studio
 
 Development version **v1.0-snapshot**. See the [version history](#version-history).
@@ -15,32 +17,31 @@ together with audio editing, saved voices and NVIDIA GPU controls.
 
 ## Quick Start
 
-**Current status:** the [full/tiny container workflow](docs/RELEASING.md) is
-configured for Docker Hub and GHCR. Registry images become available after its
-first successful publishing run. You can build and run this checkout now:
-
-Install Git, Docker with Linux containers and NVIDIA GPU support, and a driver
-compatible with CUDA 12.8. No host Python environment or CUDA toolkit is needed.
+With Docker, NVIDIA GPU support and a CUDA 12.8-compatible driver installed, run:
 
 ```bash
-git clone https://github.com/hangry-labs/faster-qwen3-tts-studio.git
-cd faster-qwen3-tts-studio
-docker build -t faster-qwen3-tts-studio:dev .
-docker volume create --label app.hangrylabs.project=faster-qwen3-tts-studio faster_qwen3_tts_studio_data
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent faster-qwen3-tts-studio:dev
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
 ```
 
-Open **[http://localhost:7860](http://localhost:7860)**. By default the Studio keeps
-0.6B Base, 0.6B CustomVoice and 1.7B VoiceDesign ready in GPU memory. First use downloads their pinned checkpoints into the persistent
-volume; model weights are not baked into this development image.
+Open **[http://localhost:7860](http://localhost:7860)** and start generating speech.
+The full image includes all five pinned checkpoints and can run offline after
+the image pull. The named volume preserves models, saved voices and scripts.
 
-The same port serves the [API view](http://localhost:7860/docs) and
-[OpenAPI schema](http://localhost:7860/openapi.json). It includes OpenAI-compatible
-speech, native synthesis, SSML/SSML-H, Magic takes and saved voices/scripts.
-See the [API guide](docs/API.md) and opt-in [MCP tools](docs/MCP.md).
+<details>
+<summary><strong>Smaller download: tiny image</strong></summary>
 
-On Windows, the [Task workflow](docs/DEVELOPMENT.md) provides `task init`,
-`task start` and `task stop` instead of assembling Docker commands manually.
+```bash
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+```
+
+Tiny downloads models into the same persistent volume on first use. Keep it
+online until the selected models are cached. Choose either full or tiny.
+
+</details>
+
+No Git checkout, host Python or manual model setup is needed. The same port
+serves the [API view](http://localhost:7860/docs) and [OpenAPI schema](http://localhost:7860/openapi.json).
+See [building from source](docs/DEVELOPMENT.md#build-from-source) for development.
 
 ## What You Get
 
@@ -69,11 +70,27 @@ loaded together when VRAM permits; loading failures are visible in System.
 
 ## Browser UI
 
+<p align="center">
+  <a href="assets/screenshots/generate-ui.webp">
+    <img src="assets/screenshots/generate-ui.webp" alt="Qwen3-TTS Studio Generate workspace with Magic dialogue editing, voice settings and saved scripts" width="1200">
+  </a>
+</p>
+
+Choose English, Norwegian Bokmål, Polish, Japanese, Simplified Chinese or Spanish
+in the interface language picker. Switching preserves unsaved text, reference
+recordings, takes and generated audio. The browser remembers the choice; direct
+routes are `/en`, `/nb`, `/pl`, `/ja`, `/zh` and `/es`. English is the default.
+
+Interface language and speech language are independent. Norwegian and Polish
+are interface languages only. Examples follow the selected synthesis language;
+Auto uses English sample text. Protocol names and model IDs remain unchanged.
+
 | View | What you can do |
 | --- | --- |
 | Generate | Choose a built-in speaker, enter text and generate speech. Use 1.7B for style instructions. |
 | Voice design | Describe a voice, generate a sample, then reuse or save it as a cloning reference. |
 | Voice clone | Upload, record or choose a saved voice; supply its transcript and optional delivery direction. |
+| Voices | Search saved references, edit portraits and metadata, use voices and restore their creation settings for refinement. |
 | API | Inspect capabilities, request formats and available routes. |
 | System | Load or unload models, configure reference transcription and inspect GPU activity. |
 
@@ -111,16 +128,15 @@ checkpoints. See the [model revisions and licenses](docs/LICENSING.md).
 
 ### Image And GPU Selection
 
-`faster-qwen3-tts-studio:dev` is the local tiny target built above. The publishing
-workflow builds these variants to `hangrylabs/faster-qwen3-tts-studio` and
-`ghcr.io/hangry-labs/faster-qwen3-tts-studio`:
+Published images are available from [Docker Hub](https://hub.docker.com/r/hangrylabs/faster-qwen3-tts-studio/tags)
+and `ghcr.io/hangry-labs/faster-qwen3-tts-studio`:
 
 | Variant | Rolling tag | Stable tag | Models |
 | --- | --- | --- | --- |
 | Full | `latest` | `vX.Y` or `vX.Y.Z` | All five pinned checkpoints included |
 | Tiny | `latest_tiny` | Matching version plus `_tiny` | Download into the volume on first use |
 
-These tags are publication rules, not a claim that the first run has finished.
+Rolling tags follow `main`; stable version tags are created for releases.
 Full seeds its baked files into the same model cache used by tiny and defaults
 to offline operation. See [container builds and releases](docs/RELEASING.md) and
 the prepared [Docker Hub description](docs/dockerhub.md).
@@ -130,7 +146,7 @@ headroom for other GPU workloads; memory needs depend on the selected checkpoint
 and request. System can unload all TTS weights without stopping the UI.
 
 The default port mapping binds to this computer only. The Studio has no account
-system. An optional `QWEN_STUDIO_API_KEY` protects only `/v1` routes. Publish the
+system. An optional `QWEN_STUDIO_API_KEY` protects `/v1` and enabled MCP endpoints. Publish the
 whole Studio to a trusted network only with appropriate
 access controls. Browser microphone capture needs localhost or HTTPS and
 permission.
@@ -344,6 +360,12 @@ The first Hangry Labs Studio development version. Python distributions use the
 PEP 440 version `1.0.dev0`. This snapshot name does not create a stable release
 or change the rolling Docker image tags.
 
+- Simplify full/tiny Docker Quick Starts to one command, move source builds into
+  the development guide and add the Studio screenshot to all README languages.
+- Add six complete interface locales and translated README introductions. Switch
+  interface language without reloading or discarding browser work; retain English
+  fallback and translate Qwen model controls, voice dialogs, MCP and diagnostics.
+  Keep synthesis language independent and provide examples for all ten speech languages.
 - Bound inference admission with explicit HTTP 429 overload responses, FIFO
   cancellation and queue telemetry; keep single-request GPU inference.
 - Add independently enabled compact/advanced MCP, expiring audio links, bounded
@@ -392,7 +414,7 @@ or change the rolling Docker image tags.
   passed, including ten-turn SSML completion and four-client FIFO WAV identity.
   Retain the results as preliminary evidence, separate from official history.
 
-- Add the manual VoxCPMTTS-style benchmark suite: isolated native/faster workers,
+- Add the manual benchmark suite: isolated native/faster workers,
   five pinned checkpoints, multilingual speed/memory/ASR fidelity reports,
   streaming first-audio measurements, queue identity checks and paired ten-turn
   SSML reliability. Planning and offline tests can run without GPU inference;

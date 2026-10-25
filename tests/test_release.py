@@ -1,5 +1,6 @@
 """Release transitions transform real documents without publishing or rewriting refs."""
 from pathlib import Path
+import re
 import subprocess
 import shutil
 from unittest.mock import patch
@@ -44,6 +45,16 @@ def test_actual_snapshot_promotes_and_preserves_every_note():
     assert 'Verify full/tiny registry indexes' in stable['README.md']
     assert following['README.md'].count('<details>') == following['README.md'].count('</details>')
     assert old == documents()
+
+
+def test_intro_version_and_shared_history_stay_in_sync_for_translated_readme_links():
+    original = documents()
+    original['README.md'] = 'Development version **v1.0-snapshot**. See the [version history](#version-history).\n\n' + original['README.md']
+    _, release, following = prepare(original)
+    assert release['README.md'].startswith('Source release **v1.0**.')
+    assert following['README.md'].startswith('Development version **v1.1-snapshot**.')
+    assert following['README.md'].index('### v1.1-snapshot') < following['README.md'].index('### v1.0\n')
+    assert re.search(r'</details>\s*<details>\s*<summary><strong>v1.0 release notes', following['README.md'])
 
 
 @pytest.mark.parametrize('next_version', ['1.0-snapshot', '0.9-snapshot', 'latest', '1.1', '$(id)', '1.2.3.4-snapshot'])

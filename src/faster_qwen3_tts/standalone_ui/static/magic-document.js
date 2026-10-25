@@ -1,3 +1,4 @@
+import { msg } from './i18n.js'
 const SSML_NAMESPACE = 'http://www.w3.org/2001/10/synthesis'
 const SSML_H_NAMESPACE = 'https://hangrylabs.app/ns/ssml-h/1.0'
 const XML_NAMESPACE = 'http://www.w3.org/XML/1998/namespace'
@@ -42,14 +43,14 @@ function serializeRichText(block) {
   let cursor = 0
   let output = ''
   for (const annotation of annotations) {
-    if (annotation.start < cursor) throw new Error('Magic inline controls cannot overlap.')
+    if (annotation.start < cursor) throw new Error(msg('Magic inline controls cannot overlap.'))
     output += escapeXml(text.slice(cursor, annotation.start))
     const source = escapeXml(text.slice(annotation.start, annotation.end))
     if (annotation.type === 'substitution') {
-      if (!String(annotation.alias || '').trim()) throw new Error('Pronunciation substitutions require spoken text.')
+      if (!String(annotation.alias || '').trim()) throw new Error(msg('Pronunciation substitutions require spoken text.'))
       output += `<sub alias="${escapeXml(String(annotation.alias).trim())}">${source}</sub>`
     } else {
-      if (!String(annotation.interpretAs || '').trim()) throw new Error('Say-as ranges require an interpretation.')
+      if (!String(annotation.interpretAs || '').trim()) throw new Error(msg('Say-as ranges require an interpretation.'))
       output += `<say-as interpret-as="${escapeXml(String(annotation.interpretAs).trim())}">${source}</say-as>`
     }
     cursor = annotation.end
@@ -113,10 +114,10 @@ export function serializeMagicDocument(blocks, options = {}) {
 
 function parseBreakTime(value) {
   const match = String(value || '').trim().match(/^(\d+(?:\.\d+)?)(ms|s)$/i)
-  if (!match) throw new Error('Magic supports break times written in milliseconds or seconds.')
+  if (!match) throw new Error(msg('Magic supports break times written in milliseconds or seconds.'))
   const milliseconds = Number(match[1]) * (match[2].toLowerCase() === 's' ? 1000 : 1)
   if (!Number.isFinite(milliseconds) || milliseconds < 0 || milliseconds > 10_000) {
-    throw new Error('Magic supports pauses between 0 and 10000 milliseconds.')
+    throw new Error(msg('Magic supports pauses between 0 and 10000 milliseconds.'))
   }
   return Math.round(milliseconds)
 }
@@ -156,22 +157,22 @@ function parseInline(element) {
       continue
     }
     if (node.nodeType !== Node.ELEMENT_NODE || node.namespaceURI !== SSML_NAMESPACE) {
-      throw new Error('Magic supports only substitution and say-as ranges inside a speech turn.')
+      throw new Error(msg('Magic supports only substitution and say-as ranges inside a speech turn.'))
     }
-    if ([...node.children].length) throw new Error(`Magic does not support nested content inside <${node.localName}>.`)
+    if ([...node.children].length) throw new Error(msg`Magic does not support nested content inside <${node.localName}>.`)
     if (node.localName === 'sub') {
       const alias = node.getAttribute('alias')?.trim()
-      if (!alias) throw new Error('Magic substitutions require a non-empty alias.')
+      if (!alias) throw new Error(msg('Magic substitutions require a non-empty alias.'))
       append(node.textContent, { type: 'substitution', alias })
       continue
     }
     if (node.localName === 'say-as') {
       const interpretAs = node.getAttribute('interpret-as')?.trim()
-      if (!interpretAs) throw new Error('Magic say-as ranges require an interpretation.')
+      if (!interpretAs) throw new Error(msg('Magic say-as ranges require an interpretation.'))
       append(node.textContent, { type: 'say-as', interpretAs })
       continue
     }
-    throw new Error(`Magic cannot edit <${node.localName}> inside a speech turn.`)
+    throw new Error(msg`Magic cannot edit <${node.localName}> inside a speech turn.`)
   }
   return { text, annotations }
 }
@@ -186,15 +187,15 @@ function peelTurnControls(element) {
     const child = nodes[0]
     if (child.namespaceURI !== SSML_NAMESPACE) break
     if (child.localName === 'lang') {
-      if (language) throw new Error('Magic supports one language control per turn.')
+      if (language) throw new Error(msg('Magic supports one language control per turn.'))
       language = child.getAttributeNS(XML_NAMESPACE, 'lang') || child.getAttribute('xml:lang') || ''
-      if (!language.trim()) throw new Error('Magic turn language cannot be empty.')
+      if (!language.trim()) throw new Error(msg('Magic turn language cannot be empty.'))
       container = child
       continue
     }
     if (child.localName === 'prosody') {
       if (prosody.rate || prosody.pitch || prosody.volume) {
-        throw new Error('Magic supports one prosody control per turn.')
+        throw new Error(msg('Magic supports one prosody control per turn.'))
       }
       prosody.rate = child.getAttribute('rate') || ''
       prosody.pitch = child.getAttribute('pitch') || ''
@@ -225,11 +226,11 @@ function parseVoiceDefinitions(metadata) {
   const definitions = []
   for (const extensions of metadata.children) {
     if (extensions.namespaceURI !== SSML_H_NAMESPACE || extensions.localName !== 'extensions') {
-      throw new Error(`Magic cannot edit the <${extensions.localName}> metadata element.`)
+      throw new Error(msg`Magic cannot edit the <${extensions.localName}> metadata element.`)
     }
     for (const element of extensions.children) {
       if (element.namespaceURI !== SSML_H_NAMESPACE || element.localName !== 'voice-definition') {
-        throw new Error(`Magic cannot edit the <${element.localName}> SSML-H extension.`)
+        throw new Error(msg`Magic cannot edit the <${element.localName}> SSML-H extension.`)
       }
       const definition = {}
       for (const name of DEFINITION_ATTRIBUTES) {
@@ -238,13 +239,13 @@ function parseVoiceDefinitions(metadata) {
       }
       for (const child of element.children) {
         if (child.namespaceURI !== SSML_H_NAMESPACE) {
-          throw new Error(`Magic cannot edit the <${child.localName}> voice-definition element.`)
+          throw new Error(msg`Magic cannot edit the <${child.localName}> voice-definition element.`)
         }
         if (child.localName === 'description') definition.description = normalizedText(child.textContent)
         else if (child.localName === 'sample') {
           definition.sample = normalizedText(child.textContent)
           definition.sampleLanguage = child.getAttributeNS(XML_NAMESPACE, 'lang') || child.getAttribute('xml:lang') || ''
-        } else throw new Error(`Magic cannot edit the <${child.localName}> voice-definition element.`)
+        } else throw new Error(msg`Magic cannot edit the <${child.localName}> voice-definition element.`)
       }
       definitions.push(definition)
     }
@@ -256,10 +257,10 @@ export function parseMagicDocument(source) {
   const parser = new DOMParser()
   const document = parser.parseFromString(String(source || ''), 'application/xml')
   const parseError = document.querySelector('parsererror')
-  if (parseError) throw new Error(`Invalid SSML-H: ${parseError.textContent.trim()}`)
+  if (parseError) throw new Error(msg`Invalid SSML-H: ${parseError.textContent.trim()}`)
   const root = document.documentElement
   if (root.localName !== 'speak' || root.namespaceURI !== SSML_NAMESPACE) {
-    throw new Error('SSML-H must use a namespaced <speak> root element.')
+    throw new Error(msg('SSML-H must use a namespaced <speak> root element.'))
   }
 
   const blocks = []
@@ -272,10 +273,10 @@ export function parseMagicDocument(source) {
     }
     if (node.nodeType !== Node.ELEMENT_NODE) continue
     if (node.namespaceURI !== SSML_NAMESPACE) {
-      throw new Error(`Magic cannot edit the <${node.localName}> element at the document level.`)
+      throw new Error(msg`Magic cannot edit the <${node.localName}> element at the document level.`)
     }
     if (node.localName === 'metadata') {
-      if (metadata) throw new Error('Magic supports one metadata section.')
+      if (metadata) throw new Error(msg('Magic supports one metadata section.'))
       metadata = node
       continue
     }
@@ -298,7 +299,7 @@ export function parseMagicDocument(source) {
       blocks.push({ type: 'break', milliseconds: parseBreakTime(node.getAttribute('time')) })
       continue
     }
-    throw new Error(`Magic cannot edit <${node.localName}> blocks. Keep this document in the SSML-H editor.`)
+    throw new Error(msg`Magic cannot edit <${node.localName}> blocks. Keep this document in the SSML-H editor.`)
   }
   if (!blocks.length) {
     blocks.push({ type: 'speech', text: '', annotations: [], voice: '', direction: '', language: '', prosody: { rate: '', pitch: '', volume: '' } })

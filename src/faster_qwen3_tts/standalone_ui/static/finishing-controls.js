@@ -26,14 +26,17 @@ export class FinishingControls {
     const section = document.createElement('details')
     const summary = document.createElement('summary')
     summary.textContent = t('finishing.advancedMastering', {}, 'Advanced mastering')
+    summary.dataset.i18n = 'finishing.advancedMastering'
     const grid = document.createElement('div'); grid.className = 'finishing-control-grid'
     for (const [key, title, min, max, step, initial] of FIELDS) {
       const label = document.createElement('label'); label.className = 'compact-field'
       const text = document.createElement('span'); text.textContent = t(`finishing.${key}`, {}, title)
+      text.dataset.i18n = `finishing.${key}`
       const input = document.createElement('input')
       Object.assign(input, { type: 'number', min, max, step, value: initial ?? '',
         required: initial !== null,
         placeholder: initial === null ? t('finishing.inherit', {}, 'Preset default') : '' })
+      if (initial === null) input.dataset.i18nPlaceholder = 'finishing.inherit'
       input.addEventListener('input', onChange)
       this.inputs.set(key, input)
       label.append(text, input); grid.append(label)

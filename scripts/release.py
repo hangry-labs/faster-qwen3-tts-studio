@@ -71,6 +71,8 @@ def prepare(original, next_version=''):
         'container publication. Verify full/tiny registry indexes and add their digest-pinned '
         'deployment references before announcing availability.\n' + section[bullets:])
     release['README.md'] = readme[:start] + promoted + readme[end:]
+    release['README.md'] = release['README.md'].replace(
+        f'Development version **v{snapshot}**.', f'Source release **v{stable}**.')
     publication = re.compile(r'\*\*Publication status:\*\*.*?(?=\n\n)', re.S)
     release['docs/dockerhub.md'], count = publication.subn(
         f'**Publication status:** source release `v{stable}` prepares the versioned full/tiny tags. '
@@ -84,7 +86,11 @@ def prepare(original, next_version=''):
     new_section = (f'<details>\n<summary><strong>v{next_snapshot} development notes</strong></summary>\n\n'
         f'### v{next_snapshot}\n\nDevelopment version after `v{stable}`. Rolling `latest` and `latest_tiny` '
         'tags follow `main`; immutable release tags remain unchanged.\n\n- No changes recorded yet.\n\n</details>\n\n')
-    following['README.md'] = release['README.md'][:start] + new_section + release['README.md'][start:]
+    history_start = release['README.md'].index(
+        f'<details>\n<summary><strong>v{stable} release notes</strong></summary>')
+    following['README.md'] = release['README.md'][:history_start] + new_section + release['README.md'][history_start:]
+    following['README.md'] = following['README.md'].replace(
+        f'Source release **v{stable}**.', f'Development version **v{next_snapshot}**.')
     return {'tag': 'v' + stable, 'version': stable, 'package_version': package_version(stable),
             'next_snapshot': next_snapshot}, release, following
 

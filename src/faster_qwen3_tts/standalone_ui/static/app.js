@@ -1,5 +1,7 @@
+import { msg } from './i18n.js'
 // Qwen workflow adapter for the Apache-2.0 VoxCPMTTS UI components; see NOTICE.
-import { initializeI18n } from './i18n.js'
+import { initializeI18n, retranslate, languageLabel } from './i18n.js'
+import { speechSample } from './speech-samples.js'
 import { AudioEditor } from './audio-editor.js'
 import { AudioRecorder } from './audio-recorder.js'
 import { GpuMonitor } from './gpu-monitor.js'
@@ -13,12 +15,7 @@ const $ = (selector) => document.querySelector(selector)
 const $$ = (selector) => [...document.querySelectorAll(selector)]
 const state = { tab: 'custom', mode: 'custom', capabilities: null, busy: false,
   controller: null, player: null, outputs: {}, models: {}, textFeed: {}, toastTimer: null }
-const names = { custom: 'Generate speech', design: 'Design voice', clone: 'Clone voice' }
-const examples = {
-  custom: 'Good morning! It is a lovely day to give your ideas a voice.',
-  design: 'Welcome to our little corner of the world. Take a breath, settle in, and let the story begin.',
-  clone: 'This is a new sentence, spoken with the voice from my reference recording.',
-}
+const names = { custom: msg('Generate speech'), design: msg('Design voice'), clone: msg('Clone voice') }
 
 function toast(message) {
   $('#toast').textContent = String(message)
@@ -39,6 +36,7 @@ function selectOptions(select, items, value = null) {
     const option = document.createElement('option')
     option.value = typeof item === 'string' ? item : item.id
     option.textContent = typeof item === 'string' ? item : item.label
+    if (['language', 'voice-language'].includes(select.id)) option.textContent = languageLabel(option.value)
     if (select.id === 'model') option.textContent = option.textContent.replace('CustomVoice', 'Custom').replace('VoiceDesign', 'Design').replace('-', ' ')
     option.title = typeof item === 'string' ? item : item.label
     return option
@@ -46,35 +44,35 @@ function selectOptions(select, items, value = null) {
   if (value && [...select.options].some((item) => item.value === value)) select.value = value
 }
 
-const reference = new AudioEditor($('#reference-editor'), { label: 'Reference audio',
-  emptyTitle: 'Your voice reference', emptyDescription: 'Upload, record, or use a designed voice',
+const reference = new AudioEditor($('#reference-editor'), { label: msg('Reference audio'),
+  emptyTitle: msg('Your voice reference'), emptyDescription: msg('Upload, record, or use a designed voice'),
   onChange: (file) => {
     $('#transcribe-reference').disabled = !file
     $('#save-reference').disabled = !file
     $('#reference-text').value = ''
   } })
-const output = new AudioEditor($('#output-editor'), { label: 'Generated audio',
-  emptyTitle: 'Your voice, ready to hear', emptyDescription: 'Generated speech appears here',
+const output = new AudioEditor($('#output-editor'), { label: msg('Generated audio'),
+  emptyTitle: msg('Your voice, ready to hear'), emptyDescription: msg('Generated speech appears here'),
   onChange: (file) => {
     $('#use-as-reference').disabled = !file
     $('#save-output').disabled = !file
     if (state.capabilities && state.mode === 'custom' && !workbench.resultStreaming) workbench.sourceEdited(file)
   } })
-for (const editor of [reference, output]) editor.container.addEventListener('audio-error', (event) => toast(event.detail?.message || 'Unable to load audio.'))
+for (const editor of [reference, output]) editor.container.addEventListener('audio-error', (event) => toast(event.detail?.message || msg('Unable to load audio.')))
 const recorder = new AudioRecorder({ button: $('#record-reference'), status: $('#recording-status'),
   canvas: $('#recording-canvas'), deviceSelect: $('#microphone-device'), refreshButton: $('#refresh-microphones'),
   onFile: (file) => loadReference(file), onError: (error) => toast(error.message),
-  labels: { ready: 'Microphone ready', record: 'Record', stop: 'Stop recording', recording: 'Recording {time}',
-    processing: 'Preparing recording', readyWithTime: 'Recorded {time}', unavailable: 'Recording needs microphone permission and localhost or HTTPS.' } })
+  labels: { ready: msg('Microphone ready'), record: msg('Record'), stop: msg('Stop recording'), recording: msg('Recording {time}'),
+    processing: msg('Preparing recording'), readyWithTime: msg('Recorded {time}'), unavailable: msg('Recording needs microphone permission and localhost or HTTPS.') } })
 const gpu = new GpuMonitor($('#gpu-output'), { fetchJson })
 
 async function loadReference(file) {
-  if (file.size > (state.capabilities?.max_upload_bytes || 10 * 1024 * 1024)) throw new Error('Choose reference audio smaller than 10 MB.')
+  if (file.size > (state.capabilities?.max_upload_bytes || 10 * 1024 * 1024)) throw new Error(msg('Choose reference audio smaller than 10 MB.'))
   await reference.load(file)
 }
 
 function updateCount() {
-  $('#text-count').textContent = state.mode === 'custom' ? `${workbench.count().length} input characters` : `${$(`#text-${state.mode}`).value.length} / 1000 characters`
+  $('#text-count').textContent = state.mode === 'custom' ? msg`${workbench.count().length} input characters` : msg`${$(`#text-${state.mode}`).value.length} / 1000 characters`
 }
 
 function updateModelControls() {
@@ -85,7 +83,7 @@ function updateModelControls() {
   $('#custom-instruction-help').hidden = state.mode !== 'custom' || !!spec?.instructions
   $('#clone-instruction-field').hidden = state.mode !== 'clone' || !spec?.instructions
   updateCloneGuidance()
-  $('#model-help').textContent = spec?.mode === 'design' ? 'Creates a new voice from a description.' : spec?.mode === 'clone' ? 'Recreates a voice from reference audio.' : 'Nine built-in speakers. The 1.7B model also supports style instructions.'
+  $('#model-help').textContent = spec?.mode === 'design' ? msg('Creates a new voice from a description.') : spec?.mode === 'clone' ? msg('Recreates a voice from reference audio.') : msg('Nine built-in speakers. The 1.7B model also supports style instructions.')
   state.models[state.mode] = $('#model').value
   $('#model').title = spec?.label || $('#model').value
   workbench.defaultVoice()
@@ -93,20 +91,20 @@ function updateModelControls() {
 
 function updateCloneGuidance() {
   const identityOnly = $('#clone-method').value === 'true'
-  $('#transcript-required').textContent = identityOnly ? '(optional for speaker identity only)' : '(required)'
+  $('#transcript-required').textContent = identityOnly ? msg('(optional for speaker identity only)') : msg('(required)')
   $('#clone-instruction-help').textContent = identityOnly
-    ? 'Delivery direction is experimental. Choose Speaker and reference transcript for best results; speaker identity only may ignore the direction. Leave blank to clone without direction.'
-    : 'Delivery direction is experimental. The reference audio and its exact transcript help guide the delivery. Results vary by voice and instruction; leave blank to clone without direction.'
+    ? msg('Delivery direction is experimental. Choose Speaker and reference transcript for best results; speaker identity only may ignore the direction. Leave blank to clone without direction.')
+    : msg('Delivery direction is experimental. The reference audio and its exact transcript help guide the delivery. Results vary by voice and instruction; leave blank to clone without direction.')
 }
 
 function renderMetrics(metrics) {
   const panel = $('#generation-metrics')
   panel.replaceChildren()
   for (const [label, value] of [
-    ['Audio', `${Number(metrics.duration_s || 0).toFixed(2)} s`],
-    ['First audio', `${Number(metrics.ttfa_ms || 0).toFixed(0)} ms`],
-    ['Generation', `${(Number(metrics.generation_ms || 0) / 1000).toFixed(2)} s`],
-    ['Realtime speed', `${Number(metrics.speed || 0).toFixed(2)}×`],
+    [msg('Audio'), `${Number(metrics.duration_s || 0).toFixed(2)} s`],
+    [msg('First audio'), `${Number(metrics.ttfa_ms || 0).toFixed(0)} ms`],
+    [msg('Generation'), `${(Number(metrics.generation_ms || 0) / 1000).toFixed(2)} s`],
+    [msg('Realtime speed'), `${Number(metrics.speed || 0).toFixed(2)}×`],
   ]) {
     const span = document.createElement('span'), strong = document.createElement('strong')
     strong.textContent = value; span.append(strong, label); panel.append(span)
@@ -115,17 +113,17 @@ function renderMetrics(metrics) {
 }
 
 function renderDiagnostics(metrics) {
-  const ms = value => value == null ? 'Not available' : `${Number(value).toFixed(0)} ms`
+  const ms = value => value == null ? msg('Not available') : msg`${Number(value).toFixed(0)} ms`
   const rows = [
-    ['Queue wait', ms(metrics.queue_ms)], ['Model loading', ms(metrics.model_load_ms)],
-    ['Reference preparation', ms(metrics.reference_preparation_ms)],
-    ['Reference cache', metrics.reference_cache_hit == null ? 'Not applicable' : metrics.reference_cache_hit ? 'Reused' : 'Prepared'],
-    ['Server first audio', ms(metrics.ttfa_ms)], ['Model TTFA (streaming)', ms(metrics.model_ttfa_ms)],
-    ['Model generation (streaming)', ms(metrics.model_generation_ms)],
-    ['First chunk received', ms(metrics.client_first_chunk_ms)],
-    ['Playback start (scheduled)', ms(metrics.client_playback_ms)],
-    ['Playback buffered ahead', `${Number(metrics.buffered_s || 0).toFixed(2)} s`],
-    ['Server total, including queue', ms(metrics.total_ms)],
+    [msg('Queue wait'), ms(metrics.queue_ms)], [msg('Model loading'), ms(metrics.model_load_ms)],
+    [msg('Reference preparation'), ms(metrics.reference_preparation_ms)],
+    [msg('Reference cache'), metrics.reference_cache_hit == null ? msg('Not applicable') : metrics.reference_cache_hit ? msg('Reused') : msg('Prepared')],
+    [msg('Server first audio'), ms(metrics.ttfa_ms)], [msg('Model TTFA (streaming)'), ms(metrics.model_ttfa_ms)],
+    [msg('Model generation (streaming)'), ms(metrics.model_generation_ms)],
+    [msg('First chunk received'), ms(metrics.client_first_chunk_ms)],
+    [msg('Playback start (scheduled)'), ms(metrics.client_playback_ms)],
+    [msg('Playback buffered ahead'), `${Number(metrics.buffered_s || 0).toFixed(2)} s`],
+    [msg('Server total, including queue'), ms(metrics.total_ms)],
   ]
   $('#diagnostic-values').replaceChildren(...rows.flatMap(([name, value]) => {
     const label = document.createElement('dt'), result = document.createElement('dd')
@@ -137,8 +135,8 @@ function renderDiagnostics(metrics) {
 function updateChunkHelp() {
   const frames = Number($('#chunk-size').value), limits = state.capabilities?.chunk_size
   $('#chunk-size-help').textContent = Number.isInteger(frames) && frames >= (limits?.min || 1) && frames <= (limits?.max || 64)
-    ? `${frames} frame${frames === 1 ? '' : 's'} ≈ ${(frames / 12).toFixed(2)} seconds of audio. Smaller chunks reduce the wait for first audio.`
-    : `Choose a whole number from ${limits?.min || 1} to ${limits?.max || 64}.`
+    ? msg`Audio frames: ${frames} ≈ ${(frames / 12).toFixed(2)} seconds. Smaller chunks reduce the wait for first audio.`
+    : msg`Choose a whole number from ${limits?.min || 1} to ${limits?.max || 64}.`
 }
 
 async function activateTab(tab) {
@@ -185,7 +183,7 @@ async function activateTab(tab) {
     selectOptions($('#model'), choices, selected)
     updateModelControls()
     $('#text-feed').value = String(state.textFeed[state.mode] ?? state.capabilities.workflow_defaults[state.mode].non_streaming_mode)
-    $('#generate-button span').textContent = state.busy ? 'Stop generation' : names[state.mode]
+    $('#generate-button span').textContent = state.busy ? msg('Stop generation') : names[state.mode]
     const saved = state.outputs[state.mode]
     if (tab === 'custom') {
       $('#generate-result').hidden = workbench.resultStreaming || !saved
@@ -213,8 +211,8 @@ async function activateTab(tab) {
 
 function example(mode) {
   if (mode === 'custom') { workbench.loadExample(); updateCount(); return }
-  $(`#text-${mode}`).value = examples[mode]
-  if (mode === 'design') $('#design-instruct').value = 'A warm female narrator with a clear, gentle voice and a relaxed, conversational delivery.'
+  $(`#text-${mode}`).value = speechSample($('#language').value, mode)
+  if (mode === 'design') $('#design-instruct').value = msg('A warm female narrator with a clear, gentle voice and a relaxed, conversational delivery.')
   updateCount()
 }
 
@@ -273,7 +271,7 @@ async function generate() {
   }
   if (state.mode === 'custom') {
     try { await workbench.generate($('#streaming').checked) }
-    catch (error) { toast(error.name === 'AbortError' ? 'Generation stopped' : error.message) }
+    catch (error) { toast(error.name === 'AbortError' ? msg('Generation stopped') : error.message) }
     finally { refreshStatus().catch(() => {}) }
     return
   }
@@ -281,23 +279,24 @@ async function generate() {
   if (options.seed == null) options.seed = crypto.getRandomValues(new Uint32Array(1))[0]
   const sourceReference = mode === 'clone' ? reference.currentFile() : null
   const chunkLimits = state.capabilities.chunk_size
-  if (!Number.isInteger(options.chunk_size) || options.chunk_size < chunkLimits.min || options.chunk_size > chunkLimits.max) return toast(`Choose a whole chunk size from ${chunkLimits.min} to ${chunkLimits.max}.`)
-  if (!options.text) return toast('Enter text to speak.')
-  if (mode === 'design' && !options.instruct) return toast('Describe the voice you want to create.')
-  if (mode === 'clone' && !reference.currentFile()) return toast('Choose or record a reference first.')
-  if (mode === 'clone' && !options.xvec_only && !options.ref_text) return toast('Add the exact reference transcript, or use Transcribe reference.')
+  if (!Number.isInteger(options.chunk_size) || options.chunk_size < chunkLimits.min || options.chunk_size > chunkLimits.max) return toast(msg`Choose a whole chunk size from ${chunkLimits.min} to ${chunkLimits.max}.`)
+  if (!options.text) return toast(msg('Enter text to speak.'))
+  if (mode === 'design' && !options.instruct) return toast(msg('Describe the voice you want to create.'))
+  if (mode === 'clone' && !reference.currentFile()) return toast(msg('Choose or record a reference first.'))
+  if (mode === 'clone' && !options.xvec_only && !options.ref_text) return toast(msg('Add the exact reference transcript, or use Transcribe reference.'))
   const form = new FormData()
   form.set('options', JSON.stringify(options))
   if (mode === 'clone') form.set('reference', reference.currentFile())
   state.busy = true; state.controller = new AbortController()
-  $('#generate-button span').textContent = 'Stop generation'
+  $('#ui-locale').disabled = true
+  $('#generate-button span').textContent = msg('Stop generation')
   $('#generate-button').dataset.running = 'true'
   $('#stream-surface').hidden = !streaming
-  $('#stream-state').textContent = 'Preparing model and waiting for speech'
+  $('#stream-state').textContent = msg('Preparing model and waiting for speech')
   $('#stream-detail').textContent = ''
-  $('#global-status').textContent = 'Loading model or waiting for inference'
+  $('#global-status').textContent = msg('Loading model or waiting for inference')
   $('#request-status').hidden = false
-  $('#request-status').textContent = 'Submitting request'
+  $('#request-status').textContent = msg('Submitting request')
   const chunks = []; let rate = 24000, metrics = {}, completed = false
   const clientMetrics = { buffered_s: 0 }
   let diagnosticsTimer = null
@@ -313,15 +312,15 @@ async function generate() {
     const response = await fetch('/studio/generate/stream' + (streaming ? '' : '?streaming=false'), {
       method: 'POST', body: form, signal: state.controller.signal,
     })
-    if (!response.ok) { const data = await response.json(); throw new Error(data.detail || 'Generation failed.') }
+    if (!response.ok) { const data = await response.json(); throw new Error(data.detail || msg('Generation failed.')) }
     await readSse(response, async (event) => {
         if (event.type === 'error') throw new Error(event.message)
         if (event.type === 'queued') {
-          $('#request-status').textContent = event.position > 0 ? `Waiting for inference: ${event.position} request${event.position === 1 ? '' : 's'} ahead` : 'Preparing model and voice'
+          $('#request-status').textContent = event.position > 0 ? msg`Waiting for inference. Requests ahead: ${event.position}` : msg('Preparing model and voice')
           $('#global-status').textContent = $('#request-status').textContent
         }
-        if (event.type === 'loading') $('#request-status').textContent = 'Loading the selected model'
-        if (event.type === 'ready') { $('#stream-state').textContent = 'Generating speech'; $('#request-status').textContent = 'Generating speech' }
+        if (event.type === 'loading') $('#request-status').textContent = msg('Loading the selected model')
+        if (event.type === 'ready') { $('#stream-state').textContent = msg('Generating speech'); $('#request-status').textContent = msg('Generating speech') }
         if (event.type === 'chunk') {
           if (clientMetrics.client_first_chunk_ms == null) clientMetrics.client_first_chunk_ms = performance.now() - requestStarted
           const decoded = decodePcmWav(bytesFromBase64(event.audio_b64))
@@ -332,12 +331,12 @@ async function generate() {
           metrics = event.metrics || metrics
           renderMetrics({ ...metrics, ...clientMetrics })
           if (streaming) drawStream(decoded.samples)
-          $('#stream-state').textContent = streaming ? 'Playing generated speech' : 'Preparing complete audio'
-          $('#stream-detail').textContent = `${event.duration_s.toFixed(2)} seconds received`
+          $('#stream-state').textContent = streaming ? msg('Playing generated speech') : msg('Preparing complete audio')
+          $('#stream-detail').textContent = msg`${event.duration_s.toFixed(2)} seconds received`
         }
         if (event.type === 'done') { metrics = event.metrics; completed = true; renderMetrics({ ...metrics, ...clientMetrics }) }
       })
-    if (!completed) throw new Error('The audio response ended before completion.')
+    if (!completed) throw new Error(msg('The audio response ended before completion.'))
     const count = chunks.reduce((sum, chunk) => sum + chunk.length, 0), all = new Float32Array(count)
     let offset = 0
     chunks.forEach((chunk) => { all.set(chunk, offset); offset += chunk.length })
@@ -352,13 +351,13 @@ async function generate() {
       workbench.finisher.setSource(file, 'wav')
       await output.load(file); renderMetrics({ ...metrics, ...clientMetrics })
     }
-    $('#stream-state').textContent = 'Generation complete'
-    $('#global-status').textContent = 'Speech generated'
+    $('#stream-state').textContent = msg('Generation complete')
+    $('#global-status').textContent = msg('Speech generated')
     if (state.player) await state.player.finish()
-    $('#request-status').textContent = 'Generation complete'
+    $('#request-status').textContent = msg('Generation complete')
   } catch (error) {
-    if (error.name === 'AbortError') { $('#stream-state').textContent = 'Generation stopped'; $('#global-status').textContent = 'Stopped'; $('#request-status').textContent = 'Generation stopped' }
-    else { toast(error.message); $('#global-status').textContent = 'Generation failed'; $('#stream-state').textContent = 'Generation failed'; $('#request-status').textContent = error.message }
+    if (error.name === 'AbortError') { $('#stream-state').textContent = msg('Generation stopped'); $('#global-status').textContent = msg('Stopped'); $('#request-status').textContent = msg('Generation stopped') }
+    else { toast(error.message); $('#global-status').textContent = msg('Generation failed'); $('#stream-state').textContent = msg('Generation failed'); $('#request-status').textContent = error.message }
   } finally {
     clearInterval(diagnosticsTimer)
     await state.player?.stop().catch(() => {})
@@ -369,6 +368,7 @@ async function generate() {
     renderDiagnostics({ ...metrics, ...clientMetrics })
     state.player = null; state.controller = null; state.busy = false
     $('#generate-button span').textContent = names[state.mode]
+    $('#ui-locale').disabled = false
     $('#generate-button').dataset.running = 'false'
     refreshStatus().catch(() => {})
   }
@@ -376,22 +376,22 @@ async function generate() {
 
 async function refreshStatus() {
   const status = await fetchJson('/studio/status')
-  const label = { idle: 'Ready to load a voice', ready: 'Inference ready', loading: 'Loading model', generating: 'Generating speech', error: 'Inference needs attention' }[status.state] || status.state
+  const label = { idle: msg('Ready to load a voice'), ready: msg('Inference ready'), loading: msg('Loading model'), generating: msg('Generating speech'), error: msg('Inference needs attention') }[status.state] || status.state
   $('#runtime-state').textContent = label
   const activeModel = status.model?.split('/').at(-1)?.replace('Qwen3-TTS-12Hz-', '')
-  $('#runtime-model').textContent = activeModel ? `${activeModel}${status.resident_models?.length > 1 ? ' · ' + status.resident_models.length + ' loaded' : ''}` : 'NVIDIA · models load on demand'
+  $('#runtime-model').textContent = activeModel ? `${activeModel}${status.resident_models?.length > 1 ? ' · ' + status.resident_models.length + msg(' loaded') : ''}` : msg('NVIDIA · models load on demand')
   $('#runtime-badge').dataset.state = status.state === 'ready' ? 'ready' : status.state === 'error' ? 'error' : status.state === 'idle' ? 'ready' : 'starting'
   const resident = status.resident_models || (status.model ? [status.model] : [])
-  $('#residency-status').textContent = `${resident.length ? 'In memory: ' + resident.map(id => id.split('12Hz-').at(-1)).join(', ') : 'No weights in memory'}${status.error ? ' · ' + status.error : ''}`
+  $('#residency-status').textContent = `${resident.length ? msg('In memory: ') + resident.map(id => id.split('12Hz-').at(-1)).join(', ') : msg('No weights in memory')}${status.error ? ' · ' + status.error : ''}`
   const errors = Object.entries(status.residency_errors || {}).map(([id, error]) => `${id.split('12Hz-').at(-1)}: ${error}`)
   if (errors.length) $('#model-policy-status').textContent = errors.join(' · ')
   if (!state.busy) $('#global-status').textContent = label
 }
 
 async function refreshAsr() {
-  $('#asr-status').textContent = 'Checking connection'
+  $('#asr-status').textContent = msg('Checking connection')
   const result = await fetchJson('/studio/asr/status')
-  $('#asr-status').textContent = result.ready ? 'Qwen3 ASR is ready' : 'ASR is not ready. Check the URL and service.'
+  $('#asr-status').textContent = result.ready ? msg('Qwen3 ASR is ready') : msg('ASR is not ready. Check the URL and service.')
 }
 
 async function refreshVoices() {
@@ -411,7 +411,7 @@ function captureVoice() {
 
 async function voiceFile(url, name = 'reference.wav') {
   const response = await fetch(url, { cache: 'no-store' })
-  if (!response.ok) throw new Error('Saved voice audio could not be loaded.')
+  if (!response.ok) throw new Error(msg('Saved voice audio could not be loaded.'))
   return new File([await response.blob()], name, { type: 'audio/wav' })
 }
 
@@ -457,7 +457,7 @@ async function refineVoice(profile) {
     recipe: structuredClone(recipe), source, generatedAt: null, metrics: { seed: settings.seed },
     finishing: workbench.finisher.snapshot() }
   updateCount(); workbench.toolbar.sync()
-  toast(`Refining ${profile.name}. Generate a new recording to enable replacement; the saved voice remains available.`)
+  toast(msg`Refining ${profile.name}. Generate a new recording to enable replacement; the saved voice remains available.`)
 }
 
 async function setHeaderCollapsed(collapsed, animate = true) {
@@ -466,8 +466,8 @@ async function setHeaderCollapsed(collapsed, animate = true) {
   hero.dataset.collapsed = String(collapsed)
   document.documentElement.dataset.headerCollapsed = String(collapsed)
   $('#hero-toggle').setAttribute('aria-expanded', String(!collapsed))
-  $('#hero-toggle').setAttribute('aria-label', collapsed ? 'Expand header' : 'Collapse header')
-  $('#hero-toggle').title = collapsed ? 'Expand header' : 'Collapse header'
+  $('#hero-toggle').setAttribute('aria-label', collapsed ? msg('Expand header') : msg('Collapse header'))
+  $('#hero-toggle').title = collapsed ? msg('Expand header') : msg('Collapse header')
   $('#hero-toggle i').className = collapsed ? 'icon-chevron-down' : 'icon-chevron-up'
   const end = hero.getBoundingClientRect().height
   if (animate && !reduced) hero.animate([{ height: start + 'px' }, { height: end + 'px' }], { duration: 180, easing: 'ease-out' })
@@ -484,7 +484,8 @@ const workbench = new GenerateWorkbench({ options: requestOptions, fetchJson, to
   },
   onBusy: (busy, controller) => {
     state.busy = busy; state.controller = controller
-    $('#generate-button span').textContent = busy ? 'Stop generation' : names[state.mode]
+    $('#ui-locale').disabled = busy
+    $('#generate-button span').textContent = busy ? msg('Stop generation') : names[state.mode]
     $('#generate-button').dataset.running = String(busy)
   },
   onOutput: async (file, text, metrics) => {
@@ -551,10 +552,10 @@ for (const event of ['dragleave','drop']) $('#reference-drop').addEventListener(
 $('#reference-drop').addEventListener('drop', (event) => { const file = event.dataTransfer.files[0]; if (file) loadReference(file).catch((error) => toast(error.message)) })
 $('#transcribe-reference').addEventListener('click', async () => {
   if (!reference.currentFile()) return
-  const button = $('#transcribe-reference'); button.disabled = true; button.textContent = 'Transcribing…'
+  const button = $('#transcribe-reference'); button.disabled = true; button.textContent = msg('Transcribing…')
   try { const form = new FormData(); form.set('file', reference.currentFile()); const result = await fetchJson('/studio/asr/transcribe', { method: 'POST', body: form }); $('#reference-text').value = result.text }
   catch (error) { toast(error.message) }
-  finally { button.disabled = !reference.currentFile(); button.textContent = 'Transcribe reference' }
+  finally { button.disabled = !reference.currentFile(); button.textContent = msg('Transcribe reference') }
 })
 $('#use-as-reference').addEventListener('click', async () => { const file = state.mode === 'custom' ? workbench.currentFile() : output.currentFile(); if (!file) return; const saved = state.outputs[state.mode]; await reference.load(file); $('#reference-text').value = saved?.text || ''; await activateTab('clone') })
 $('#save-output').addEventListener('click', () => openSave(state.mode === 'custom' ? workbench.currentFile() : output.currentFile(), state.outputs[state.mode]?.text))
@@ -569,14 +570,14 @@ $('#save-mcp').addEventListener('click', async () => {
   try {
     await fetchJson('/system/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mcp_enabled: $('#mcp-enabled').checked, mcp_advanced_enabled: $('#mcp-advanced-enabled').checked }) })
-    $('#mcp-status').textContent = 'Access saved. Reconnect the agent after enabling an endpoint.'
+    $('#mcp-status').textContent = msg('Access saved. Reconnect the agent after enabling an endpoint.')
   } catch (error) { $('#mcp-status').textContent = error.message }
   finally { button.disabled = false }
 })
 $('#load-model').addEventListener('click', async () => {
-  const button = $('#load-model'); button.disabled = true; button.textContent = 'Loading model…'
+  const button = $('#load-model'); button.disabled = true; button.textContent = msg('Loading model…')
   try { await fetchJson('/studio/models/load', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: $('#system-model').value }) }) } catch (error) { toast(error.message) }
-  finally { button.disabled = false; button.textContent = 'Load model'; refreshStatus().catch(() => {}) }
+  finally { button.disabled = false; button.textContent = msg('Load model'); refreshStatus().catch(() => {}) }
 })
 $('#unload-model').addEventListener('click', async () => {
   try { await fetchJson('/studio/models/unload', { method: 'POST' }); await refreshStatus() } catch (error) { toast(error.message) }
@@ -602,8 +603,8 @@ function renderModelPolicy(policy) {
     label.append(title, select)
     const keepLabel = document.createElement('label'); keepLabel.className = 'checkbox-field'
     const keep = document.createElement('input'); keep.type = 'checkbox'; keep.id = `policy-keep-${mode}`; keep.checked = choice.keep_loaded
-    keep.setAttribute('aria-label', `${names[mode]} always loaded`)
-    const text = document.createElement('span'); text.textContent = 'Always loaded'
+    keep.setAttribute('aria-label', msg`${names[mode]} always loaded`)
+    const text = document.createElement('span'); text.textContent = msg('Always loaded')
     keepLabel.append(keep, text); row.append(label, keepLabel)
     return row
   })
@@ -612,7 +613,7 @@ function renderModelPolicy(policy) {
 
 $('#save-model-policy').addEventListener('click', async () => {
   const button = $('#save-model-policy'); button.disabled = true
-  $('#model-policy-status').textContent = 'Applying defaults and loading selected weights…'
+  $('#model-policy-status').textContent = msg('Applying defaults and loading selected weights…')
   const policy = { enabled: $('#keep-weights').checked, workflows: Object.fromEntries(
     ['custom', 'design', 'clone'].map(mode => [mode, {model: $(`#policy-model-${mode}`).value, keep_loaded: $(`#policy-keep-${mode}`).checked}])) }
   try {
@@ -622,7 +623,7 @@ $('#save-model-policy').addEventListener('click', async () => {
       state.capabilities.workflow_defaults[mode].model = choice.model
       delete state.models[mode]
     }
-    $('#model-policy-status').textContent = 'Defaults saved. Request-only weights unload after each request.'
+    $('#model-policy-status').textContent = msg('Defaults saved. Request-only weights unload after each request.')
     await refreshStatus()
   } catch (error) { $('#model-policy-status').textContent = error.message }
   finally { button.disabled = false }
@@ -660,6 +661,34 @@ async function initialize() {
   await activateTab(tab)
   await Promise.all([refreshStatus(), refreshVoices()])
   $('#generate-button').disabled = false
-  setInterval(() => { if (!document.hidden) refreshStatus().catch(() => { $('#runtime-state').textContent = 'Service unavailable' }) }, 2000)
+  $('#ui-locale').disabled = false
+  setInterval(() => { if (!document.hidden) refreshStatus().catch(() => { $('#runtime-state').textContent = msg('Service unavailable') }) }, 2000)
 }
-initialize().catch((error) => { toast(error.message); $('#global-status').textContent = 'Unable to connect to Studio' })
+window.addEventListener('ui-locale-error', event => toast(event.detail))
+window.addEventListener('ui-locale-changed', () => {
+  if (!state.capabilities) return
+  for (const key of Object.keys(names)) names[key] = retranslate(names[key])
+  recorder.relocalize()
+  for (const id of ['language', 'voice-language']) {
+    const select = $('#' + id); selectOptions(select, state.capabilities.languages, select.value)
+  }
+  workbench.relocalize(); voiceLibrary.relocalize()
+  for (const id of ['stream-state', 'stream-detail', 'request-status', 'model-policy-status', 'mcp-status']) {
+    const node = $('#' + id); node.textContent = retranslate(node.textContent)
+  }
+  $('#generate-button span').textContent = names[state.mode]
+  updateModelControls(); updateChunkHelp(); updateCount()
+  setHeaderCollapsed($('#brand-hero').dataset.collapsed === 'true', false)
+  for (const mode of ['custom', 'design', 'clone']) {
+    const row = $(`#policy-model-${mode}`)?.closest('.model-policy-row')
+    if (!row) continue
+    row.querySelector('.compact-field > span').textContent = names[mode]
+    row.querySelector('.checkbox-field > span').textContent = msg('Always loaded')
+    row.querySelector('input').setAttribute('aria-label', msg`${names[mode]} always loaded`)
+  }
+  if (state.outputs[state.mode]?.metrics) renderMetrics(state.outputs[state.mode].metrics)
+  else renderDiagnostics({})
+  if (state.tab === 'system') { gpu.render(gpu.stats); refreshAsr().catch(error => toast(error.message)) }
+  refreshStatus().catch(error => toast(error.message))
+})
+initialize().catch((error) => { toast(error.message); $('#global-status').textContent = msg('Unable to connect to Studio') })

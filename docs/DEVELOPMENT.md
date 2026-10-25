@@ -21,6 +21,22 @@ task logs
 task stop
 ```
 
+## Build from source
+
+For normal use, run a published image with the [one-command Quick Start](../README.md#quick-start).
+To build a local tiny image from the source instead:
+
+```bash
+git clone https://github.com/hangry-labs/faster-qwen3-tts-studio.git
+cd faster-qwen3-tts-studio
+docker build -t faster-qwen3-tts-studio:dev .
+docker volume create --label app.hangrylabs.project=faster-qwen3-tts-studio faster_qwen3_tts_studio_data
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent faster-qwen3-tts-studio:dev
+```
+
+The default build downloads models on first use. Use `--target baked` when
+building a full image with all five pinned checkpoints included.
+
 ## Main commands
 
 | Command | Behavior |

@@ -9,6 +9,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from functools import lru_cache
 import queue
 import re
 import subprocess
@@ -33,6 +34,24 @@ from faster_qwen3_tts import __version__
 ROOT = Path(__file__).resolve().parent
 MAX_UPLOAD = 10 * 1024 * 1024
 LOG = logging.getLogger(__name__)
+UI_LOCALES = (
+    {'code': 'en', 'name': 'English', 'path': '/en', 'direction': 'ltr', 'browserLanguage': 'en-US'},
+    {'code': 'nb', 'name': 'Norsk bokmål', 'path': '/nb', 'direction': 'ltr', 'browserLanguage': 'nb-NO'},
+    {'code': 'pl', 'name': 'Polski', 'path': '/pl', 'direction': 'ltr', 'browserLanguage': 'pl-PL'},
+    {'code': 'ja', 'name': '日本語', 'path': '/ja', 'direction': 'ltr', 'browserLanguage': 'ja-JP'},
+    {'code': 'zh', 'name': '简体中文', 'path': '/zh', 'direction': 'ltr', 'browserLanguage': 'zh-CN'},
+    {'code': 'es', 'name': 'Español', 'path': '/es', 'direction': 'ltr', 'browserLanguage': 'es-ES'},
+)
+
+
+@lru_cache(maxsize=len(UI_LOCALES))
+def locale_catalog(locale: str) -> dict[str, str]:
+    """Merge translated entries over English, including newly introduced keys."""
+    catalog = json.loads((ROOT / 'static/locales/en.json').read_text(encoding='utf-8'))
+    if locale != 'en':
+        translated = json.loads((ROOT / f'static/locales/{locale}.json').read_text(encoding='utf-8'))
+        catalog.update({key: value for key, value in translated.items() if isinstance(value, str) and value.strip()})
+    return catalog
 
 
 class ModelSelection(BaseModel):
@@ -90,16 +109,25 @@ def create_app(engine=None, data_root: Path | None = None):
         return response
 
     @app.get('/', include_in_schema=False)
-    @app.get('/en', include_in_schema=False)
     def index():
-        catalog = json.loads((ROOT / 'static/locales/en.json').read_text(encoding='utf-8'))
-        bootstrap = {'locale': 'en', 'defaultLocale': 'en', 'storageKey': 'qwen3tts-ui-locale-v1',
-                     'locales': [{'code': 'en', 'name': 'English', 'path': '/en', 'browserLanguage': 'en-US'}],
-                     'messages': catalog}
+        return localized_index('en')
+
+    def localized_index(locale):
+        bootstrap = {'locale': locale, 'defaultLocale': 'en', 'storageKey': 'qwen3tts-ui-locale-v1',
+                     'locales': UI_LOCALES, 'messages': locale_catalog(locale)}
         page = (ROOT / 'static/index.html').read_text(encoding='utf-8')
-        page = page.replace('{{UI_VERSION}}', __version__).replace('{{UI_LOCALE}}', 'en').replace('{{UI_DIRECTION}}', 'ltr')
+        page = page.replace('{{UI_VERSION}}', __version__).replace('{{UI_LOCALE}}', locale).replace('{{UI_DIRECTION}}', 'ltr')
         page = page.replace('{{UI_BOOTSTRAP}}', json.dumps(bootstrap, ensure_ascii=False).replace('<', '\\u003c'))
         return HTMLResponse(page)
+
+    def locale_handler(locale):
+        def handler():
+            return localized_index(locale)
+        return handler
+
+    for locale in UI_LOCALES:
+        app.add_api_route(locale['path'], locale_handler(locale['code']), methods=['GET'],
+                          include_in_schema=False, name='ui-' + locale['code'])
 
     @app.get('/favicon.ico', include_in_schema=False)
     def favicon():

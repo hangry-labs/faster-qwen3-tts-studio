@@ -57,6 +57,11 @@ html[data-header-collapsed="true"] .brand-hero .labs-branding { align-self: cent
 .studio-diagnostics { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 18px; margin: 0; font-size: .76rem; }
 .studio-diagnostics dt { color: var(--muted); }
 .studio-diagnostics dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.runtime-settings-card .studio-diagnostics { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+.runtime-settings-card .studio-diagnostics dt:not(:first-child) { margin-top: 7px; }
+.runtime-settings-card .studio-diagnostics dd { min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.brand-hero .brand-copy { pointer-events: none; }
+.brand-hero .brand-nav { z-index: 2; }
 .reference-options { align-items: end !important; }
 .reference-options > label { flex: 1; }
 .studio-workspace .system-grid { display: grid; grid-template-columns: minmax(300px, .8fr) minmax(420px, 1.2fr); gap: 22px; align-items: start; }

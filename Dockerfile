@@ -24,7 +24,7 @@ COPY src/faster_qwen3_tts/standalone_ui/model_catalog.py ./src/faster_qwen3_tts/
 RUN python -u scripts/prefetch_models.py --cache-root /app/baked-models/huggingface
 
 FROM dependencies AS app
-COPY pyproject.toml README.md VERSION LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
+COPY pyproject.toml README*.md VERSION LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
 COPY src/ ./src/
 RUN python -m pip install --no-build-isolation --no-deps '.[studio]' \
     && python -m pip check

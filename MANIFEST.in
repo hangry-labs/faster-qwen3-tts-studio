@@ -1,4 +1,5 @@
 include README.md VERSION LICENSE NOTICE THIRD_PARTY_NOTICES.md
+include README.nb.md README.pl.md README.ja.md README.zh.md README.es.md
 include pyproject.toml Taskfile.yml Dockerfile .dockerignore requirements.runtime.txt
 include requirements.runtime.in
 include .github/workflows/docker-build.yml
@@ -13,6 +14,7 @@ recursive-include tests *.py *.ps1
 recursive-include tests/ui *.mjs
 recursive-include benchmarks *.py
 recursive-include benchmarks *.json *.md Dockerfile
+recursive-include assets *.webp
 prune benchmark-artifacts
 global-exclude *.pyc
 global-exclude __pycache__/*

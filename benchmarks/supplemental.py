@@ -98,11 +98,24 @@ class QueueMonitor:
             'peak_queued': max((item['queued'] for item in self.samples), default=0)}
 
 
-def run_batch(url, model, call_ids, mode, *, generator=generate, max_tokens=600, chunk_size=8):
+def queue_payload(model, seed, max_tokens=600, chunk_size=8, workload='plain'):
+    item = {'model': model, 'mode': 'custom', 'language': 'English', 'text': QUEUE_TEXT}
+    options = payload(item, seed=seed, max_tokens=max_tokens, chunk_size=chunk_size)
+    if workload == 'processed':
+        options.update(input_type='ssml', normalize_loudness=True, text=(
+            '<speak><prosody rate="110%" pitch="+2st">'
+            'The morning train is ready to leave.</prosody><break time="120ms"/>'
+            '<prosody rate="90%" volume="-3dB">Please keep your ticket close at hand.'
+            '</prosody></speak>'))
+    elif workload != 'plain':
+        raise ValueError('Unknown queue workload.')
+    return options
+
+
+def run_batch(url, model, call_ids, mode, *, generator=generate, max_tokens=600, chunk_size=8, workload='plain'):
     barrier = threading.Barrier(len(call_ids)) if mode == 'queued' else None
     def submit(call_id):
-        item = {'model': model, 'mode': 'custom', 'language': 'English', 'text': QUEUE_TEXT}
-        options = payload(item, seed=stable_seed(call_id), max_tokens=max_tokens, chunk_size=chunk_size)
+        options = queue_payload(model, stable_seed(call_id), max_tokens, chunk_size, workload)
         if barrier:
             barrier.wait(timeout=30)
         audio, metrics = generator(url, options, request_id=str(uuid.uuid4()))
@@ -135,9 +148,9 @@ def summarize_batches(batches):
 
 
 def measure_queue(args, model, suffix):
-    item = {'model': model, 'mode': 'custom', 'language': 'English', 'text': QUEUE_TEXT}
-    warmups = [generate(args.base_url, payload(item, seed=9001 + index, max_tokens=args.max_new_tokens,
-        chunk_size=args.chunk_size))[1] for index in range(args.warmup_calls)]
+    workload = getattr(args, 'queue_workload', 'plain')
+    warmups = [generate(args.base_url, queue_payload(model, 9001 + index, args.max_new_tokens,
+        args.chunk_size, workload))[1] for index in range(args.warmup_calls)]
     batches = {'sequential': [], 'queued': []}
     matching, compared = 0, 0
     for number in range(1, args.rounds + 1):
@@ -145,7 +158,7 @@ def measure_queue(args, model, suffix):
         paired = {}
         for mode in (['sequential', 'queued'] if number % 2 else ['queued', 'sequential']):
             paired[mode] = run_batch(args.base_url, model, call_ids, mode,
-                max_tokens=args.max_new_tokens, chunk_size=args.chunk_size)
+                max_tokens=args.max_new_tokens, chunk_size=args.chunk_size, workload=workload)
         for call_id in call_ids:
             compared += 1
             matching += paired['sequential']['audio'][call_id] == paired['queued']['audio'][call_id]
@@ -158,7 +171,7 @@ def measure_queue(args, model, suffix):
                     (folder / f'{mode}-{call_id}.wav').write_bytes(audio)
             batch.pop('audio'); batches[mode].append(batch)
     sequential, queued = (summarize_batches(batches[mode]) for mode in ['sequential', 'queued'])
-    return {'warmups': warmups, 'batches': batches, 'sequential': sequential, 'queued': queued,
+    return {'workload': workload, 'warmups': warmups, 'batches': batches, 'sequential': sequential, 'queued': queued,
         'comparison': {'compared_outputs': compared, 'matching_outputs': matching,
             'throughput_change_percent': 100 * (queued['requests_per_second'] / sequential['requests_per_second'] - 1)},
         'passed': matching == compared and queued['peak_queued'] >= 1 and queued['peak_active'] <= 1 and not queued['monitor_errors']}
@@ -192,6 +205,8 @@ def render(data, args):
     for run in data['runs']:
         for profile in run['profiles']:
             identity = [run['run_id'], profile['engine'], MODELS[profile['model']]['label']]
+            if args.suite == 'queue':
+                identity.append(profile.get('workload', 'plain'))
             if args.suite == 'ssml':
                 for scenario in ['ssml', 'ssml-h']:
                     calls = [call for call in profile['calls'] if call['scenario'] == scenario]
@@ -206,7 +221,7 @@ def render(data, args):
                     metric(profile['queued']['total_batch_wall_seconds']), metric(comparison['throughput_change_percent'], 2),
                     f"{comparison['matching_outputs']}/{comparison['compared_outputs']}", profile['queued']['peak_queued'], profile['passed']])
     headers = ['Run', 'Engine', 'Checkpoint'] + (['Input', 'Passed', 'Rounds', 'Complete tails', 'Mean similarity %', 'Median RTF']
-        if args.suite == 'ssml' else ['Clients', 'Rounds', 'Sequential s', 'Queued s', 'Throughput change %', 'Identical WAVs', 'Peak queue', 'Pass'])
+        if args.suite == 'ssml' else ['Workload', 'Clients', 'Rounds', 'Sequential s', 'Queued s', 'Throughput change %', 'Identical WAVs', 'Peak queue', 'Pass'])
     note = ('The same ten turns and final-tail checks as VoxCPMTTS; fixed Ryan/Aiden voices. Delivery directions are used only on capable checkpoints; each profile records this scope. ASR is a comparative judge.'
         if args.suite == 'ssml' else 'One GPU worker; alternate batch order each round. Queued latency includes waiting time. A throughput change is not a claim that FIFO accelerates model inference.')
     write(args.reports / ('ssml' if args.suite == 'ssml' else 'inference_queue') / 'BENCHMARKS.md', lines + [note, '', *table(headers, rows), ''])

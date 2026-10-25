@@ -274,9 +274,29 @@ runtime does not infer a Git revision from the host filesystem.
 
 ## Queue admission
 
-Inference remains serialized. `QWEN_STUDIO_QUEUE_SIZE` sets waiting capacity
-from 0 to 256, default 8; zero permits an idle request but rejects waiting work.
+GPU inference remains serialized. `QWEN_STUDIO_QUEUE_SIZE` sets pending capacity
+from 0 to 256, default 8. The synthesis pipeline admits at most this value plus
+one request, including requests still finishing CPU audio work. Zero permits one
+request at a time, including its finishing stage.
+Native and OpenAI generation reserve admission before voice lookup and plan
+compilation, which run off the HTTP event loop while earlier requests synthesize.
+Reference files are prepared before the GPU lease. Model tokenization, reference
+encoding and waveform decoding still run under that lease.
 Admission happens before creating a generation thread or opening a response
 stream. A full queue returns HTTP 429 with `Retry-After: 1`; `/v1` uses an
 OpenAI error envelope. Cancellation removes queued work. Status includes queue
-capacity, active/waiting counts and cumulative rejected admissions.
+capacity, active/waiting counts, total synthesis `inflight` and cumulative rejected
+admissions. Full-response per-unit effects run on CPU workers with at most two
+unfinished units per request and two simultaneous effect operations per service.
+The final model call releases the GPU before assembly and whole-recording
+normalization. Streaming releases it before the final filter drain; bounded
+stream buffers still apply backpressure during inference. HTTP encoding already
+runs separately from GPU inference.
+
+Native generation metrics add `preparation_ms`, `gpu_lease_ms` and
+`postprocess_ms`. Preparation measures off-loop voice lookup and compilation.
+The GPU lease includes model preparation and synthesis; the CPU tail starts
+after release and excludes HTTP encoding. These intervals can overlap work from
+other requests. `queue_ms` measures time until GPU acquisition, including
+reference file preparation; `total_ms` starts after planning. Complete-response
+`ttfa_ms` remains time to assembled audio, rather than a streaming latency claim.

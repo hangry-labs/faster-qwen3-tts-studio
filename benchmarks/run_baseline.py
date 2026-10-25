@@ -59,6 +59,8 @@ def parse_args(argv=None):
     parser.add_argument('--suite', choices=['baseline', 'backends', 'streaming', 'ssml', 'queue', 'full'], default='baseline')
     parser.add_argument('--rounds', type=int, default=5)
     parser.add_argument('--clients', type=int, default=4)
+    parser.add_argument('--queue-workload', choices=['plain', 'processed'], default='plain',
+        help='Queue control or two-turn SSML with prosody and whole-recording normalization.')
     parser.add_argument('--minimum-similarity', type=float, default=95.)
     parser.add_argument('--plan', action='store_true')
     parser.add_argument('--no-write', action='store_true', help='Retain local evidence, but do not append history or update reports.')

@@ -11,6 +11,7 @@ import queue
 import threading
 import time
 import re
+from dataclasses import replace
 from typing import Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
@@ -244,9 +245,34 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                 'X-Qwen-Input-Type': prepared.request.input_type,
                 'Content-Disposition': f'inline; filename="qwen3-tts.{fmt}"'}
 
+    async def prepare_generation(payload, reference=None):
+        # Reserve before filesystem reads / compilation and retain the same FIFO
+        # ticket through CPU finishing. Invalid input and disconnects return it.
+        reserve = getattr(service.engine, 'admit', None)
+        ticket = reserve() if callable(reserve) else None
+        started = time.perf_counter()
+        preparation = asyncio.create_task(asyncio.to_thread(service.prepare, payload, reference))
+        try:
+            prepared = await asyncio.shield(preparation)
+            return replace(prepared, admission=ticket, preparation_ms=(time.perf_counter() - started) * 1000)
+        except asyncio.CancelledError:
+            # A filesystem read cannot be interrupted. Keep its slot until the
+            # bounded CPU task actually exits, even if the HTTP task is gone.
+            def abandoned(task):
+                if ticket is not None:
+                    service.engine.cancel_admission(ticket)
+                if not task.cancelled():
+                    task.exception()
+            preparation.add_done_callback(abandoned)
+            raise
+        except BaseException:
+            if ticket is not None:
+                service.engine.cancel_admission(ticket)
+            raise
+
     async def binary(payload, http_request=None, reference=None):
         reference = await resolve_reference(payload, reference)
-        prepared = service.prepare(payload, reference)
+        prepared = await prepare_generation(payload, reference)
         result = await complete(prepared, http_request)
         encoded = await asyncio.to_thread(audio.encode, result['audio'], payload.output_format)
         if http_request is not None and await http_request.is_disconnected():
@@ -268,8 +294,8 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                 await upload.close()
         return reference
 
-    def progressive(payload, reference=None, http_request=None):
-        prepared = service.prepare(payload, reference)
+    async def progressive(payload, reference=None, http_request=None):
+        prepared = await prepare_generation(payload, reference)
         identity = begin_activity(http_request)
         fmt = payload.stream_format
         events, cancelled = start_worker(service, prepared, streaming=True)
@@ -350,7 +376,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         try:
             if payload.response_format in {'wav', 'flac'}:
                 return await binary(native, request)
-            return progressive(native.model_copy(update={'stream_format': payload.response_format}), http_request=request)
+            return await progressive(native.model_copy(update={'stream_format': payload.response_format}), http_request=request)
         except HTTPException as exc:
             return error_payload(str(exc.detail), exc.status_code)
 
@@ -407,11 +433,11 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
 
     @router.post('/tts/plan')
     async def plan(payload: SpeechRequest):
-        return service.inspect(service.prepare(payload, await resolve_reference(payload)))
+        return service.inspect(await asyncio.to_thread(service.prepare, payload, await resolve_reference(payload)))
 
     @router.post('/tts/metrics')
     async def metrics(payload: SpeechRequest):
-        prepared = service.prepare(payload, await resolve_reference(payload))
+        prepared = await asyncio.to_thread(service.prepare, payload, await resolve_reference(payload))
         return {'input_type': payload.input_type, 'metrics': {
             'characters': sum(len(u.text) for u in prepared.plan.units),
             'words': sum(len(u.text.split()) for u in prepared.plan.units),
@@ -431,16 +457,16 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
 
     @router.post('/tts/stream')
     async def stream(payload: SpeechRequest, request: Request):
-        return progressive(payload, await resolve_reference(payload), http_request=request)
+        return await progressive(payload, await resolve_reference(payload), http_request=request)
 
     @router.post('/tts/stream-upload')
     async def stream_upload(payload: str = Form(...), reference_audio: UploadFile = File(...)):
         parsed = SpeechRequest.model_validate_json(payload)
-        return progressive(parsed, await resolve_reference(parsed, await canonical_audio(reference_audio)))
+        return await progressive(parsed, await resolve_reference(parsed, await canonical_audio(reference_audio)))
 
     @router.post('/tts/events')
     async def events(payload: SpeechRequest):
-        prepared = service.prepare(payload, await resolve_reference(payload))
+        prepared = await prepare_generation(payload, await resolve_reference(payload))
         events, cancelled = start_worker(service, prepared, streaming=True)
         async def stream():
             result = None
@@ -533,7 +559,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
 
     @router.post('/tts/magic/take')
     async def magic_take(payload: MagicTakeRequest, request: Request):
-        prepared = service.prepare(payload.payload)
+        prepared = await asyncio.to_thread(service.prepare, payload.payload)
         if payload.speech_index >= sum(u.kind == 'speech' for u in prepared.plan.units):
             raise ValueError('Magic speech_index does not identify a speech unit.')
         result = await complete(prepared, request, speech_index=payload.speech_index)
@@ -545,7 +571,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     async def magic_render(request: Request, payload: str = Form(...), speech_ids: str = Form(...),
                            retained: str = Form('[]'), takes: list[UploadFile] = File(default=[])):
         config = SpeechRequest.model_validate_json(payload)
-        prepared = service.prepare(config)
+        prepared = await asyncio.to_thread(service.prepare, config)
         ids = json.loads(speech_ids)
         count = sum(u.kind == 'speech' for u in prepared.plan.units)
         if not isinstance(ids, list) or len(ids) != count or any(not isinstance(n, str) or not n or len(n) > 80 for n in ids) or len(set(ids)) != len(ids):

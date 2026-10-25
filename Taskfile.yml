@@ -238,11 +238,24 @@ tasks:
         vars:
           CLI_ARGS: '--clients 2 --rounds 1 --no-write {{.CLI_ARGS}}'
 
+  benchmark-queue-compare:
+    desc: Validate matched before/after queue runs and generate their processing report
+    cmds:
+      - uv run --no-project --python 3.13 python scripts/compare_queue_runs.py {{.CLI_ARGS}}
+
+  benchmark-queue-sustained:
+    desc: Compare preserved images with continuously replenished four/eight-client load
+    cmds:
+      - >-
+        uv run --no-project --python 3.13 python scripts/benchmark_sustained_queue.py
+        --port {{.BENCHMARK_PORT}} --gpu-index {{.GPU_DEVICE}} --cache-volume {{.DATA_VOLUME}}
+        --stop-container {{.CONTAINER}} {{.CLI_ARGS}}
+
   benchmark-test:
     desc: Check benchmark planning, transport, statistics and isolation without GPU inference
     dir: '{{.TASKFILE_DIR}}'
     cmds:
-      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_benchmarks.py -q -p no:cacheprovider
+      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_benchmarks.py tests/test_queue_comparison.py tests/test_sustained_queue.py -q -p no:cacheprovider
 
   package:
     desc: Build local Python artifacts and verify their metadata and notices

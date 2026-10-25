@@ -43,6 +43,8 @@ task benchmark-backends
 task benchmark-streaming
 task benchmark-ssml
 task benchmark-queue
+# Same four-client queue test with two-turn SSML effects and normalization.
+task benchmark-queue -- --queue-workload processed
 ```
 
 Set `QWEN_STUDIO_ASR_URL`, use Task's `ASR_URL` variable, or pass `--asr-url` to
@@ -84,6 +86,52 @@ in raw records and report details. Use `--models all` for all five checkpoints
 the only design checkpoint; directed SSML uses 1.7B CustomVoice. Each worker
 preloads its selected model and keeps it resident throughout measurement.
 Production residency settings do not preload unrelated models in individual-suite workers.
+
+For an implementation experiment, preserve the before/after benchmark images and
+run both workloads against each image with identical settings. Keep raw run JSON
+with `--no-write` while investigating. Generate the matched processing report with:
+
+```bash
+task benchmark-queue-compare -- --before benchmark-artifacts/BEFORE/run.json --after benchmark-artifacts/AFTER/run.json
+```
+
+Repeat `--before` and `--after` in matching order to include both workloads. The
+comparison refuses changed harnesses, dependencies, GPU identity, client counts,
+seeds, WAV hashes or measured model loads. It writes
+`inference_queue/PROCESSING.md` automatically and compares each submission mode
+across images. Plain sequential-versus-queued results remain a separate report.
+The measured CPU-overlap experiment is in
+[Concurrent processing](inference_queue/PROCESSING.md).
+
+### Sustained concurrency
+
+`benchmark-queue` submits independent bursts. For continuously busy clients,
+package the same benchmark harness onto preserved before/after runtime images:
+
+```bash
+task benchmark-build IMAGE=faster-qwen3-tts-studio:before BENCHMARK_IMAGE=faster-qwen3-tts-studio:bench-before
+task benchmark-build IMAGE=faster-qwen3-tts-studio:after BENCHMARK_IMAGE=faster-qwen3-tts-studio:bench-after
+task benchmark-queue-sustained -- --before-image faster-qwen3-tts-studio:bench-before --after-image faster-qwen3-tts-studio:bench-after
+```
+
+The default is four and eight continuously replenished clients, plain and
+processed workloads, two passes with reversed image order, and 90-second steady
+windows. Each client submits its next request as soon as the previous one
+finishes. A completed cycle of clients fills the queue first; the final drain
+is excluded from throughput. All requests, including fill/drain, must match the
+fixed-seed golden audio. The repeated seed keeps request cost consistent while
+testing scheduling; this does not simulate a diverse production workload.
+
+The task records client occupancy from timestamped send/receive transitions,
+time-weighted sampled queue depth, throughput, latency and GPU telemetry. It
+automatically writes `inference_queue/SUSTAINED.md`, with raw timelines under
+ignored benchmark artifacts. Use `--seconds`, `--passes`, `--clients` or
+`--workloads` to narrow a run, `--no-write` for a smoke without public results,
+or `--plan` to inspect the schedule without Docker/GPU access. Default queue
+capacity supports up to eight clients without changing the production runtime.
+See [Sustained concurrent inference](inference_queue/SUSTAINED.md) for measured
+four/eight-client occupancy, waiting depth and before/after results. Keep its
+fixed-seed workload separate from the varied-seed burst comparison above.
 
 ### Full product baseline
 

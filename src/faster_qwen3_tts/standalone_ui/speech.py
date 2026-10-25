@@ -1,7 +1,8 @@
 """Compile text/SSML/SSML-H to Qwen requests before taking the GPU lease."""
 from __future__ import annotations
 
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 import queue
@@ -82,6 +83,8 @@ class PlannedSpeech:
     bindings: dict[str, Binding]
     seed: int
     default: Binding
+    admission: object | None = None
+    preparation_ms: float = 0.
 
 
 def language(value):
@@ -130,6 +133,7 @@ def design_description(definition):
 class SpeechService:
     def __init__(self, engine, voices: VoiceStore):
         self.engine, self.voices = engine, voices
+        self.processing_slots = threading.BoundedSemaphore(2)
 
     def default_model(self, mode):
         return getattr(self.engine, 'workflow_models', {}).get(mode,
@@ -264,12 +268,58 @@ class SpeechService:
         pending, takes, output = [], {}, []
         timings, first_audio_ms, retries = [], None, 0
         lease = self.engine.session(cancelled, emit) if hasattr(self.engine, 'session') else nullcontext()
-        with lease, tempfile.TemporaryDirectory(prefix='qwen-speech-') as temporary:
-            queue_ms = (time.perf_counter() - started) * 1000
+        with tempfile.TemporaryDirectory(prefix='qwen-speech-') as temporary, \
+                ThreadPoolExecutor(max_workers=1, thread_name_prefix='qwen-audio') as processor, ExitStack() as gpu:
             references = {}
+            # Snapshot reference files while waiting, before touching model state.
+            for binding in bindings.values():
+                if binding.reference is not None and binding.name not in references:
+                    path = Path(temporary) / f'reference-{len(references)}.wav'
+                    path.write_bytes(binding.reference)
+                    references[binding.name] = path
+            gpu.enter_context(lease)
+            queue_ms = (time.perf_counter() - started) * 1000
+            acquired_at, released_at = time.perf_counter(), None
             duration = 0.
 
-            def render(config, binding, *, stream=False, receive_audio=None, retry=True):
+            def release_gpu():
+                nonlocal released_at
+                if released_at is None:
+                    gpu.close()
+                    released_at = time.perf_counter()
+
+            def finish_unit(waveform, unit):
+                while not cancelled.is_set():
+                    if self.processing_slots.acquire(timeout=.1):
+                        try:
+                            if cancelled.is_set():
+                                raise InterruptedError('Generation cancelled.')
+                            return audio.effects(waveform, rate=unit.prosody.rate * request.speed,
+                                pitch=unit.prosody.pitch_semitones, volume=unit.prosody.volume)
+                        finally:
+                            self.processing_slots.release()
+                raise InterruptedError('Generation cancelled.')
+
+            def finished(future):
+                while not cancelled.is_set():
+                    try:
+                        return future.result(timeout=.1)
+                    except FutureTimeout:
+                        if future.done():
+                            return future.result()
+                future.cancel()
+                raise InterruptedError('Generation cancelled.')
+
+            def finish_normalization(waveform):
+                while not cancelled.is_set():
+                    if self.processing_slots.acquire(timeout=.1):
+                        try:
+                            return audio.effects(waveform, normalize=True)
+                        finally:
+                            self.processing_slots.release()
+                raise InterruptedError('Generation cancelled.')
+
+            def render(config, binding, *, stream=False, receive_audio=None, retry=True, final=False):
                 nonlocal retries
                 if cancelled.is_set():
                     raise InterruptedError('Generation cancelled.')
@@ -307,7 +357,11 @@ class SpeechService:
                     pieces = [render(config.model_copy(update={'text': text,
                                 'seed': ((config.seed or 0) + index + 1) % 2**32}), binding, retry=False)
                               for index, text in enumerate(texts)]
+                    if final:
+                        release_gpu()
                     return np.concatenate(list(audio.assemble(('speech', piece) for piece in pieces)))
+                if final:
+                    release_gpu()
                 if cancelled.is_set():
                     raise InterruptedError('Generation cancelled.')
                 if not parts:
@@ -356,16 +410,19 @@ class SpeechService:
             else:
                 units = plan.units
 
-            def timeline():
+            def prepare_timeline():
+                # At most two unfinished units per request. Effects for one unit
+                # can run while the GPU synthesizes the following unit.
+                pending_effects, items = [], []
                 index, timeline_frames = 0, 0
                 for unit in units:
                     if cancelled.is_set():
                         raise InterruptedError('Generation cancelled.')
                     if unit.kind == 'break':
                         timeline_frames += round(audio.RATE * unit.duration_ms / 1000)
-                        if timeline_frames > audio.RATE * 300:
+                        if timeline_frames > audio.RATE * 1200:
                             raise ValueError('Generated output exceeds the 300 second request limit.')
-                        yield 'break', unit.duration_ms
+                        items.append(('break', unit.duration_ms))
                         continue
                     take_id = ids[index] if ids else str(index)
                     seed_index = speech_index if speech_index is not None else index
@@ -373,17 +430,39 @@ class SpeechService:
                     binding = bindings.get(unit.voice) if unit.voice else prepared.default
                     if retained and take_id in retained:
                         seed, waveform = retained[take_id]
+                        future = None
                     else:
+                        if len(pending_effects) == 2:
+                            finished(pending_effects.pop(0))
                         emit({'type': 'turn', 'index': seed_index, 'voice': binding.name, 'seed': seed})
                         waveform = render(self.config(request, unit, binding, seed), binding)
-                        waveform = audio.effects(waveform, rate=unit.prosody.rate * request.speed,
-                                                 pitch=unit.prosody.pitch_semitones, volume=unit.prosody.volume)
-                    takes[take_id] = (seed, waveform)
+                        future = processor.submit(finish_unit, waveform, unit)
+                        pending_effects.append(future)
+                    # Raw buffers are bounded even before effects complete.
                     timeline_frames += len(waveform)
+                    if timeline_frames > audio.RATE * 1200:
+                        raise ValueError('Generated raw audio exceeds the request limit.')
+                    items.append(('speech', (take_id, seed, future, waveform if future is None else None)))
+                    index += 1
+                release_gpu()
+                return items
+
+            def timeline(items):
+                timeline_frames = 0
+                for kind, item in items:
+                    if cancelled.is_set():
+                        raise InterruptedError('Generation cancelled.')
+                    if kind == 'break':
+                        timeline_frames += round(audio.RATE * item / 1000)
+                        yield kind, item
+                    else:
+                        take_id, seed, future, waveform = item
+                        waveform = finished(future) if future is not None else waveform
+                        takes[take_id] = (seed, waveform)
+                        timeline_frames += len(waveform)
+                        yield kind, waveform
                     if timeline_frames > audio.RATE * 300:
                         raise ValueError('Generated output exceeds the 300 second request limit.')
-                    index += 1
-                    yield 'speech', waveform
             def incremental(emit_audio):
                 previous, gap = False, None
                 last_speech = max(index for index, unit in enumerate(units) if unit.kind == 'speech')
@@ -405,7 +484,7 @@ class SpeechService:
                     config = self.config(request, unit, binding, seed)
                     neutral = unit.prosody.is_neutral and request.speed == 1
                     if neutral:
-                        waveform = render(config, binding, stream=True, receive_audio=boundary.feed)
+                        waveform = render(config, binding, stream=True, receive_audio=boundary.feed, final=index == last_speech)
                     else:
                         processed = []
                         def receive_processed(samples):
@@ -414,7 +493,7 @@ class SpeechService:
                         filters = audio.effect_filters(rate=unit.prosody.rate * request.speed,
                             pitch=unit.prosody.pitch_semitones, volume=unit.prosody.volume)
                         with audio.StreamingFilter(receive_processed, cancelled, ','.join(filters)) as shaper:
-                            render(config, binding, stream=True, receive_audio=shaper.feed)
+                            render(config, binding, stream=True, receive_audio=shaper.feed, final=index == last_speech)
                         waveform = np.concatenate(processed) if processed else np.empty(0, dtype=np.float32)
                     boundary.finish()
                     takes[str(speech_number)] = (seed, waveform)
@@ -429,12 +508,14 @@ class SpeechService:
                         incremental(normalizer.feed)
                 else:
                     incremental(publish)
-            elif request.normalize_loudness:
-                waveform = np.concatenate(list(audio.assemble(timeline())))
-                publish(audio.effects(waveform, normalize=True))
             else:
-                for array in audio.assemble(timeline()):
-                    publish(array)
+                items = prepare_timeline()
+                if request.normalize_loudness:
+                    waveform = np.concatenate(list(audio.assemble(timeline(items))))
+                    publish(finish_normalization(waveform))
+                else:
+                    for array in audio.assemble(timeline(items)):
+                        publish(array)
             if cancelled.is_set():
                 raise InterruptedError('Generation cancelled.')
             total_ms = (time.perf_counter() - started) * 1000
@@ -442,6 +523,9 @@ class SpeechService:
             generation_ms = max(0, total_ms - queue_ms - load_ms)
             metrics = {'duration_s': round(duration, 3), 'generation_ms': round(generation_ms),
                        'total_ms': round(total_ms), 'queue_ms': round(queue_ms), 'model_load_ms': round(load_ms),
+                       'preparation_ms': round(prepared.preparation_ms, 3),
+                       'gpu_lease_ms': round(((released_at or time.perf_counter()) - acquired_at) * 1000, 3),
+                       'postprocess_ms': round((time.perf_counter() - (released_at or time.perf_counter())) * 1000, 3),
                        'ttfa_ms': round(first_audio_ms or 0),
                        'speed': round(duration / (generation_ms / 1000), 3) if generation_ms else 0,
                        'reference_preparation_ms': sum(t.get('reference_preparation_ms') or 0 for t in timings),
@@ -471,5 +555,5 @@ def start_worker(service, prepared, **options):
             emit({'type': 'error', 'message': str(exc), 'status_code': getattr(exc, 'status_code', 503)})
         finally:
             emit({'type': 'finished'})
-    start_request_thread(service.engine, work, name='qwen-speech-request')
+    start_request_thread(service.engine, work, name='qwen-speech-request', ticket=prepared.admission)
     return events, cancelled

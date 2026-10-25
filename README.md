@@ -368,6 +368,13 @@ or change the rolling Docker image tags.
   Keep synthesis language independent and provide examples for all ten speech languages.
 - Bound inference admission with explicit HTTP 429 overload responses, FIFO
   cancellation and queue telemetry; keep single-request GPU inference.
+- Overlap CPU speech-unit effects and finishing with queued GPU inference.
+  Compile native/OpenAI requests off the HTTP event loop, bound unfinished
+  synthesis requests and expose preparation, GPU-lease and CPU-tail timings.
+  [Matched concurrent measurements](benchmarks/inference_queue/PROCESSING.md)
+  record the plain control and the effects/normalization workload separately.
+  [Sustained load measurements](benchmarks/inference_queue/SUSTAINED.md) keep
+  four/eight clients busy continuously and report actual occupancy and queue depth.
 - Add independently enabled compact/advanced MCP, expiring audio links, bounded
   reference locations and persistent voice tools. Expose build identity and lock
   transitive Python wheels; add tested snapshot/release preparation with a real

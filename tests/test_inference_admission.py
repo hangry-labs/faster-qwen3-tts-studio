@@ -79,7 +79,8 @@ def test_full_queue_returns_429_before_any_worker_or_stream(route, payload, tmp_
     engine = StudioEngine(queue_capacity=0)
     ticket = engine.admit()
     try:
-        with TestClient(create_app(engine, tmp_path)) as client, patch.object(engine, 'generate') as generate:
+        with TestClient(create_app(engine, tmp_path)) as client, patch.object(engine, 'generate') as generate, \
+                patch('faster_qwen3_tts.standalone_ui.speech.SpeechService.prepare') as prepare:
             response = client.post(route, json=payload) if payload else client.post(route,
                 data={'options': json.dumps({'text': 'Hello'})})
             assert response.status_code == 429, response.text
@@ -89,5 +90,7 @@ def test_full_queue_returns_429_before_any_worker_or_stream(route, payload, tmp_
             else:
                 assert response.json()['code'] == 'inference_queue_full'
             generate.assert_not_called()
+            if not route.startswith('/studio/'):
+                prepare.assert_not_called()
     finally:
         engine.cancel_admission(ticket)

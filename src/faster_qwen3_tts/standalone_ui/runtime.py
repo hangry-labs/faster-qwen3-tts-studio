@@ -35,10 +35,10 @@ class GenerationIncomplete(RuntimeError):
         self.reason, self.metrics = reason, metrics
 
 
-def start_request_thread(engine, work, *, name):
+def start_request_thread(engine, work, *, name, ticket=None):
     """Reserve bounded capacity synchronously, before HTTP streaming headers."""
     reserve = getattr(engine, 'admit', None)
-    ticket = reserve() if callable(reserve) else None
+    ticket = reserve() if ticket is None and callable(reserve) else ticket
 
     def run():
         if ticket is None:
@@ -115,6 +115,7 @@ class StudioEngine:
         self.error: str | None = None
         self.queued = 0
         self.waiters = deque()
+        self.admissions = set()
         self.session_owner = threading.local()
         self.models = {}
         self.policy = None
@@ -152,6 +153,7 @@ class StudioEngine:
                     'residency_errors': dict(self.residency_errors), 'gpu_memory': memory,
                     'queue': {'workers': 1, 'capacity': self.queue_capacity,
                               'active': int(self.gate.locked()), 'queued': self.queued,
+                              'inflight': len(self.admissions),
                               'rejected': self.queue_rejected}}
 
     def configure_models(self, policy):
@@ -193,21 +195,24 @@ class StudioEngine:
             self.state, self.error = state, error
 
     def admit(self):
-        """Count waiting requests, allowing one reserved runner when idle."""
+        """Bound the complete synthesis pipeline, including CPU finishing."""
         ticket = object()
         with self.state_lock:
             slots = self.queue_capacity + int(not self.gate.locked())
-            if len(self.waiters) >= slots:
+            if len(self.admissions) >= self.queue_capacity + 1 or len(self.waiters) >= slots:
                 self.queue_rejected += 1
                 raise InferenceQueueFull('Inference queue is full. Retry after a running request finishes.')
             self.waiters.append(ticket)
+            self.admissions.add(ticket)
             self.queued = len(self.waiters)
         return ticket
 
-    def cancel_admission(self, ticket):
+    def cancel_admission(self, ticket, *, waiting_only=False):
         with self.state_lock:
             if ticket in self.waiters:
                 self.waiters.remove(ticket)
+            if not waiting_only:
+                self.admissions.discard(ticket)
             self.queued = len(self.waiters)
 
     @contextmanager
@@ -223,11 +228,13 @@ class StudioEngine:
         if cancelled.is_set():
             return False
         ticket = getattr(self.session_owner, 'admission', None)
+        managed = ticket is not None
         self.session_owner.admission = None
         if ticket is None:
             ticket = self.admit()
         with self.state_lock:
             position = self.waiters.index(ticket) + int(self.gate.locked())
+        acquired = False
         try:
             emit({'type': 'queued', 'position': position})
             while not cancelled.is_set():
@@ -245,7 +252,7 @@ class StudioEngine:
                 cancelled.wait(0.1)
             return False
         finally:
-            self.cancel_admission(ticket)
+            self.cancel_admission(ticket, waiting_only=acquired and managed)
 
     def _unload(self):
         removed = list(self.models.values())

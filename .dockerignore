@@ -4,6 +4,8 @@
 **/.ai
 AGENTS.md
 **/AGENTS.md
+UPSTREAM_PULL_REQUESTS.md
+UPSTREAM_ISSUES.md
 ref_audio*.wav
 .venv/
 **/__pycache__/

@@ -24,3 +24,4 @@ prune .ai
 prune docs/internal
 prune .idea
 global-exclude AGENTS.md
+exclude UPSTREAM_PULL_REQUESTS.md UPSTREAM_ISSUES.md

@@ -42,6 +42,8 @@ take bundle, dialogue script storage and adapted API contracts are
 adapted from Hangry Labs VoxCPMTTS (Apache-2.0):
 https://github.com/hangry-labs/VoxCPMTTS
 Qwen-specific workflow, runtime, and API changes are maintained in this project.
+Sentence planning, dialogue boundary compaction and mastering filters also
+adapt VoxCPMTTS implementations for Qwen's codec budgets and native sample rate.
 Browser library notices accompany their vendored assets and are summarized in
 THIRD_PARTY_NOTICES.md.
 

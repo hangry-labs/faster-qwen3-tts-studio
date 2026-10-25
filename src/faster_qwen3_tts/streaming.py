@@ -106,9 +106,11 @@ def fast_generate_streaming(
     total_steps = 0
     chunk_count = 0
     chunk_start = time.time()
+    stop_reason = 'max_new_tokens'
 
     for step_idx in range(max_new_tokens):
         if token.item() == eos_id:
+            stop_reason = 'eos'
             break
 
         # --- CUDA-Graphed Code Predictor ---
@@ -134,6 +136,7 @@ def fast_generate_streaming(
         # --- CUDA-Graphed Talker decode step ---
         current_pos = prefill_len + step_idx
         if current_pos >= talker_graph.max_seq_len - 1:
+            stop_reason = 'max_seq_len'
             break
 
         hidden_states = talker_graph.run(inputs_embeds, position=current_pos)
@@ -169,7 +172,9 @@ def fast_generate_streaming(
                 'prefill_ms': t_prefill * 1000 if chunk_count == 0 else 0,
                 'decode_ms': chunk_decode_time * 1000,
                 'total_steps_so_far': total_steps,
-                'is_final': False,
+                'is_final': token.item() == eos_id or step_idx == max_new_tokens - 1,
+                'stop_reason': ('eos' if token.item() == eos_id else 'max_new_tokens')
+                    if token.item() == eos_id or step_idx == max_new_tokens - 1 else None,
             }
 
             chunk_buffer = []
@@ -177,6 +182,8 @@ def fast_generate_streaming(
             chunk_start = time.time()
 
     # --- Yield final partial chunk ---
+    if stop_reason == 'max_new_tokens' and token.item() == eos_id:
+        stop_reason = 'eos'
     if chunk_buffer:
         torch.cuda.synchronize()
         chunk_decode_time = time.time() - chunk_start
@@ -189,6 +196,7 @@ def fast_generate_streaming(
             'decode_ms': chunk_decode_time * 1000,
             'total_steps_so_far': total_steps,
             'is_final': True,
+            'stop_reason': stop_reason,
         }
 
 

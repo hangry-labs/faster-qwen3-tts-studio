@@ -8,6 +8,7 @@ import io
 import subprocess
 import tempfile
 import threading
+import time
 
 import numpy as np
 import soundfile as sf
@@ -45,7 +46,7 @@ def tempo_filters(rate):
     return filters + [f'atempo={rate:.8f}']
 
 
-def effects(audio, *, rate=1., pitch=0., volume=1., normalize=False,
+def effect_filters(*, rate=1., pitch=0., volume=1., normalize=False,
             noise=0., bass=0., presence=0., dynamics=0.):
     filters = []
     if pitch:
@@ -66,6 +67,13 @@ def effects(audio, *, rate=1., pitch=0., volume=1., normalize=False,
         filters.append(f'acompressor=threshold=0.125:ratio={1 + dynamics / 25:.4f}:attack=20:release=180:makeup=1')
     if normalize:
         filters += ['loudnorm=I=-16:TP=-1.5:LRA=11', f'aresample={RATE}']
+    return filters
+
+
+def effects(audio, *, rate=1., pitch=0., volume=1., normalize=False,
+            noise=0., bass=0., presence=0., dynamics=0.):
+    filters = effect_filters(rate=rate, pitch=pitch, volume=volume, normalize=normalize,
+                             noise=noise, bass=bass, presence=presence, dynamics=dynamics)
     if not filters or not len(audio):
         return audio
     process = subprocess.run(
@@ -90,6 +98,141 @@ def trim_internal(audio, leading):
         return audio[max(0, int(active[0]) - keep):]
     trim = max(0, scan - int(active[-1]) - 1 - keep)
     return audio[:-trim] if trim else audio
+
+
+class UnitBoundary:
+    """Compact one unit incrementally, retaining only its 600 ms edge window."""
+
+    def __init__(self, emit, *, leading, trailing):
+        self.emit = emit
+        self.leading = leading
+        self.trailing = trailing
+        self.window = round(RATE * .6)
+        self.head = np.empty(0, dtype=np.float32)
+        self.tail = np.empty(0, dtype=np.float32)
+
+    def feed(self, samples):
+        samples = np.asarray(samples, dtype=np.float32)
+        if not len(samples):
+            return
+        if self.leading:
+            self.head = np.concatenate((self.head, samples))
+            if len(self.head) < self.window and not np.any(np.abs(self.head) > 192 / 32768):
+                return
+            samples = trim_internal(self.head, True)
+            self.head = np.empty(0, dtype=np.float32)
+            self.leading = False
+        if self.trailing:
+            self.tail = np.concatenate((self.tail, samples))
+            if len(self.tail) > self.window:
+                self.emit(self.tail[:-self.window])
+                self.tail = self.tail[-self.window:]
+        else:
+            self.emit(samples)
+
+    def finish(self):
+        if self.leading:
+            self.leading = False
+            samples, self.head = trim_internal(self.head, True), np.empty(0, dtype=np.float32)
+            self.feed(samples)
+        if self.trailing:
+            samples, self.tail = trim_internal(self.tail, False), np.empty(0, dtype=np.float32)
+            if len(samples):
+                self.emit(samples)
+
+
+class StreamingFilter:
+    """Feed float audio on the inference thread; drain one continuous filter."""
+
+    def __init__(self, emit, cancelled, filters):
+        self.emit, self.cancelled = emit, cancelled
+        self.errors = []
+        self.log = tempfile.TemporaryFile()
+        try:
+            self.process = subprocess.Popen(
+                ['ffmpeg', '-v', 'error', '-f', 'f32le', '-ar', str(RATE), '-ac', '1',
+                 '-probesize', '32', '-analyzeduration', '1', '-i', 'pipe:0', '-af', filters,
+                 '-f', 'f32le', '-ar', str(RATE), 'pipe:1'],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.log)
+        except BaseException:
+            self.log.close()
+            raise
+        self.reader = threading.Thread(target=self._read, daemon=True, name='qwen-audio-filter')
+        self.reader.start()
+
+    def _read(self):
+        pending = b''
+        try:
+            while data := self.process.stdout.read1(8192):
+                if self.cancelled.is_set():
+                    if self.process.poll() is None:
+                        self.process.kill()
+                    return
+                pending += data
+                end = len(pending) // 4 * 4
+                if end:
+                    self.emit(np.frombuffer(pending[:end], dtype='<f4').copy())
+                    pending = pending[end:]
+            if pending:
+                raise RuntimeError('Audio filter returned an incomplete sample.')
+        except Exception as exc:
+            self.errors.append(exc)
+            if self.process.poll() is None:
+                self.process.kill()
+
+    def feed(self, samples):
+        if self.errors:
+            raise self.errors[0]
+        if self.cancelled.is_set():
+            raise InterruptedError('Generation cancelled.')
+        try:
+            self.process.stdin.write(np.asarray(samples, dtype='<f4').tobytes())
+            self.process.stdin.flush()
+        except (BrokenPipeError, OSError):
+            if self.errors:
+                raise self.errors[0]
+            raise RuntimeError('Audio filtering stopped before completion.') from None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, kind, error, traceback):
+        process = self.process
+        try:
+            if self.cancelled.is_set() and process.poll() is None:
+                process.kill()
+            elif kind is not None and process.poll() is None:
+                process.terminate()
+            try:
+                process.stdin.close()
+            except (OSError, BrokenPipeError):
+                pass
+            deadline = time.monotonic() + 30
+            while self.reader.is_alive() and time.monotonic() < deadline:
+                self.reader.join(.1)
+                if self.cancelled.is_set() and process.poll() is None:
+                    process.terminate()
+            if self.reader.is_alive():
+                raise RuntimeError('Audio filter did not finish.')
+            try:
+                code = process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                code = process.wait(timeout=5)
+                if kind is None and not self.cancelled.is_set():
+                    raise RuntimeError('Audio filter did not exit.') from None
+            if kind is None and not self.cancelled.is_set():
+                if self.errors:
+                    raise self.errors[0]
+                if code:
+                    self.log.seek(0)
+                    raise RuntimeError('Audio filtering failed: ' + self.log.read().decode(errors='replace')[-1000:])
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
+            process.stdout.close()
+            self.log.close()
 
 
 def assemble(items):
@@ -152,7 +295,8 @@ def encode_stream(chunks, fmt, cancelled):
     errors = []
     with tempfile.TemporaryFile() as log:
         process = subprocess.Popen(
-            ['ffmpeg', '-v', 'error', '-f', 's16le', '-ar', str(RATE), '-ac', '1', '-i', 'pipe:0',
+            ['ffmpeg', '-v', 'error', '-f', 's16le', '-ar', str(RATE), '-ac', '1',
+             '-probesize', '32', '-analyzeduration', '1', '-i', 'pipe:0',
              '-c:a', codec, '-flush_packets', '1', '-f', container, 'pipe:1'],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log)
 
@@ -162,6 +306,7 @@ def encode_stream(chunks, fmt, cancelled):
                     if cancelled.is_set():
                         break
                     process.stdin.write(pcm(chunk))
+                    process.stdin.flush()
             except Exception as exc:
                 errors.append(exc)
             finally:
@@ -171,20 +316,32 @@ def encode_stream(chunks, fmt, cancelled):
                     pass
 
         writer = threading.Thread(target=feed, daemon=True, name='qwen-audio-encoder')
+        stopped = threading.Event()
+        def watch_cancel():
+            while not stopped.wait(.1):
+                if cancelled.is_set():
+                    if process.poll() is None:
+                        process.kill()
+                    return
+        watcher = threading.Thread(target=watch_cancel, daemon=True, name='qwen-audio-cancel')
         writer.start()
+        watcher.start()
         try:
             while data := process.stdout.read1(8192):
                 yield data
             writer.join(timeout=5)
             code = process.wait(timeout=15)
             if errors:
-                raise errors[0]
+                if not cancelled.is_set():
+                    raise errors[0]
             if code and not cancelled.is_set():
                 raise RuntimeError('Streaming audio encoding failed.')
         finally:
+            stopped.set()
             if process.poll() is None:
                 cancelled.set()
-                process.terminate()
+                process.kill()
             process.stdout.close()
             writer.join(timeout=5)
-            process.wait(timeout=15)
+            watcher.join(timeout=1)
+            process.wait(timeout=5)

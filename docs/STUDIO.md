@@ -79,12 +79,14 @@ names. Device changes and permission errors are reported beside recording.
 Audio chunk controls accept every integer from 1 to 64 codec frames and show
 approximate audio duration. Playback streaming is independent of text input.
 
-Generate's Stream mode uses progressive MP3 playback. Short, neutral requests
-can stream model codec chunks, while long text and multi-turn dialogue currently
-wait for complete speech units, including one unit of boundary-assembly
-lookahead. MP3 encoding adds buffering, and Normalize loudness waits for the
-whole recording. Browser playback can therefore start later than the native
-SSE first-audio measurements in the benchmark reports.
+Generate's Stream mode previews MP3 progressively, including within long-text
+and dialogue units. Boundary compaction retains up to 600 ms at internal edges;
+speed/prosody and whole-stream normalization add their own filter buffering.
+Browser playback therefore starts later than model/SSE first-audio timings.
+
+The finishing menu includes Signalsmith Voice, FFmpeg Voice Shape and advanced
+mastering controls. Processed WAV previews preserve float samples at the native
+24 kHz rate. Normalization is opt-in and original audio remains available.
 
 Protect long audio splits Generate text into units of at most 400 characters.
 The Maximum audio length selection applies to each model call, not to the

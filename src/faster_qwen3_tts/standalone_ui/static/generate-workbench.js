@@ -10,6 +10,7 @@ import { AudioFinisher } from './audio-finisher.js'
 import { AudioEditor } from './audio-editor.js'
 import { StreamWaveform, IncrementalAudioPlayback } from './streaming-player.js'
 import { closeDialogOnBackdrop } from './dialog-utils.js'
+import { generateRequestId } from './request-id.js'
 
 const $ = selector => document.querySelector(selector)
 
@@ -28,7 +29,7 @@ export class GenerateWorkbench {
       onChange: () => { this.count(); this.library?.markDirty(); this.scheduleAssembly() },
       onPreview: block => this.job(async signal => {
         const index = this.editor.speechBlocks().findIndex(item => item.id === block.id)
-        const requestId = crypto.randomUUID(), monitor = new AbortController()
+        const requestId = generateRequestId(), monitor = new AbortController()
         const stop = () => monitor.abort()
         signal.addEventListener('abort', stop, { once: true })
         const watching = this.watchProgress(requestId, monitor.signal)
@@ -350,7 +351,7 @@ export class GenerateWorkbench {
 
   async generate(streaming) {
     return this.job(async signal => {
-      const payload = this.payload(), requestId = crypto.randomUUID()
+      const payload = this.payload(), requestId = generateRequestId()
       const monitor = new AbortController()
       signal.addEventListener('abort', () => monitor.abort(), { once: true })
       const watching = this.watchProgress(requestId, monitor.signal)

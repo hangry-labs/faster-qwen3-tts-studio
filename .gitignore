@@ -9,6 +9,7 @@ __pycache__/
 outputs/
 artifacts/
 .ai/
+.idea/
 AGENTS.md
 build/
 dist/

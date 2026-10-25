@@ -44,7 +44,10 @@ encoder. OpenAI `stream_format="audio"` is supported. OpenAI speech SSE events
 are not implemented. `input` is always plain text; use native routes for markup.
 `speed` is a pitch-preserving audio effect, from 0.25 to 4.0.
 
-Optional extensions: `language`, `seed`, `voice_profile`, `normalize_loudness`.
+Optional extensions include `language`, `seed`, `randomize_seed`, `voice_profile`,
+`normalize_loudness`, `protect_long_audio`, `temperature`, `top_k`,
+`repetition_penalty`, `chunk_size`, `max_new_tokens`, `non_streaming_mode`
+and `xvec_only`. They use the same validation and controls as native requests.
 Unknown harmless OpenAI fields are ignored. Unsupported formats, voices,
 models and conditioning combinations return OpenAI-shaped error objects.
 Set `QWEN_STUDIO_API_KEY` to require a Bearer key on `/v1` routes. This does
@@ -62,25 +65,18 @@ curl http://localhost:7860/tts/generate \
 
 `POST /tts/generate` and `/tts/convert` return complete binary audio. Use
 `POST /tts/stream` for a progressive response and select `stream_format` from
-MP3, PCM, Opus, AAC, FLAC or Ogg. Actual codec-chunk streaming requires exactly
-one compiled speech unit, neutral prosody, speed 1 and disabled loudness
-normalization. This can be plain text or a single neutral SSML/SSML-H turn.
-Delivery instructions do not by themselves disable this path.
+MP3, PCM, Opus, AAC, FLAC or Ogg. All three Qwen model families produce
+incremental codec audio. Text and multi-turn SSML/SSML-H can stream within each
+speech unit. Internal boundary compaction retains up to 600 ms of audio at a
+unit edge; it does not wait for the next unit to finish. Explicit pauses and
+outer recording edges retain the complete-response semantics.
 
-Multiple units, including automatically split long text, use complete model
-calls per unit. The boundary assembler holds the previous unit until the next
-one is ready, so first speech waits for two completed units when there are two
-or more. A two-unit request can therefore finish synthesis before any speech
-is sent. Audio effects buffer their speech unit; whole-recording loudness
-normalization buffers the entire recording.
-
-One encoder owns the entire progressive response, preserving dialogue boundaries
-across compressed packets. PCM forwards available samples directly. Compressed
-formats also incur encoder/muxer buffering; the current FFmpeg defaults can
-defer short MP3 output until synthesis finishes. The browser Stream mode uses
-this MP3 route, so its playback latency differs from native SSE benchmark TTFA.
-If the browser cannot use MP3 MediaSource playback, the UI collects the stream
-and plays the completed recording instead.
+Speed/prosody use a continuous filter per speech unit. Optional loudness
+normalization runs once over the assembled stream. These filters and compressed
+codecs add buffering, so browser playback latency differs from model/SSE TTFA.
+One encoder owns the entire response. MP3 uses bounded input probing to avoid
+waiting for the whole short recording. If MP3 MediaSource is unavailable, the
+browser collects the stream and plays the completed recording instead.
 
 `POST /tts/events` returns native SSE progress and base64 WAV chunks, followed
 by a `done` event containing metrics and committed profile ids. This is separate
@@ -104,12 +100,13 @@ set `voice_profile` to a saved id or unique name; the saved transcript is reused
 
 ### Long text
 
-`protect_long_audio=true` is the default and splits each speech unit into at
-most 400 characters. Whitespace is collapsed. The chunker uses the last
-punctuation or whitespace boundary within that limit; it does not prefer an
-earlier sentence ending over a later word boundary. An uninterrupted long word
-is split at the character limit. With protection disabled, each speech unit
-must fit 1000 characters or validation fails.
+`protect_long_audio=true` is the default. The planner counts words in spaced
+scripts and characters in CJK scripts, preferring sentence endings, then clauses,
+then whitespace, with a hard 400-character ceiling. Default planning targets
+50 units with an 80-unit ceiling; smaller codec budgets reduce those limits.
+Whitespace is collapsed and an uninterrupted oversized word is split at the
+character ceiling. These heuristics do not guarantee speech duration.
+With protection disabled, each speech unit must fit 1000 characters.
 
 Native source input can contain up to 50000 characters, including markup;
 OpenAI `input` is limited to 4096. Both use the processor limits of 6000 spoken
@@ -131,9 +128,12 @@ constant-memory long-form session.
 `max_new_tokens` applies per model call, not to the final joined recording.
 The default 360 codec frames represent roughly 30 seconds of raw speech;
 the maximum 600 represents roughly 50 seconds, before effects. Exhausting the
-token or model-context budget currently returns the generated portion without
-a termination-reason warning or automatic continuation. Character splitting
-does not guarantee that a unit will finish within this budget.
+token or model-context budget is reported as incomplete generation. Complete
+native responses may retry the affected unit once in up to three smaller
+sections before publishing audio; `metrics.retries` records this recovery.
+A failed retry returns HTTP 422. Streaming never regenerates already-emitted
+speech: SSE reports an error and binary streams terminate unsuccessfully.
+There is no automatic continuation from partial model context.
 
 Inspect the full plan before inference with `POST /tts/plan`;
 `POST /tts/metrics` reports text and plan counts. The legacy `/studio/generate`
@@ -222,16 +222,33 @@ for up to an hour, bounded to the most recent 128 requests. Omitting the query
 retains the model/queue status response.
 
 Finishing accepts multipart `audio` and JSON `options`, up to 40 MB and 300
-seconds. `method="ffmpeg"` offers `noise_reduction_db` (0 to 12), `bass_db` and
-`presence_db` (-6 to 6), `dynamics` (0 to 100), and `normalize_loudness` (-16
-LUFS). `method="ffmpeg-shape"` additionally applies `pitch_semitones` (-6 to 6)
-and `speed_factor` (0.75 to 1.25). `preset` records `clean`, `studio` or `custom`;
-clients send the numeric settings explicitly. Legacy `speed`, `pitch`, `volume`
-and `output_format` remain supported. The browser keeps the original recording
-separate from the processed preview.
+seconds. `method="ffmpeg"` provides noise cleanup, EQ, dynamics and optional
+loudness normalization. `ffmpeg-shape` and `signalsmith` add independent
+`pitch_semitones` (-6 to 6) and `speed_factor` (0.75 to 1.25).
+WAV previews use float samples at Qwen's native 24 kHz rate.
+
+Advanced controls include `high_pass_hz`, `warmth_db`/`warmth_hz`,
+`mud_db`/`mud_hz`, `presence_db`/`presence_hz`, `air_db`/`air_hz`,
+`compression_ratio`, `compression_threshold_dbfs`, `compression_attack_ms`,
+`compression_release_ms`, `deesser_strength_percent`, `saturation_blend_percent`,
+`room_percent`, `target_loudness_lufs` and `peak_ceiling_dbtp`. The schema exposes
+exact bounds; the air band tops out at 11 kHz for the 24 kHz signal.
+Loudness normalization remains opt-in. `preset` records `clean`, `studio` or
+`custom`; clients send numeric settings explicitly. Legacy `speed`, `pitch`,
+`volume` and `output_format` remain supported. Originals and processed previews
+remain separate, and preview processing does not load TTS weights.
 
 The original `/studio/*` multipart/JSON/SSE contracts remain available for
 single-model workflows. No local ASR, forced alignment, server-path audio access,
 remote audio fetching, portrait upload or MCP service is added by these routes.
 These are separate capabilities, rather than placeholders that claim success.
 Only clone permitted speakers and use recordings you are authorized to process.
+
+## Queue admission
+
+Inference remains serialized. `QWEN_STUDIO_QUEUE_SIZE` sets waiting capacity
+from 0 to 256, default 8; zero permits an idle request but rejects waiting work.
+Admission happens before creating a generation thread or opening a response
+stream. A full queue returns HTTP 429 with `Retry-After: 1`; `/v1` uses an
+OpenAI error envelope. Cancellation removes queued work. Status includes queue
+capacity, active/waiting counts and cumulative rejected admissions.

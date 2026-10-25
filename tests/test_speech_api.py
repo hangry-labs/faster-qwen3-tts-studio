@@ -98,7 +98,7 @@ def test_finishing_controls_process_audio_and_shape_pitch_speed(api):
     assert not engine.requests
 
 
-@pytest.mark.parametrize('overrides', [{'method': 'signalsmith'}, {'noise_reduction_db': 13},
+@pytest.mark.parametrize('overrides', [{'method': 'unknown'}, {'noise_reduction_db': 13},
     {'bass_db': -7}, {'presence_db': 7}, {'dynamics': 101}, {'speed_factor': 2}, {'pitch_semitones': 7}])
 def test_finishing_rejects_unsupported_controls_before_processing(api, overrides):
     client, engine, _ = api
@@ -125,6 +125,26 @@ def test_openai_client_formats_and_aliases(api, fmt):
     elif fmt in {'wav', 'flac'}:
         samples, rate = sf.read(io.BytesIO(response.content))
         assert len(samples) == 2400 and rate == 24000
+
+
+def test_openai_extensions_reach_the_same_native_controls(api):
+    client, engine, _ = api
+    response = client.post('/v1/audio/speech', json={'model': 'qwen3-tts', 'input': 'Hello', 'voice': 'Ryan',
+        'response_format': 'wav', 'temperature': .7, 'top_k': 31, 'repetition_penalty': 1.2,
+        'chunk_size': 3, 'max_new_tokens': 120, 'non_streaming_mode': False,
+        'protect_long_audio': False, 'seed': 42, 'randomize_seed': False})
+    assert response.status_code == 200, response.text
+    request = engine.requests[-1][0]
+    assert request.seed == 42 and request.temperature == .7 and request.top_k == 31
+    assert request.chunk_size == 3 and request.max_new_tokens == 120
+    assert not request.non_streaming_mode and request.repetition_penalty == 1.2
+
+
+def test_openai_unknown_route_uses_compatible_error_envelope(api):
+    client, _, _ = api
+    response = client.get('/v1/does-not-exist')
+    assert response.status_code == 404
+    assert response.json()['error']['type'] == 'invalid_request_error'
 
 
 def test_openai_auth_errors_and_discovery(api, monkeypatch):
@@ -335,8 +355,9 @@ def test_one_unit_stream_and_complete_share_exact_effects(api):
     complete = client.post('/tts/generate', json=payload)
     streamed = client.post('/tts/events', json=payload)
     assert complete.status_code == streamed.status_code == 200
-    event = next(json.loads(l[6:]) for l in streamed.text.splitlines() if l.startswith('data: ') and json.loads(l[6:])['type'] == 'chunk')
+    events = [json.loads(line[6:]) for line in streamed.text.splitlines()
+              if line.startswith('data: ') and json.loads(line[6:])['type'] == 'chunk']
     # Fake engine changes amplitude each call; timing and duration must still match.
     a, rate = sf.read(io.BytesIO(complete.content))
-    b, _ = sf.read(io.BytesIO(base64.b64decode(event['audio_b64'])))
+    b = np.concatenate([sf.read(io.BytesIO(base64.b64decode(event['audio_b64'])))[0] for event in events])
     assert len(a) == len(b) and rate == 24000

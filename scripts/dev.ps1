@@ -118,6 +118,7 @@ switch ($Action) {
             '--env', "CUDA_VISIBLE_DEVICES=$gpuDevice", '--mount', "type=volume,src=$dataVolume,dst=/app/persistent")
         if ($env:HF_TOKEN) { $runArgs += @('--env', 'HF_TOKEN') }
         if ($env:QWEN_STUDIO_ASR_URL) { $runArgs += @('--env', 'QWEN_STUDIO_ASR_URL') }
+        if ($env:QWEN_STUDIO_QUEUE_SIZE) { $runArgs += @('--env', 'QWEN_STUDIO_QUEUE_SIZE') }
         if ($env:QWEN_STUDIO_API_KEY) { $runArgs += @('--env', 'QWEN_STUDIO_API_KEY') }
         if ($devMount) {
             $runArgs += @('--env', 'PYTHONPATH=/app/src')

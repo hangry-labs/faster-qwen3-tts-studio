@@ -925,6 +925,8 @@ class FasterQwen3TTS:
             repetition_penalty=repetition_penalty,
         )
 
+        self.last_generation_stop_reason = timing.get('stop_reason')
+
         if codec_ids is None:
             logger.warning("Generation returned no tokens")
             return [np.zeros(1, dtype=np.float32)], self.sample_rate
@@ -1079,6 +1081,8 @@ class FasterQwen3TTS:
             stream_kwargs["talker_graph"] = self.talker_graph
 
         for codec_chunk, timing in stream_fn(**stream_kwargs):
+            if timing.get('stop_reason'):
+                self.last_generation_stop_reason = timing['stop_reason']
             all_codes.append(codec_chunk)
             n_new = codec_chunk.shape[0]
             all_flat = torch.cat(all_codes, dim=0)
@@ -1196,6 +1200,8 @@ class FasterQwen3TTS:
             repetition_penalty=repetition_penalty,
         )
 
+        self.last_generation_stop_reason = timing.get('stop_reason')
+
         if codec_ids is None:
             logger.warning("Generation returned no tokens")
             return [np.zeros(1, dtype=np.float32)], self.sample_rate
@@ -1289,6 +1295,8 @@ class FasterQwen3TTS:
             repetition_penalty=repetition_penalty,
             chunk_size=chunk_size,
         ):
+            if timing.get('stop_reason'):
+                self.last_generation_stop_reason = timing['stop_reason']
             all_codes.append(codec_chunk)
             n_new = codec_chunk.shape[0]
             all_flat = torch.cat(all_codes, dim=0)
@@ -1380,6 +1388,8 @@ class FasterQwen3TTS:
             repetition_penalty=repetition_penalty,
         )
 
+        self.last_generation_stop_reason = timing.get('stop_reason')
+
         if codec_ids is None:
             logger.warning("Generation returned no tokens")
             return [np.zeros(1, dtype=np.float32)], self.sample_rate
@@ -1468,6 +1478,8 @@ class FasterQwen3TTS:
             repetition_penalty=repetition_penalty,
             chunk_size=chunk_size,
         ):
+            if timing.get('stop_reason'):
+                self.last_generation_stop_reason = timing['stop_reason']
             all_codes.append(codec_chunk)
             n_new = codec_chunk.shape[0]
             all_flat = torch.cat(all_codes, dim=0)

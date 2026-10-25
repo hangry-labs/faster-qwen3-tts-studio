@@ -17,12 +17,13 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 import numpy as np
 import soundfile as sf
 
 from . import audio
 from .magic_takes import MAGIC_TAKE_MEDIA_TYPE, pack_magic_take_bundle
-from .runtime import LANGUAGES, MODELS, SPEAKERS
+from .runtime import InferenceQueueFull, LANGUAGES, MODELS, SPEAKERS
 from .speech import (CUSTOM, MODEL_ALIASES, NATIVE_LANGUAGES, VOICE_ALIASES,
                      SpeechRequest, SpeechService, capabilities, start_worker)
 
@@ -41,6 +42,15 @@ class OpenAISpeechRequest(BaseModel):
     seed: int | None = Field(default=None, ge=0, le=2**32-1)
     voice_profile: str | None = None
     normalize_loudness: bool = False
+    protect_long_audio: bool = True
+    randomize_seed: bool | None = None
+    temperature: float = Field(default=.9, ge=.1, le=2)
+    top_k: int = Field(default=50, ge=1, le=200)
+    repetition_penalty: float = Field(default=1.05, ge=1, le=2)
+    chunk_size: int = Field(default=8, ge=1, le=64)
+    max_new_tokens: int = Field(default=360, ge=24, le=600)
+    non_streaming_mode: bool | None = None
+    xvec_only: bool = False
 
 
 class MagicTakeRequest(BaseModel):
@@ -69,7 +79,7 @@ class EffectsRequest(BaseModel):
     volume: float = Field(default=1, ge=0, le=2)
     normalize_loudness: bool = False
     output_format: Literal['wav', 'mp3', 'flac', 'ogg', 'opus', 'aac', 'pcm'] = 'wav'
-    method: Literal['ffmpeg', 'ffmpeg-shape'] = 'ffmpeg'
+    method: Literal['ffmpeg', 'ffmpeg-shape', 'signalsmith'] = 'ffmpeg'
     preset: Literal['clean', 'studio', 'custom'] = 'custom'
     pitch_semitones: float | None = Field(default=None, ge=-6, le=6)
     speed_factor: float | None = Field(default=None, ge=.75, le=1.25)
@@ -77,11 +87,28 @@ class EffectsRequest(BaseModel):
     bass_db: float = Field(default=0, ge=-6, le=6)
     presence_db: float = Field(default=0, ge=-6, le=6)
     dynamics: float = Field(default=0, ge=0, le=100)
+    high_pass_hz: float = Field(default=50, ge=50, le=150)
+    warmth_db: float | None = Field(default=None, ge=-4, le=6)
+    warmth_hz: float | None = Field(default=None, ge=80, le=250)
+    mud_db: float = Field(default=0, ge=-5, le=0)
+    mud_hz: float = Field(default=300, ge=180, le=500)
+    presence_hz: float | None = Field(default=None, ge=2000, le=5000)
+    air_db: float = Field(default=0, ge=-3, le=3)
+    air_hz: float = Field(default=10000, ge=7000, le=11000)
+    compression_ratio: float | None = Field(default=None, ge=1, le=5)
+    compression_attack_ms: float = Field(default=12, ge=3, le=40)
+    compression_release_ms: float = Field(default=120, ge=50, le=300)
+    compression_threshold_dbfs: float = Field(default=-22, ge=-36, le=-8)
+    saturation_blend_percent: float = Field(default=0, ge=0, le=20)
+    deesser_strength_percent: float | None = Field(default=None, ge=0, le=100)
+    room_percent: float = Field(default=0, ge=0, le=10)
+    target_loudness_lufs: float = Field(default=-16, ge=-24, le=-14)
+    peak_ceiling_dbtp: float = Field(default=-1.5, ge=-3, le=-.5)
 
 
 def error_payload(message, status=400, param=None):
     return JSONResponse({'error': {'message': message,
-        'type': 'authentication_error' if status == 401 else 'invalid_request_error' if status < 500 else 'server_error',
+        'type': 'authentication_error' if status == 401 else 'rate_limit_error' if status == 429 else 'invalid_request_error' if status < 500 else 'server_error',
         'param': param, 'code': None}}, status_code=status,
         headers={'WWW-Authenticate': 'Bearer'} if status == 401 else {})
 
@@ -124,6 +151,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
             'ready': ('generating', 'Generating speech', 'Qwen is producing your recording'),
             'designing': ('generating', 'Designing a character voice', 'Preparing the dialogue voice'),
             'turn': ('generating', 'Generating dialogue', f"Speech turn {event.get('index', 0) + 1}"),
+            'retrying': ('generating', 'Retrying a speech unit', event.get('message', 'Using smaller sections')),
             'chunk': ('streaming', 'Receiving audio', 'Speech is arriving from Qwen'),
             'done': ('encoding', 'Encoding audio', 'Preparing the completed recording'),
             'error': ('failed', 'Generation failed', str(event.get('message', 'Inference failed'))),
@@ -137,6 +165,10 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
             if identity not in activities:
                 return
             activities[identity] = {**activities.get(identity, {}), 'phase': phase, 'title': title, 'detail': detail, 'updated': time.monotonic()}
+            if kind == 'queued':
+                position = event.get('position', 0)
+                activities[identity]['queue_position'] = position
+                activities[identity]['detail'] = f'{position} request(s) ahead' if position else 'Preparing the selected voice'
             if 'metrics' in event:
                 activities[identity]['metrics'] = event['metrics']
             if 'committed_profiles' in event:
@@ -151,6 +183,21 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     @app.exception_handler(ValueError)
     async def value_error(request, exc):
         return error_payload(str(exc)) if request.url.path.startswith('/v1') else JSONResponse({'detail': str(exc)}, status_code=422)
+
+    @app.exception_handler(InferenceQueueFull)
+    async def queue_full(request, exc):
+        response = error_payload(str(exc), 429) if request.url.path.startswith('/v1') else JSONResponse(
+            {'detail': str(exc), 'code': 'inference_queue_full'}, status_code=429)
+        response.headers['Retry-After'] = '1'
+        return response
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error(request, exc):
+        if request.url.path == '/v1' or request.url.path.startswith('/v1/'):
+            response = error_payload(str(exc.detail), exc.status_code)
+            response.headers.update(exc.headers or {})
+            return response
+        return JSONResponse({'detail': exc.detail}, status_code=exc.status_code, headers=exc.headers)
 
     @app.middleware('http')
     async def api_auth(request, call_next):
@@ -174,7 +221,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                     continue
                 update_activity(identity, event)
                 if event['type'] == 'error':
-                    raise HTTPException(503, event['message'])
+                    raise HTTPException(event.get('status_code', 503), event['message'])
                 if event['type'] == 'result':
                     result = event['result']
                 if event['type'] == 'finished':
@@ -284,15 +331,14 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         voice = payload.voice.get('id', '').strip() if isinstance(payload.voice, dict) else payload.voice.strip()
         if not voice:
             return error_payload('Custom voice objects need a non-empty id.', param='voice')
-        native = SpeechRequest(text=payload.input, model=payload.model, voice=voice,
-            voice_profile=payload.voice_profile, instruct=payload.instructions or '', language=payload.language,
-            seed=payload.seed, speed=payload.speed, output_format=payload.response_format,
-            normalize_loudness=payload.normalize_loudness)
+        controls = payload.model_dump(exclude={'input', 'voice', 'instructions', 'response_format', 'stream_format'})
+        native = SpeechRequest(**controls, text=payload.input, voice=voice,
+            instruct=payload.instructions or '', output_format=payload.response_format)
         # Standard OpenAI input is always plain text, including angle brackets.
         try:
             if payload.response_format in {'wav', 'flac'}:
                 return await binary(native, request)
-            return progressive(native.model_copy(update={'stream_format': payload.response_format}))
+            return progressive(native.model_copy(update={'stream_format': payload.response_format}), http_request=request)
         except HTTPException as exc:
             return error_payload(str(exc.detail), exc.status_code)
 
@@ -314,7 +360,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
             if value and value['updated'] < time.monotonic() - 3600:
                 del activities[request_id]
                 return {}
-            return {key: value[key] for key in ('phase', 'title', 'detail', 'metrics', 'committed_profiles') if key in value}
+            return {key: value[key] for key in ('phase', 'title', 'detail', 'queue_position', 'metrics', 'committed_profiles') if key in value}
 
     @router.get('/tts/defaults')
     def defaults():
@@ -327,7 +373,9 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     @router.get('/tts/stream-formats')
     def stream_formats():
         return {'default': 'mp3', 'formats': {k: {'media_type': audio.FORMATS[k][0]} for k in ('mp3', 'pcm', 'opus', 'aac', 'flac', 'ogg')},
-                'granularity': {'text': 'codec chunks when no effects are requested', 'ssml': 'speech units', 'normalized': 'complete recording'}}
+                'granularity': {'text': 'codec chunks with bounded internal-edge buffering',
+                    'ssml': 'codec chunks per speech unit, preserving planned pauses',
+                    'effects': 'one continuous filter per speech unit; normalization once after assembly'}}
 
     @router.get('/tts/languages')
     def languages():
@@ -464,18 +512,20 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
 
     @router.post('/tts/postprocess-upload')
     async def postprocess(options: str = Form(...), audio_file: UploadFile = File(..., alias='audio')):
+        from .finishing import finish_audio
         config = EffectsRequest.model_validate_json(options)
         source = await audio_file.read(40 * 1024 * 1024 + 1)
         if not source or len(source) > 40 * 1024 * 1024:
             raise ValueError('Choose generated audio up to 40 MB.')
         converted = await asyncio.to_thread(resample_wav, source)
-        shape = config.method == 'ffmpeg-shape'
-        waveform = await asyncio.to_thread(audio.effects, converted,
-            rate=config.speed_factor if shape and config.speed_factor is not None else config.speed,
-            pitch=config.pitch_semitones if shape and config.pitch_semitones is not None else config.pitch,
-            volume=config.volume, normalize=config.normalize_loudness,
-            noise=config.noise_reduction_db, bass=config.bass_db, presence=config.presence_db, dynamics=config.dynamics)
-        return Response(await asyncio.to_thread(audio.encode, waveform, config.output_format), media_type=audio.FORMATS[config.output_format][0])
+        waveform = await asyncio.to_thread(finish_audio, converted, config)
+        if config.output_format == 'wav':
+            output = io.BytesIO()
+            sf.write(output, waveform, audio.RATE, format='WAV', subtype='FLOAT')
+            encoded = output.getvalue()
+        else:
+            encoded = await asyncio.to_thread(audio.encode, waveform, config.output_format)
+        return Response(encoded, media_type=audio.FORMATS[config.output_format][0])
 
     async def uploads(files, metadata):
         if not isinstance(metadata, list) or len(metadata) != len(files) or len(files) > 64:

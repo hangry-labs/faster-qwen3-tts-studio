@@ -772,8 +772,9 @@ button.magic-turn-portrait.ready:hover, button.magic-turn-portrait.ready:focus-v
 .audio-studio-adjustments > summary i:last-child { color: var(--muted); transition: transform 140ms ease; }
 .audio-studio-adjustments[open] > summary { border-color: #81502e; background: #292018; }
 .audio-studio-adjustments[open] > summary i:last-child { transform: rotate(180deg); }
-.audio-studio-adjustment-panel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 35; width: min(600px, calc(100vw - 24px)); padding: 8px; border: 1px solid #555861; border-radius: 5px; background: #18191d; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.48); }
+.audio-studio-adjustment-panel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 35; width: min(600px, calc(100vw - 24px)); max-height: min(70vh, 600px); overflow: auto; padding: 8px; border: 1px solid #555861; border-radius: 5px; background: #18191d; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.48); }
 .audio-studio-adjustment-panel .finishing-control-grid { margin: 0; }
+.audio-studio-adjustment-panel.is-flipped { top: auto; bottom: calc(100% + 6px); }
 .audio-studio-adjustment-panel .signalsmith-control-grid + .finishing-control-grid { margin-top: 7px; }
 .audio-studio-adjustment-panel > .toggle-field { margin: 7px 0 0; padding: 7px 8px; border: 1px solid var(--line-soft); background: #17181b; }
 .audio-studio-actions { display: flex; align-items: center; gap: 4px; }
@@ -985,7 +986,7 @@ button.magic-turn-portrait.ready:hover, button.magic-turn-portrait.ready:focus-v
   .audio-studio-adjustments { flex: 0 0 auto; }
   .audio-studio-actions { display: grid; flex: 1 1 100%; grid-template-columns: auto minmax(0, 1fr); margin-left: 0; }
   .audio-studio-actions button { min-height: 34px; }
-  .audio-studio-adjustment-panel { position: fixed; top: 72px; right: 8px; left: 8px; width: auto; max-height: calc(100vh - 88px); overflow: auto; }
+  .audio-studio-adjustment-panel, .audio-studio-adjustment-panel.is-flipped { position: fixed; top: 72px; bottom: auto; right: 8px; left: 8px; width: auto; max-height: calc(100vh - 88px); overflow: auto; }
   .design-grid, .advanced-grid, .toggle-grid, .system-action-row { grid-template-columns: 1fr; }
   .profile-search { width: 100%; }
   .live-stream-surface { grid-template-columns: 1fr; }

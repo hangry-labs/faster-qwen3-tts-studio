@@ -148,6 +148,7 @@ Mount one volume at `/app/persistent` and reuse it when replacing the container.
 | --- | --- | --- |
 | `CUDA_VISIBLE_DEVICES` | Set to `0` in the quick start | Select the visible NVIDIA GPU |
 | `QWEN_STUDIO_ASR_URL` | Empty | Initial connection to an existing reference-transcription service |
+| `QWEN_STUDIO_QUEUE_SIZE` | `8` | Maximum waiting inference requests; excess requests receive HTTP 429 |
 | `QWEN_STUDIO_API_KEY` | Empty | Optional Bearer key for OpenAI-compatible `/v1` routes only |
 | `QWEN_STUDIO_DATA` | `/app/persistent/studio` | Operator settings and saved-voice directory |
 | `HF_HOME` | `/app/persistent/huggingface` | Model download cache |
@@ -340,6 +341,16 @@ The first Hangry Labs Studio development version. Python distributions use the
 PEP 440 version `1.0.dev0`. This snapshot name does not create a stable release
 or change the rolling Docker image tags.
 
+- Bound inference admission with explicit HTTP 429 overload responses, FIFO
+  cancellation and queue telemetry; keep single-request GPU inference.
+- Plan protected long text around sentence/clause boundaries and word/CJK budgets.
+  Report token/context cutoffs; complete native generation can retry smaller
+  sections before delivering audio.
+- Stream audio within dialogue units, compact internal padding with bounded
+  buffering and normalize the joined stream once. Reduce compressed-encoder
+  startup buffering while retaining the same recording for replay.
+- Add Signalsmith shaping, advanced mastering controls and native-rate float WAV
+  previews while preserving original audio and optional normalization.
 - Record the 1.7B baseline: 510 measured requests across CustomVoice, Base and
   VoiceDesign, one model loaded at a time. Complete-response realtime speeds
   were 2.88x, 2.94x and 2.86x respectively on the test workstation. Retain
@@ -397,8 +408,8 @@ or change the rolling Docker image tags.
 - Protect audio replacement from stale loads clearing newer recordings.
 
 Native speaker direction requires the 1.7B CustomVoice model. Base delivery
-direction remains experimental. Finishing uses FFmpeg; Signalsmith processing
-and VoxCPM-specific model controls are not offered by this engine. Word timing
+direction remains experimental. Finishing uses FFmpeg and optional Signalsmith
+shaping; generation does not expose diffusion controls. Word timing
 and subtitle export are not available. See [API capabilities](docs/API.md) for the
 supported input semantics and limits.
 

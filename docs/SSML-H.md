@@ -93,8 +93,9 @@ Automatic splitting uses at most 400 characters per call; disabling long-audio
 protection raises the unit limit to 1000 without silently truncating text.
 
 Full output, progressive audio, native SSE, Magic and plan inspection use the
-same validation, routing and boundary rules. Markup streaming emits assembled
-speech units; normalization requires complete buffering. One request-owned FIFO
+same validation, routing and boundary rules. Markup streams codec audio within
+speech units, with bounded internal-edge buffering and per-unit prosody filters.
+Optional normalization processes the assembled stream once. One request-owned FIFO
 lease serializes inference across models. System controls which defaults remain
 resident; request-only weights release after the complete document. Crossing between
 native speakers and clones loads any missing checkpoints; design references are

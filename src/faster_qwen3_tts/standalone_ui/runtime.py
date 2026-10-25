@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import gc
+import os
 import sys
 import threading
 import time
@@ -19,6 +20,41 @@ from .model_catalog import MODELS
 LANGUAGES = ['Auto', 'Chinese', 'English', 'Japanese', 'Korean', 'German', 'French',
              'Russian', 'Portuguese', 'Spanish', 'Italian']
 SPEAKERS = ['Vivian', 'Serena', 'Uncle_Fu', 'Dylan', 'Eric', 'Ryan', 'Aiden', 'Ono_Anna', 'Sohee']
+
+
+class InferenceQueueFull(RuntimeError):
+    """Admission failed before a worker or response stream was started."""
+
+
+class GenerationIncomplete(RuntimeError):
+    status_code = 422
+
+    def __init__(self, reason, metrics):
+        super().__init__('Speech reached the ' + reason + ' generation limit before the model ended. '
+                         'Use shorter speech units or increase Maximum audio length.')
+        self.reason, self.metrics = reason, metrics
+
+
+def start_request_thread(engine, work, *, name):
+    """Reserve bounded capacity synchronously, before HTTP streaming headers."""
+    reserve = getattr(engine, 'admit', None)
+    ticket = reserve() if callable(reserve) else None
+
+    def run():
+        if ticket is None:
+            work()
+        else:
+            with engine.admitted(ticket):
+                work()
+
+    thread = threading.Thread(target=run, daemon=True, name=name)
+    try:
+        thread.start()
+    except BaseException:
+        if ticket is not None:
+            engine.cancel_admission(ticket)
+        raise
+    return thread
 
 
 class GenerationRequest(BaseModel):
@@ -61,7 +97,16 @@ class GenerationRequest(BaseModel):
 
 
 class StudioEngine:
-    def __init__(self):
+    def __init__(self, *, queue_capacity=None):
+        value = os.getenv('QWEN_STUDIO_QUEUE_SIZE', '8') if queue_capacity is None else queue_capacity
+        try:
+            valid = not isinstance(value, bool) and str(value) == str(int(value)) and 0 <= int(value) <= 256
+        except (TypeError, ValueError, OverflowError):
+            valid = False
+        if not valid:
+            raise ValueError('QWEN_STUDIO_QUEUE_SIZE must be an integer from 0 to 256.')
+        self.queue_capacity = int(value)
+        self.queue_rejected = 0
         self.gate = threading.Lock()
         self.state_lock = threading.Lock()
         self.model = None
@@ -104,7 +149,10 @@ class StudioEngine:
                     'default_backend': 'torch', 'available_backends': ['torch'],
                     'resident_models': list(self.models),
                     'requested_resident_models': sorted(self.policy.resident_models) if self.policy else [],
-                    'residency_errors': dict(self.residency_errors), 'gpu_memory': memory}
+                    'residency_errors': dict(self.residency_errors), 'gpu_memory': memory,
+                    'queue': {'workers': 1, 'capacity': self.queue_capacity,
+                              'active': int(self.gate.locked()), 'queued': self.queued,
+                              'rejected': self.queue_rejected}}
 
     def configure_models(self, policy):
         """Apply under the same lease as inference. Never evict pinned weights to hide OOM."""
@@ -144,12 +192,42 @@ class StudioEngine:
         with self.state_lock:
             self.state, self.error = state, error
 
-    def _acquire(self, cancelled: threading.Event, emit):
+    def admit(self):
+        """Count waiting requests, allowing one reserved runner when idle."""
         ticket = object()
         with self.state_lock:
+            slots = self.queue_capacity + int(not self.gate.locked())
+            if len(self.waiters) >= slots:
+                self.queue_rejected += 1
+                raise InferenceQueueFull('Inference queue is full. Retry after a running request finishes.')
             self.waiters.append(ticket)
             self.queued = len(self.waiters)
-            position = len(self.waiters) - 1 + int(self.gate.locked())
+        return ticket
+
+    def cancel_admission(self, ticket):
+        with self.state_lock:
+            if ticket in self.waiters:
+                self.waiters.remove(ticket)
+            self.queued = len(self.waiters)
+
+    @contextmanager
+    def admitted(self, ticket):
+        self.session_owner.admission = ticket
+        try:
+            yield
+        finally:
+            self.session_owner.admission = None
+            self.cancel_admission(ticket)
+
+    def _acquire(self, cancelled: threading.Event, emit):
+        if cancelled.is_set():
+            return False
+        ticket = getattr(self.session_owner, 'admission', None)
+        self.session_owner.admission = None
+        if ticket is None:
+            ticket = self.admit()
+        with self.state_lock:
+            position = self.waiters.index(ticket) + int(self.gate.locked())
         try:
             emit({'type': 'queued', 'position': position})
             while not cancelled.is_set():
@@ -167,10 +245,7 @@ class StudioEngine:
                 cancelled.wait(0.1)
             return False
         finally:
-            with self.state_lock:
-                if ticket in self.waiters:
-                    self.waiters.remove(ticket)
-                self.queued = len(self.waiters)
+            self.cancel_admission(ticket)
 
     def _unload(self):
         removed = list(self.models.values())
@@ -286,6 +361,7 @@ class StudioEngine:
                 kwargs.update(instruct=request.instruct)
                 method = 'generate_voice_design'
             generation_start = time.perf_counter()
+            self.model.last_generation_stop_reason = None
             rate = 24000
             model_first_ms, model_generation_ms = None, None
 
@@ -335,10 +411,16 @@ class StudioEngine:
                           'ttfa_ms': first_audio_ms, 'duration_s': duration})
             if not cancelled.is_set() and duration <= 0:
                 raise RuntimeError('The model did not produce audio. Try another text or reference.')
+            stop_reason = getattr(self.model, 'last_generation_stop_reason', None)
+            if not cancelled.is_set() and stop_reason in {'max_new_tokens', 'max_seq_len'}:
+                raise GenerationIncomplete(stop_reason, metrics(elapsed, duration, first_audio_ms))
             if not cancelled.is_set():
                 emit({'type': 'done', 'model': request.model, 'sample_rate': rate,
                       'metrics': metrics(elapsed, duration, first_audio_ms)})
             self._state('ready')
+        except GenerationIncomplete:
+            self._state('ready')
+            raise
         except Exception as exc:
             self._state('error', str(exc))
             raise

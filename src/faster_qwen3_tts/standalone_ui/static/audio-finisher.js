@@ -1,4 +1,6 @@
 import { AudioEditor } from './audio-editor.js?v=waveform-hitbox'
+import { FinishingControls } from './finishing-controls.js'
+import { t } from './i18n.js'
 
 const PRESETS = {
   clean: { pitch_semitones: 0, speed_factor: 1, noise_reduction_db: 1, bass_db: 0, presence_db: 0.5, dynamics: 15, normalize_loudness: false },
@@ -36,6 +38,8 @@ export class AudioFinisher {
       },
     })
     this.output.container.addEventListener('audio-error', (event) => this.onError(event.detail))
+    this.advanced = new FinishingControls(this.root.querySelector('.audio-studio-adjustment-panel'),
+      this.$('normalize').closest('label'), () => { this.$('preset').value = 'custom'; this.markPreviewStale() })
     this.bind()
     this.applyPreset('studio', { invalidate: false })
     this.renderMethod()
@@ -43,6 +47,19 @@ export class AudioFinisher {
 
   bind() {
     this.adjustments = this.root.querySelector('.audio-studio-adjustments')
+    this.positionAdjustments = () => {
+      const panel = this.root.querySelector('.audio-studio-adjustment-panel')
+      panel.classList.remove('is-flipped'); panel.style.maxHeight = ''
+      if (!this.adjustments.open) return
+      if (getComputedStyle(panel).position !== 'absolute') return
+      const anchor = this.adjustments.getBoundingClientRect()
+      const below = innerHeight - anchor.bottom - 18, above = anchor.top - 18
+      const flip = below < 260 && above > below
+      panel.classList.toggle('is-flipped', flip)
+      panel.style.maxHeight = `${Math.max(100, Math.min(600, flip ? above : below))}px`
+    }
+    this.adjustments.addEventListener('toggle', this.positionAdjustments)
+    window.addEventListener('resize', this.positionAdjustments)
     this.handleDocumentPointerDown = (event) => {
       if (this.adjustments?.open && !this.adjustments.contains(event.target)) this.adjustments.open = false
     }
@@ -79,7 +96,8 @@ export class AudioFinisher {
   }
 
   methodLabel(method = this.$('method').value) {
-    return method === 'ffmpeg-shape' ? this.labels.signalsmith : this.labels.ffmpeg
+    return method === 'signalsmith' ? t('finishing.signalsmithVoice', {}, 'Signalsmith Voice')
+      : method === 'ffmpeg-shape' ? this.labels.signalsmith : this.labels.ffmpeg
   }
 
   options() {
@@ -93,6 +111,7 @@ export class AudioFinisher {
       presence_db: Number(this.$('presence').value),
       dynamics: Number(this.$('dynamics').value),
       normalize_loudness: this.$('normalize').checked,
+      ...this.advanced.options(),
     }
   }
 
@@ -107,7 +126,7 @@ export class AudioFinisher {
   }
 
   renderMethod() {
-    this.$('signalsmith-controls').hidden = this.$('method').value !== 'ffmpeg-shape'
+    this.$('signalsmith-controls').hidden = this.$('method').value === 'ffmpeg'
     if (!this.output.currentFile()) this.$('method-badge').textContent = this.methodLabel()
   }
 
@@ -123,6 +142,7 @@ export class AudioFinisher {
       dynamics: 'dynamics',
     })) this.$(role).value = preset[key]
     this.$('normalize').checked = preset.normalize_loudness
+    this.advanced.restore()
     this.renderValues()
     if (invalidate) this.markPreviewStale()
   }
@@ -141,6 +161,7 @@ export class AudioFinisher {
       if (options[key] !== undefined) this.$(role).value = options[key]
     }
     if (options.normalize_loudness !== undefined) this.$('normalize').checked = Boolean(options.normalize_loudness)
+    this.advanced.restore(options)
     this.renderValues()
     this.renderMethod()
     if (markStale) this.markPreviewStale()
@@ -222,6 +243,7 @@ export class AudioFinisher {
 
   async create() {
     if (!this.source) return this.onError(new Error(this.labels.generateFirst))
+    if (!this.advanced.valid()) return
     const button = this.$('create')
     const status = this.$('status')
     const options = this.options()
@@ -258,6 +280,7 @@ export class AudioFinisher {
   }
 
   destroy() {
+    window.removeEventListener('resize', this.positionAdjustments)
     document.removeEventListener('pointerdown', this.handleDocumentPointerDown)
     document.removeEventListener('keydown', this.handleDocumentKeyDown)
     this.output.destroy()

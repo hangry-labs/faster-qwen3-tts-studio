@@ -18,7 +18,8 @@ from ssml_h import SSMLPlan, SSMLUnit, compile_ssml, ssml_capabilities
 
 from . import audio
 from .profiles import VoiceStore
-from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS
+from .runtime import GenerationIncomplete, GenerationRequest, LANGUAGES, MODELS, SPEAKERS, start_request_thread
+from .text_planning import split_text
 
 CUSTOM = 'Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice'
 DIRECTED = 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice'
@@ -109,17 +110,6 @@ def capabilities():
         'values': 'Bounded natural-language descriptions, interpreted by VoiceDesign; results are probabilistic.',
     }
     return result
-
-
-def chunks(text, limit):
-    text = re.sub(r'\s+', ' ', text).strip()
-    while len(text) > limit:
-        candidates = [m.end() for m in re.finditer(r'[.!?。！？]\s*|\s+', text[:limit+1]) if m.end() <= limit]
-        end = max(candidates) if candidates else limit
-        yield text[:end].strip()
-        text = text[end:].strip()
-    if text:
-        yield text
 
 
 def design_description(definition):
@@ -221,8 +211,13 @@ class SpeechService:
             effective_rate = unit.prosody.rate * request.speed
             if not .25 <= effective_rate <= 4:
                 raise ValueError('Combined request speed and SSML rate must be between 0.25 and 4.')
-            texts = list(chunks(unit.text, 400 if request.protect_long_audio else 1000))
-            if not request.protect_long_audio and len(texts) > 1:
+            if request.protect_long_audio:
+                target = max(4, min(50, request.max_new_tokens // 7))
+                limit = max(target, min(80, request.max_new_tokens // 4))
+                texts = list(split_text(unit.text, max_chars=400, target_units=target, limit_units=limit))
+            else:
+                texts = [re.sub(r'\s+', ' ', unit.text).strip()]
+            if not request.protect_long_audio and len(texts[0]) > 1000:
                 raise ValueError('Speech units exceed 1000 characters. Enable protect_long_audio or split the text.')
             for text in texts:
                 compiled = replace(unit, text=text)
@@ -266,14 +261,15 @@ class SpeechService:
         request, plan = prepared.request, prepared.plan
         bindings = dict(prepared.bindings)
         pending, takes, output = [], {}, []
-        timings, first_audio_ms = [], None
+        timings, first_audio_ms, retries = [], None, 0
         lease = self.engine.session(cancelled, emit) if hasattr(self.engine, 'session') else nullcontext()
         with lease, tempfile.TemporaryDirectory(prefix='qwen-speech-') as temporary:
             queue_ms = (time.perf_counter() - started) * 1000
             references = {}
             duration = 0.
 
-            def render(config, binding, *, stream=False):
+            def render(config, binding, *, stream=False, receive_audio=None, retry=True):
+                nonlocal retries
                 if cancelled.is_set():
                     raise InterruptedError('Generation cancelled.')
                 path = None
@@ -290,12 +286,27 @@ class SpeechService:
                             raise RuntimeError('Unexpected Qwen sample rate.')
                         parts.append(np.asarray(event['audio'], dtype=np.float32))
                         if stream:
-                            publish(parts[-1])
+                            (receive_audio or publish)(parts[-1])
                     elif event['type'] == 'done':
                         timings.append(event.get('metrics', {}))
                     else:
                         emit(event)
-                self.engine.generate(config, path, cancelled, receive, stream)
+                try:
+                    self.engine.generate(config, path, cancelled, receive, stream)
+                except GenerationIncomplete as exc:
+                    timings.append(exc.metrics)
+                    if stream or not retry or len(config.text.strip()) < 2 or cancelled.is_set():
+                        raise
+                    texts = list(split_text(config.text, max_chars=max(1, len(config.text) // 2),
+                                            target_units=1, limit_units=80))
+                    if not 2 <= len(texts) <= 3:
+                        raise
+                    retries += 1
+                    emit({'type': 'retrying', 'message': 'Retrying a limited speech unit in smaller sections.'})
+                    pieces = [render(config.model_copy(update={'text': text,
+                                'seed': ((config.seed or 0) + index + 1) % 2**32}), binding, retry=False)
+                              for index, text in enumerate(texts)]
+                    return np.concatenate(list(audio.assemble(('speech', piece) for piece in pieces)))
                 if cancelled.is_set():
                     raise InterruptedError('Generation cancelled.')
                 if not parts:
@@ -341,7 +352,6 @@ class SpeechService:
                 units = [speech[speech_index]]
             else:
                 units = plan.units
-            direct = streaming and len(units) == 1 and units[0].kind == 'speech' and units[0].prosody.is_neutral and request.speed == 1 and not request.normalize_loudness and ids is None
 
             def timeline():
                 index, timeline_frames = 0, 0
@@ -362,18 +372,60 @@ class SpeechService:
                         seed, waveform = retained[take_id]
                     else:
                         emit({'type': 'turn', 'index': seed_index, 'voice': binding.name, 'seed': seed})
-                        waveform = render(self.config(request, unit, binding, seed), binding, stream=direct)
-                        if not direct:
-                            waveform = audio.effects(waveform, rate=unit.prosody.rate * request.speed,
-                                                     pitch=unit.prosody.pitch_semitones, volume=unit.prosody.volume)
+                        waveform = render(self.config(request, unit, binding, seed), binding)
+                        waveform = audio.effects(waveform, rate=unit.prosody.rate * request.speed,
+                                                 pitch=unit.prosody.pitch_semitones, volume=unit.prosody.volume)
                     takes[take_id] = (seed, waveform)
                     timeline_frames += len(waveform)
                     if timeline_frames > audio.RATE * 300:
                         raise ValueError('Generated output exceeds the 300 second request limit.')
                     index += 1
                     yield 'speech', waveform
-            if direct:
-                list(timeline())
+            def incremental(emit_audio):
+                previous, gap = False, None
+                last_speech = max(index for index, unit in enumerate(units) if unit.kind == 'speech')
+                speech_number = 0
+                for index, unit in enumerate(units):
+                    if cancelled.is_set():
+                        raise InterruptedError('Generation cancelled.')
+                    if unit.kind == 'break':
+                        gap = (gap or 0) + unit.duration_ms
+                        continue
+                    pause = gap if gap is not None else 120 if previous else 0
+                    if pause:
+                        emit_audio(np.zeros(round(audio.RATE * pause / 1000), dtype=np.float32))
+                    boundary = audio.UnitBoundary(emit_audio, leading=previous, trailing=index != last_speech)
+                    seed_index = speech_index if speech_index is not None else speech_number
+                    seed = (prepared.seed + seed_index) % 2**32
+                    binding = bindings.get(unit.voice) if unit.voice else prepared.default
+                    emit({'type': 'turn', 'index': seed_index, 'voice': binding.name, 'seed': seed})
+                    config = self.config(request, unit, binding, seed)
+                    neutral = unit.prosody.is_neutral and request.speed == 1
+                    if neutral:
+                        waveform = render(config, binding, stream=True, receive_audio=boundary.feed)
+                    else:
+                        processed = []
+                        def receive_processed(samples):
+                            processed.append(samples)
+                            boundary.feed(samples)
+                        filters = audio.effect_filters(rate=unit.prosody.rate * request.speed,
+                            pitch=unit.prosody.pitch_semitones, volume=unit.prosody.volume)
+                        with audio.StreamingFilter(receive_processed, cancelled, ','.join(filters)) as shaper:
+                            render(config, binding, stream=True, receive_audio=shaper.feed)
+                        waveform = np.concatenate(processed) if processed else np.empty(0, dtype=np.float32)
+                    boundary.finish()
+                    takes[str(speech_number)] = (seed, waveform)
+                    speech_number += 1
+                    previous, gap = True, None
+                if gap:
+                    emit_audio(np.zeros(round(audio.RATE * gap / 1000), dtype=np.float32))
+
+            if streaming and ids is None:
+                if request.normalize_loudness:
+                    with audio.StreamingFilter(publish, cancelled, 'loudnorm=I=-16:TP=-1.5:LRA=11,aresample=24000') as normalizer:
+                        incremental(normalizer.feed)
+                else:
+                    incremental(publish)
             elif request.normalize_loudness:
                 waveform = np.concatenate(list(audio.assemble(timeline())))
                 publish(audio.effects(waveform, normalize=True))
@@ -392,6 +444,7 @@ class SpeechService:
                        'reference_preparation_ms': sum(t.get('reference_preparation_ms') or 0 for t in timings),
                        'reference_cache_hit': next((t.get('reference_cache_hit') for t in reversed(timings) if t.get('reference_cache_hit') is not None), None),
                        'seed': prepared.seed, 'speech_units': len(speech), 'voices': list(plan.voices),
+                       'retries': retries,
                        'languages': list(plan.languages)}
             emit({'type': 'done', 'metrics': metrics})
             return {'audio': np.concatenate(output), 'takes': takes, 'pending': pending, 'metrics': metrics,
@@ -412,8 +465,8 @@ def start_worker(service, prepared, **options):
             result = service.run(prepared, cancelled, emit, **options)
             emit({'type': 'result', 'result': result})
         except Exception as exc:
-            emit({'type': 'error', 'message': str(exc)})
+            emit({'type': 'error', 'message': str(exc), 'status_code': getattr(exc, 'status_code', 503)})
         finally:
             emit({'type': 'finished'})
-    threading.Thread(target=work, name='qwen-speech-request', daemon=True).start()
+    start_request_thread(service.engine, work, name='qwen-speech-request')
     return events, cancelled

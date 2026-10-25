@@ -24,7 +24,7 @@ from pydantic import BaseModel, ValidationError
 import soundfile as sf
 
 from .gpu import GpuMonitor
-from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS, StudioEngine
+from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS, StudioEngine, start_request_thread
 from .profiles import VoiceStore
 from .model_policy import ModelPolicy
 from faster_qwen3_tts import __version__
@@ -296,11 +296,11 @@ def create_app(engine=None, data_root: Path | None = None):
                     engine.generate(config, reference_path, cancelled, emit, streaming)
             except Exception as exc:
                 LOG.exception('Generation failed')
-                emit({'type': 'error', 'message': str(exc)})
+                emit({'type': 'error', 'message': str(exc), 'status_code': getattr(exc, 'status_code', 503)})
             finally:
                 emit({'type': 'finished'})
 
-        threading.Thread(target=work, daemon=True, name='qwen-studio-generation').start()
+        start_request_thread(engine, work, name='qwen-studio-generation')
         return events, cancelled
 
     def next_event(events):
@@ -347,7 +347,7 @@ def create_app(engine=None, data_root: Path | None = None):
                 if event['type'] == 'finished':
                     break
                 if event['type'] == 'error':
-                    raise HTTPException(503, event['message'])
+                    raise HTTPException(event.get('status_code', 503), event['message'])
                 if event['type'] == 'chunk':
                     result.append(event['audio'])
                     rate = event['sample_rate']

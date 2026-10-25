@@ -91,6 +91,7 @@ def fast_generate(
             'prefill_ms': 0.0,
             'decode_s': total_time,
             'steps': steps,
+            'stop_reason': 'eos' if bool(has_stop_token[0]) else 'max_new_tokens',
             'ms_per_step': (total_time / steps * 1000) if steps > 0 else 0.0,
             'steps_per_s': (steps / total_time) if total_time > 0 else 0.0,
         }
@@ -145,9 +146,11 @@ def fast_generate(
     # === DECODE LOOP ===
     t_decode_start = time.time()
     all_codec_ids = []
+    stop_reason = 'max_new_tokens'
     
     for step_idx in range(max_new_tokens):
         if token.item() == eos_id:
+            stop_reason = 'eos'
             break
         
         # --- CUDA-Graphed Code Predictor ---
@@ -174,6 +177,7 @@ def fast_generate(
         current_pos = prefill_len + step_idx
         if current_pos >= talker_graph.max_seq_len - 1:
             # Stop if we exceed max_seq_len
+            stop_reason = 'max_seq_len'
             break
         
         hidden_states = talker_graph.run(inputs_embeds, position=current_pos)
@@ -202,10 +206,13 @@ def fast_generate(
     t_decode = time.time() - t_decode_start
     
     n_steps = len(all_codec_ids)
+    if stop_reason == 'max_new_tokens' and token.item() == eos_id:
+        stop_reason = 'eos'
     timing = {
         'prefill_ms': t_prefill * 1000,
         'decode_s': t_decode,
         'steps': n_steps,
+        'stop_reason': stop_reason,
         'ms_per_step': (t_decode / n_steps * 1000) if n_steps > 0 else 0,
         'steps_per_s': (n_steps / t_decode) if t_decode > 0 else 0,
     }

@@ -29,7 +29,10 @@ task stop
 | `task start` | Recreate this project's container, mount local source read-only, and wait up to 45 seconds for the status endpoint. Models download when requested in the UI. |
 | `task stop` | Stop the container and retain the image, model cache, and other product data. Safe when already absent. |
 | `task nuke` | Remove this project's labelled container, development image, and **all contents of its data volume**, including cached models and assets. Source files stay in place. |
-| `task release` | Run local validation, build wheel/sdist artifacts in `dist/`, and verify their notices and metadata. Does not publish images or create Git refs. |
+| `task package` | Build wheel/sdist artifacts and check their notices and metadata. |
+| `task release DRY_RUN=1` | Validate snapshot/stable/next-snapshot document transformations in memory without mutation. |
+| `task release` | Validate and create local release/next-snapshot commits and an annotated source tag; never push or publish. |
+| `task lock-runtime` | Compile the complete Linux/Python 3.13 NVIDIA wheel-hash lock. `CHECK=1` checks existing pins without changing the lock. |
 
 The development image uses Python 3.13 and matching Torch 2.10.0 CUDA
 12.8 wheels. It installs the current checkout and serves the
@@ -38,9 +41,12 @@ No model weights are baked into the development image. By default, startup
 loads 0.6B Base, 0.6B CustomVoice and 1.7B VoiceDesign into GPU memory.
 Change per-workflow defaults and residency in System.
 
-`requirements.runtime.txt` pins the core runtime components. It is not a complete
-transitive lockfile. The Python base image is pinned by digest; apt and transitive
-Python dependencies remain moving development inputs. This local workflow does not qualify an image for release;
+`requirements.runtime.in` declares the supported runtime inputs;
+`requirements.runtime.txt` locks their transitive versions and distribution hashes
+for CPython 3.13/Linux x86-64/CUDA 12.8. Docker installs binary wheels with
+`--require-hashes`, then installs local source without resolving additional
+dependencies or creating a floating build environment. The Python base image is
+pinned by digest; apt packages remain moving inputs. This local workflow does not qualify an image for release;
 see [the licensing guide](LICENSING.md#container-release-requirements).
 
 ## Settings
@@ -64,7 +70,7 @@ task --list
 | `BIND_ADDRESS` | `127.0.0.1` | Host IPv4 interface; local access by default |
 | `GPU_DEVICE` | `0` | Host NVIDIA GPU index |
 | `DEV_MOUNT` | `1` | Mount local source; `0` runs the source packaged in the image |
-| `DRY_RUN` | `0` | `1` prints Docker mutations without executing them |
+| `DRY_RUN` | `0` | `1` previews lifecycle changes or release transformations without mutation |
 
 If an optional `HF_TOKEN` is already set in the environment, `task start` passes
 it through without putting the token value into the command line. Keep tokens
@@ -94,7 +100,7 @@ task status
 task validate
 task test-runtime
 task package
-task release
+task release DRY_RUN=1
 ```
 
 `task test` covers task lifecycle safety with a fake Docker command and licensing.
@@ -105,10 +111,11 @@ local model/codec compatibility checks and fresh offline Studio startup. It inst
 container and excludes model parity tests. GPU parity tests and benchmarks
 remain separate work requiring appropriate model assets.
 
-`task release` currently prepares **local Python artifacts**. It does not tag,
-commit, push, upload to PyPI, or publish Docker images. The inherited upstream
-PyPI publisher has been replaced by the [container workflow](RELEASING.md).
-Pushing main builds rolling full/tiny images to Docker Hub and GHCR; stable Git
-tags build versioned images. This does not change the local `task release`
-behavior. Review exact image validation and corresponding-source requirements
-before promoting a release.
+`task release` requires a clean, synchronized `main` and an unused stable version.
+It promotes `VERSION`, Python package/runtime versions and README history, creates
+an annotated local release tag, then commits the next development snapshot.
+`NEXT_VERSION=1.1-snapshot` selects the next snapshot explicitly.
+`SKIP_VALIDATION=1` reuses prior exact-candidate qualification; the default runs
+validation, packaging and checks/full/tiny image builds. This is local preparation:
+no push, PyPI upload or registry publication occurs. Publication is a separate
+authorized action through the [container workflow](RELEASING.md).

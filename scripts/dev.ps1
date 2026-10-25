@@ -105,7 +105,19 @@ switch ($Action) {
     }
     'init' {
         $null = Get-OwnedResource 'image' $image
-        Invoke-Change @('build', '--file', (Join-Path $repoRoot 'Dockerfile'), '--tag', $image, $repoRoot)
+        $revision = 'unknown'
+        if (Get-Command git -ErrorAction SilentlyContinue) {
+            $gitRevision = & git -C $repoRoot rev-parse HEAD 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $revision = $gitRevision.Trim()
+                if (& git -C $repoRoot status --porcelain) { $revision += '-dirty' }
+            }
+        }
+        $builtAt = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $sourceVersion = (Get-Content -LiteralPath (Join-Path $repoRoot 'VERSION') -Raw).Trim()
+        Invoke-Change @('build', '--file', (Join-Path $repoRoot 'Dockerfile'), '--tag', $image,
+            '--build-arg', "VCS_REF=$revision", '--build-arg', "BUILD_DATE=$builtAt",
+            '--build-arg', "IMAGE_VERSION=$sourceVersion", $repoRoot)
         Initialize-Volume
     }
     'start' {
@@ -120,6 +132,13 @@ switch ($Action) {
         if ($env:QWEN_STUDIO_ASR_URL) { $runArgs += @('--env', 'QWEN_STUDIO_ASR_URL') }
         if ($env:QWEN_STUDIO_QUEUE_SIZE) { $runArgs += @('--env', 'QWEN_STUDIO_QUEUE_SIZE') }
         if ($env:QWEN_STUDIO_API_KEY) { $runArgs += @('--env', 'QWEN_STUDIO_API_KEY') }
+        foreach ($variable in @('QWEN_STUDIO_ENABLE_MCP', 'QWEN_STUDIO_ENABLE_ADVANCED_MCP',
+            'QWEN_STUDIO_MCP_ALLOWED_HOSTS', 'QWEN_STUDIO_MCP_ALLOWED_ORIGINS',
+            'QWEN_STUDIO_AUDIO_URL_ALLOWED_HOSTS', 'QWEN_STUDIO_MCP_INPUT_DIR')) {
+            if ([Environment]::GetEnvironmentVariable($variable)) { $runArgs += @('--env', $variable) }
+        }
+        if ($env:QWEN_STUDIO_MCP_BASE_URL) { $runArgs += @('--env', 'QWEN_STUDIO_MCP_BASE_URL') }
+        else { $runArgs += @('--env', "QWEN_STUDIO_MCP_BASE_URL=http://localhost:$port") }
         if ($devMount) {
             $runArgs += @('--env', 'PYTHONPATH=/app/src')
             foreach ($folder in @('src')) {

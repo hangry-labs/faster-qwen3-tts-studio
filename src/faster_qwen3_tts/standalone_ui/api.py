@@ -245,6 +245,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
                 'Content-Disposition': f'inline; filename="qwen3-tts.{fmt}"'}
 
     async def binary(payload, http_request=None, reference=None):
+        reference = await resolve_reference(payload, reference)
         prepared = service.prepare(payload, reference)
         result = await complete(prepared, http_request)
         encoded = await asyncio.to_thread(audio.encode, result['audio'], payload.output_format)
@@ -255,6 +256,17 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         return Response(encoded, media_type=audio.FORMATS[payload.output_format][0],
                         headers={**headers(prepared, payload.output_format), 'X-Qwen-Committed-Profiles': json.dumps(profiles),
                                  'X-Qwen-Metrics': json.dumps(result['metrics'])})
+
+    async def resolve_reference(payload, reference=None):
+        if payload.ref_audio:
+            if reference is not None or payload.voice_profile:
+                raise ValueError('Choose one reference: upload, saved voice or local ref_audio.')
+            upload = await app.state.references.read(payload.ref_audio, allow_url=False)
+            try:
+                return await canonical_audio(upload)
+            finally:
+                await upload.close()
+        return reference
 
     def progressive(payload, reference=None, http_request=None):
         prepared = service.prepare(payload, reference)
@@ -344,12 +356,13 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
 
     @router.get('/tts/ping')
     def ping():
-        from faster_qwen3_tts import __version__
-        return {'msg': 'pong', 'type': 'Qwen3-TTS Studio', 'version': __version__, 'backend': 'torch'}
+        from .build_info import build_identity
+        return {'msg': 'pong', 'type': 'Qwen3-TTS Studio', **build_identity(), 'backend': 'torch'}
 
     @router.get('/tts/status')
     def status():
-        return engine.status()
+        from .build_info import build_identity
+        return {**engine.status(), **build_identity()}
 
     @router.get('/tts/activity')
     def activity(request_id: str | None = None):
@@ -393,12 +406,12 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         return result
 
     @router.post('/tts/plan')
-    def plan(payload: SpeechRequest):
-        return service.inspect(service.prepare(payload))
+    async def plan(payload: SpeechRequest):
+        return service.inspect(service.prepare(payload, await resolve_reference(payload)))
 
     @router.post('/tts/metrics')
-    def metrics(payload: SpeechRequest):
-        prepared = service.prepare(payload)
+    async def metrics(payload: SpeechRequest):
+        prepared = service.prepare(payload, await resolve_reference(payload))
         return {'input_type': payload.input_type, 'metrics': {
             'characters': sum(len(u.text) for u in prepared.plan.units),
             'words': sum(len(u.text.split()) for u in prepared.plan.units),
@@ -417,16 +430,17 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         return await binary(SpeechRequest.model_validate_json(payload), request, await canonical_audio(reference_audio))
 
     @router.post('/tts/stream')
-    def stream(payload: SpeechRequest, request: Request):
-        return progressive(payload, http_request=request)
+    async def stream(payload: SpeechRequest, request: Request):
+        return progressive(payload, await resolve_reference(payload), http_request=request)
 
     @router.post('/tts/stream-upload')
     async def stream_upload(payload: str = Form(...), reference_audio: UploadFile = File(...)):
-        return progressive(SpeechRequest.model_validate_json(payload), await canonical_audio(reference_audio))
+        parsed = SpeechRequest.model_validate_json(payload)
+        return progressive(parsed, await resolve_reference(parsed, await canonical_audio(reference_audio)))
 
     @router.post('/tts/events')
     async def events(payload: SpeechRequest):
-        prepared = service.prepare(payload)
+        prepared = service.prepare(payload, await resolve_reference(payload))
         events, cancelled = start_worker(service, prepared, streaming=True)
         async def stream():
             result = None
@@ -466,6 +480,14 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     @router.post('/tts/transcribe-upload')
     async def transcribe_upload(reference_audio: UploadFile = File(...)):
         return await transcribe(reference_audio)
+
+    @router.post('/tts/transcribe')
+    async def transcribe_local(payload: dict):
+        upload = await app.state.references.read(payload.get('audio_location', payload.get('ref_audio', '')), allow_url=False)
+        try:
+            return await transcribe(upload)
+        finally:
+            await upload.close()
 
     @router.post('/tts/postprocess-upload')
     async def postprocess(options: str = Form(...), audio_file: UploadFile = File(..., alias='audio')):

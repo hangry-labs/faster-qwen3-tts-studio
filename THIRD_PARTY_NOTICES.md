@@ -20,6 +20,7 @@ for reviewed model terms, commercial-use findings and distribution requirements.
 | VoxCPMTTS Studio, Magic bundle and dialogue storage adaptations | Apache-2.0 | Hangry Labs; [source](https://github.com/hangry-labs/VoxCPMTTS); adaptations identified in [NOTICE](NOTICE) |
 | ssml-h-tools 0.3.1 | Apache-2.0 | Copyright 2026 Hangry Labs; [source](https://github.com/hangry-labs/ssml-h-tools); installed package retains LICENSE and NOTICE |
 | defusedxml 0.7.1 | PSF-2.0 | Christian Heimes; [source](https://github.com/tiran/defusedxml); installed wheel retains its Python Software Foundation license |
+| MCP Python SDK 2.3.0 | MIT | Copyright 2024 Anthropic, PBC; [source](https://github.com/modelcontextprotocol/python-sdk); installed wheel retains its full MIT license |
 
 [NOTICE](NOTICE) identifies adaptations. [Upstream provenance](docs/UPSTREAMS.md)
 records all three synchronization sources and exact incorporated revisions. Preserve the source copyright headers,

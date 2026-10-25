@@ -260,10 +260,17 @@ Loudness normalization remains opt-in. `preset` records `clean`, `studio` or
 remain separate, and preview processing does not load TTS weights.
 
 The original `/studio/*` multipart/JSON/SSE contracts remain available for
-single-model workflows. No local ASR, forced alignment, server-path audio access,
-remote audio fetching, portrait upload or MCP service is added by these routes.
-These are separate capabilities, rather than placeholders that claim success.
+single-model workflows. Native speech requests may provide `ref_audio` as a
+container path within the configured MCP input directory. It is mutually
+exclusive with an upload or `voice_profile`. `POST /tts/transcribe` accepts JSON
+`{"audio_location":"reference.wav"}` from that same directory. Native routes do
+not fetch URL references; bounded HTTP inputs belong to advanced
+[MCP tools](MCP.md). No local ASR or forced alignment is bundled.
 Only clone permitted speakers and use recordings you are authorized to process.
+
+`GET /tts/ping` and `/tts/status` include `version`, `build_id`, `build_date` and
+`image_version`. Unspecified development build metadata is reported as `unknown`;
+runtime does not infer a Git revision from the host filesystem.
 
 ## Queue admission
 

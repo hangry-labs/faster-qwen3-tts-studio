@@ -85,7 +85,7 @@ tasks:
     dir: '{{.TASKFILE_DIR}}'
     cmds:
       - pwsh -NoProfile -File tests/test_dev_tasks.ps1
-      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_ci_images.py -q -p no:cacheprovider
+      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_ci_images.py tests/test_release.py tests/test_runtime_lock.py -q -p no:cacheprovider
 
   licenses:
     desc: Check source notices and licensing documentation
@@ -252,7 +252,16 @@ tasks:
       - pwsh -NoProfile -File scripts/check-packages.ps1
 
   release:
-    desc: Validate and prepare local Python artifacts without publishing
+    desc: Promote a snapshot to a local release tag and prepare the next snapshot
+    vars:
+      NEXT_VERSION: '{{.NEXT_VERSION | default ""}}'
+      SKIP_VALIDATION: '{{.SKIP_VALIDATION | default "0"}}'
     cmds:
-      - task: validate
-      - task: package
+      - pwsh -NoProfile -File scripts/release.ps1 -DryRun '{{.DRY_RUN}}' -NextVersion '{{.NEXT_VERSION}}' -SkipValidation '{{.SKIP_VALIDATION}}'
+
+  lock-runtime:
+    desc: Regenerate the CPython 3.13 NVIDIA runtime wheel-hash lock
+    vars:
+      CHECK: '{{.CHECK | default "0"}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/lock-runtime.ps1 -Check '{{.CHECK}}'

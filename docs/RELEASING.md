@@ -50,8 +50,33 @@ docker build --target baked -t faster-qwen3-tts-studio:full .
 
 The default Dockerfile target is `tiny`. Full builds require additional disk
 space for model assets and an initial writable cache copy. CPU checks do not
-qualify GPU synthesis or offline model loading. Core versions are pinned, but
-the apt and transitive Python inputs are not a complete artifact lock.
+qualify GPU synthesis or offline model loading. Python dependencies are fully
+version/hash locked for the supported runtime; apt inputs remain separate.
 
-`task release` prepares local Python artifacts; it does not create Git refs or
-publish images. See [development tasks](DEVELOPMENT.md) for local commands.
+## Snapshot promotion
+
+```powershell
+task release DRY_RUN=1
+# After reviewing and qualifying the candidate:
+task release
+```
+
+Dry run validates both stable and next-snapshot transformations entirely in memory,
+including README history, package/runtime versions and the Docker Hub publication
+notice. It does not fetch, build, write files or create refs, and can inspect a
+dirty checkout. A real promotion requires clean `main`, synchronized with
+`origin/main`, and an unused stable tag. It creates a local release commit,
+annotated `vX.Y`/`vX.Y.Z` tag and next-snapshot commit. It never pushes or publishes.
+
+Defaults run local checks, package validation and checks/tiny/full image builds.
+Use `NEXT_VERSION=1.1-snapshot` to choose a newer next version. Use
+`SKIP_VALIDATION=1` only when the exact candidate already has the required
+qualification. Build checks do not replace real GPU and model-cache lifecycle
+checks. If promotion stops after a release commit, inspect local refs before
+retrying; do not move a published tag.
+
+When publication is separately authorized, the prepared refs can be pushed
+atomically with `git push --atomic origin main vX.Y`. The tag workflow builds the
+stable images; `main` builds the next moving snapshot. After registry verification,
+add top-level index digests to README history before announcing availability.
+See [development tasks](DEVELOPMENT.md) for other commands.

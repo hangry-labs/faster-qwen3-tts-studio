@@ -1,0 +1,23 @@
+# Supported runtime: CPython 3.13, Linux x86-64, NVIDIA CUDA 12.8.
+# Regenerate the complete wheel-hash lock with task lock-runtime.
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+torch==2.10.0+cu128
+transformers==5.15.1
+huggingface-hub==1.28.0
+tokenizers==0.22.2
+accelerate==1.12.0
+librosa==1.0.0
+numpy==2.5.4
+soundfile==0.14.0
+fastapi==0.162.0
+httpx==0.28.1
+pydantic==2.14.1
+python-multipart==0.0.32
+python-stretch==0.3.1
+uvicorn[standard]==0.54.0
+ssml-h-tools==0.3.1
+defusedxml==0.7.1
+mcp==2.3.0
+setuptools==84.2.1
+wheel>=0.46,<1

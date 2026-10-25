@@ -46,6 +46,7 @@ class SpeechRequest(BaseModel):
     language: str = 'English'
     instruct: str = Field(default='', max_length=1500, validation_alias=AliasChoices('instruct', 'control', 'instructions'))
     ref_text: str = Field(default='', max_length=4000)
+    ref_audio: str | None = Field(default=None, max_length=2048)
     xvec_only: bool = False
     non_streaming_mode: bool | None = None
     temperature: float = Field(default=.9, ge=.1, le=2)

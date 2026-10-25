@@ -355,7 +355,15 @@
             <p id="residency-status" role="status">No model loaded</p>
           </section>
           <section class="runtime-settings-card"><div class="section-title"><i class="icon-audio-lines"></i><span>Reference transcription</span></div><p class="field-help">Connect an OpenAI-compatible Qwen3 ASR service. Audio stays on the service you choose.</p><label class="compact-field"><span>ASR service URL</span><input id="asr-url" type="url" placeholder="https://asr.example.com"></label><div class="system-action-row"><button class="secondary-button" id="save-asr" type="button">Save connection</button><button class="secondary-button" id="test-asr" type="button">Test connection</button></div><p id="asr-status" role="status">Connection not checked</p></section>
-          <section class="runtime-settings-card"><div class="section-title"><i class="icon-shield-check"></i><span>Your workspace</span></div><p class="field-help">Generated audio stays in this page. Voice references are saved to the product volume only when you choose Save voice. Prepared references are reused in memory until you unload the model. Models and compiler caches persist in the product volume.</p></section>
+          <section class="runtime-settings-card"><div class="section-title"><i class="icon-git-branch"></i><span>MCP access</span></div>
+            <p class="field-help">Connect an agent to the same speech engine. Compact access offers speech and discovery; advanced access also offers design, reference inputs and voice-library changes. Both are off by default.</p>
+            <label class="toggle-field"><span>Compact MCP</span><input id="mcp-enabled" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
+            <label class="toggle-field"><span>Advanced MCP</span><input id="mcp-advanced-enabled" type="checkbox"><span class="toggle-track" aria-hidden="true"></span></label>
+            <dl class="studio-diagnostics"><dt>Compact endpoint</dt><dd><code id="mcp-compact-url"></code></dd><dt>Advanced endpoint</dt><dd><code id="mcp-advanced-url"></code></dd><dt>Audio download origin</dt><dd><code id="mcp-download-origin"></code></dd></dl>
+            <p class="field-help">Speech tools return expiring audio links. For clients on another machine, configure the deployment's download origin to a reachable address. The API bearer key also protects MCP when configured.</p>
+            <button class="secondary-button" id="save-mcp" type="button">Save MCP access</button><p id="mcp-status" class="field-help" role="status"></p>
+          </section>
+          <section class="runtime-settings-card"><div class="section-title"><i class="icon-shield-check"></i><span>Your workspace</span></div><p class="field-help">Generated browser audio stays in this page. MCP speech is stored temporarily until its link expires. Voice references are saved to the product volume when you explicitly save them. Prepared references are reused in memory until you unload the model. Models and compiler caches persist in the product volume.</p></section>
         </div>
         <section class="gpu-system-panel" id="gpu-output" aria-live="polite"></section>
       </div>

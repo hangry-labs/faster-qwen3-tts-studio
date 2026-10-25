@@ -37,7 +37,7 @@ volume; model weights are not baked into this development image.
 The same port serves the [API view](http://localhost:7860/docs) and
 [OpenAPI schema](http://localhost:7860/openapi.json). It includes OpenAI-compatible
 speech, native synthesis, SSML/SSML-H, Magic takes and saved voices/scripts.
-See the [API guide](docs/API.md). MCP is not implemented yet.
+See the [API guide](docs/API.md) and opt-in [MCP tools](docs/MCP.md).
 
 On Windows, the [Task workflow](docs/DEVELOPMENT.md) provides `task init`,
 `task start` and `task stop` instead of assembling Docker commands manually.
@@ -260,7 +260,7 @@ stay in the container.
 task init
 task start
 task stop
-task release
+task package
 ```
 
 `task start` mounts local source read-only; `task start DEV_MOUNT=0` uses only the
@@ -270,10 +270,12 @@ generation against an explicitly configured ASR service.
 With Node.js 22 or newer installed, `task test-ui` checks input-mode isolation
 and audio replacement races without loading a model.
 
-`task release` prepares local Python artifacts; it does not publish a Docker
-release. `task nuke` deletes this project's container, local image and **all data
-in its volume**. Core versions are pinned, but the development build is not a
-complete transitive Python/apt artifact lock. See [development tasks](docs/DEVELOPMENT.md).
+`task package` prepares Python artifacts. `task release DRY_RUN=1` previews
+snapshot promotion; a real `task release` creates local release/next-snapshot
+commits and an annotated tag. It does not push or publish. `task nuke` deletes
+this project's container, local image and **all data in its volume**. Python
+runtime dependencies are pinned with wheel hashes; apt packages remain separate
+moving inputs. See [development tasks](docs/DEVELOPMENT.md).
 
 </details>
 
@@ -344,6 +346,10 @@ or change the rolling Docker image tags.
 
 - Bound inference admission with explicit HTTP 429 overload responses, FIFO
   cancellation and queue telemetry; keep single-request GPU inference.
+- Add independently enabled compact/advanced MCP, expiring audio links, bounded
+  reference locations and persistent voice tools. Expose build identity and lock
+  transitive Python wheels; add tested snapshot/release preparation with a real
+  transformation dry run and separate publication.
 - Add searchable voice cards, editable metadata and normalized portraits. Preserve
   source/original/processed audio with creation recipes; restore voices for
   refinement and confirm fresh-audio replacements. Extend Magic character saving

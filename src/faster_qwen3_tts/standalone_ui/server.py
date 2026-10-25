@@ -27,6 +27,7 @@ from .gpu import GpuMonitor
 from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS, StudioEngine, start_request_thread
 from .profiles import VoiceStore, public_profile
 from .model_policy import ModelPolicy
+from .reference_inputs import ReferenceInputs
 from faster_qwen3_tts import __version__
 
 ROOT = Path(__file__).resolve().parent
@@ -53,6 +54,8 @@ def create_app(engine=None, data_root: Path | None = None):
     voice_store = VoiceStore(voices)
     settings_path = data / 'settings.json'
     settings = {'asr_url': os.getenv('QWEN_STUDIO_ASR_URL', '').strip().rstrip('/')}
+    for key, variable in [('mcp_enabled', 'QWEN_STUDIO_ENABLE_MCP'), ('mcp_advanced_enabled', 'QWEN_STUDIO_ENABLE_ADVANCED_MCP')]:
+        settings[key] = os.getenv(variable, '').lower() in {'1', 'true', 'yes', 'on'}
     if settings_path.exists():
         settings.update(json.loads(settings_path.read_text(encoding='utf-8')))
     settings['model_policy'] = ModelPolicy.model_validate(settings.get('model_policy', {})).model_dump()
@@ -76,6 +79,7 @@ def create_app(engine=None, data_root: Path | None = None):
     app = FastAPI(title='Faster Qwen3-TTS Studio', version=__version__, lifespan=lifespan,
                   docs_url=None, redoc_url=None)
     app.state.engine = engine
+    app.state.references = ReferenceInputs(data / 'mcp-input')
     app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')
     app.mount('/assets', StaticFiles(directory=ROOT / 'assets'), name='assets')
 
@@ -147,6 +151,12 @@ def create_app(engine=None, data_root: Path | None = None):
 
     @app.put('/system/settings')
     async def save_settings(payload: dict):
+        access = {}
+        for key in ('mcp_enabled', 'mcp_advanced_enabled'):
+            if key in payload:
+                if not isinstance(payload[key], bool):
+                    raise HTTPException(422, 'MCP access settings must be true or false.')
+                access[key] = payload[key]
         url = str(payload.get('asr_url', settings['asr_url'])).strip().rstrip('/')
         if url and not re.match(r'^https?://[^\s]+$', url):
             raise HTTPException(422, 'Enter an HTTP or HTTPS ASR service URL.')
@@ -154,7 +164,7 @@ def create_app(engine=None, data_root: Path | None = None):
             policy = ModelPolicy.model_validate(payload.get('model_policy', settings['model_policy']))
         except ValidationError as exc:
             raise HTTPException(422, str(exc)) from exc
-        settings.update(asr_url=url, model_policy=policy.model_dump())
+        settings.update(asr_url=url, model_policy=policy.model_dump(), **access)
         temporary = settings_path.with_suffix('.tmp')
         temporary.write_text(json.dumps(settings, indent=2), encoding='utf-8')
         temporary.replace(settings_path)
@@ -364,6 +374,8 @@ def create_app(engine=None, data_root: Path | None = None):
     from .script_api import attach_scripts
     attach_api(app, engine=engine, store=voice_store, canonical_audio=canonical_audio, transcribe=transcribe)
     attach_scripts(app, data / 'scripts')
+    from .mcp_server import attach_mcp
+    attach_mcp(app, data=data, settings=settings)
     return app
 
 

@@ -114,7 +114,9 @@ the port elsewhere. Recording requires localhost or HTTPS and browser permission
 ## API Example
 
 The Studio serves OpenAI-compatible speech, native generation, SSML/SSML-H,
-Magic takes and saved voices/scripts on the same port. MCP is not implemented.
+Magic takes and saved voices/scripts on the same port. Opt-in compact and advanced
+MCP endpoints are available at `/mcp/` and `/mcp/advanced/`; enable them in System.
+For remote clients, set `QWEN_STUDIO_MCP_BASE_URL` to the reachable service origin.
 
 ```bash
 curl http://localhost:7860/v1/audio/speech \

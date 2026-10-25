@@ -52,6 +52,12 @@ queue comparison methodology and report structure are also adapted from
 Hangry Labs VoxCPMTTS (Apache-2.0). Qwen checkpoint routing, isolated workers,
 native comparison adapter and related benchmark changes are maintained here.
 
+MCP transport, temporary audio artifacts, bounded reference fetching and release
+transition tooling also adapt Hangry Labs VoxCPMTTS patterns (Apache-2.0).
+
+The runtime uses the MCP Python SDK (MIT), Copyright 2024 Anthropic, PBC.
+Its original license remains installed and is included in runtime inventories.
+
 The runtime uses SSML-H Tools, Copyright 2026 Hangry Labs, Apache-2.0.
 It implements parts of https://github.com/hangry-labs/ssml-h-spec.
 SSML-H is based on W3C SSML 1.1 but is not a W3C Recommendation and is not

@@ -180,7 +180,8 @@ route surrounds complete inference and returns one complete audio chunk; the
 ordinary `/studio/generate` route retains its JSON response.
 Both accept multipart data containing an `options` JSON field and an optional
 `reference` audio file. Separate `/v1/audio/speech` and native `/tts/*` routes
-provide the new product API. MCP is not implemented.
+provide the product API. Independent compact/advanced [MCP endpoints](MCP.md) can
+be enabled in System and return expiring audio links. Both default to disabled.
 
 ## Validation
 
@@ -204,4 +205,4 @@ it does not fall back to a local ASR service. Generated samples are sent to that
 service for transcription.
 These short correctness checks are not representative quality/speed benchmarks.
 See [development tasks](DEVELOPMENT.md) and [licensing](LICENSING.md) for the
-remaining dependency-lock and image-release work.
+runtime locking and image-release qualification requirements.

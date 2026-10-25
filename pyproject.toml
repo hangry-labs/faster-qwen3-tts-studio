@@ -48,6 +48,7 @@ studio = [
     "ssml-h-tools==0.3.1",
     "defusedxml==0.7.1",
     "python-stretch==0.3.1",
+    "mcp==2.3.0",
 ]
 [project.scripts]
 qwen3-tts-studio = "faster_qwen3_tts.standalone_ui.server:main"

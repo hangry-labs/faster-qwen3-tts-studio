@@ -564,6 +564,15 @@ $('#save-asr').addEventListener('click', async () => {
   try { await fetchJson('/system/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asr_url: $('#asr-url').value }) }); await refreshAsr() } catch (error) { toast(error.message) }
 })
 $('#test-asr').addEventListener('click', () => refreshAsr().catch((error) => toast(error.message)))
+$('#save-mcp').addEventListener('click', async () => {
+  const button = $('#save-mcp'); button.disabled = true
+  try {
+    await fetchJson('/system/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mcp_enabled: $('#mcp-enabled').checked, mcp_advanced_enabled: $('#mcp-advanced-enabled').checked }) })
+    $('#mcp-status').textContent = 'Access saved. Reconnect the agent after enabling an endpoint.'
+  } catch (error) { $('#mcp-status').textContent = error.message }
+  finally { button.disabled = false }
+})
 $('#load-model').addEventListener('click', async () => {
   const button = $('#load-model'); button.disabled = true; button.textContent = 'Loading model…'
   try { await fetchJson('/studio/models/load', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: $('#system-model').value }) }) } catch (error) { toast(error.message) }
@@ -635,6 +644,12 @@ async function initialize() {
   renderModelPolicy(settings.model_policy)
   $('#save-model-policy').disabled = false
   $('#asr-url').value = settings.asr_url
+  $('#mcp-enabled').checked = settings.mcp_enabled
+  $('#mcp-advanced-enabled').checked = settings.mcp_advanced_enabled
+  $('#mcp-compact-url').textContent = location.origin + '/mcp/'
+  $('#mcp-advanced-url').textContent = location.origin + '/mcp/advanced/'
+  const mcp = await fetchJson('/system/mcp')
+  $('#mcp-download-origin').textContent = mcp.download_base_url
   $('#api-example').textContent = `curl ${location.origin}/v1/audio/speech -H 'Content-Type: application/json' -d '{"model":"qwen3-tts","input":"Hello from Qwen Studio.","voice":"Ryan","response_format":"mp3"}' --output speech.mp3`
   let saved = null
   try { saved = JSON.parse(sessionStorage.getItem('qwen3tts-ui-state-v1') || 'null') } catch {}

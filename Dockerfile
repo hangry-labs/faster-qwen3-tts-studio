@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements.runtime.txt ./
-RUN python -m pip install --only-binary=:all: -r requirements.runtime.txt
+RUN python -m pip install --only-binary=:all: --require-hashes -r requirements.runtime.txt
 
 FROM dependencies AS model-assets
 COPY scripts/prefetch_models.py ./scripts/
@@ -26,7 +26,7 @@ RUN python -u scripts/prefetch_models.py --cache-root /app/baked-models/huggingf
 FROM dependencies AS app
 COPY pyproject.toml README.md VERSION LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
 COPY src/ ./src/
-RUN python -m pip install --only-binary=:all: -c requirements.runtime.txt '.[studio]' \
+RUN python -m pip install --no-build-isolation --no-deps '.[studio]' \
     && python -m pip check
 RUN python -c "from importlib.metadata import distributions; print('\n'.join(sorted({d.metadata['Name'] + '==' + d.version for d in distributions()})))" > /app/runtime-constraints.txt
 COPY scripts/collect_runtime_licenses.py ./scripts/
@@ -36,6 +36,9 @@ RUN python scripts/collect_runtime_licenses.py --output /app/licenses/runtime
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
 ARG IMAGE_VERSION=dev
+ENV QWEN_STUDIO_BUILD_ID=${VCS_REF} \
+    QWEN_STUDIO_BUILD_DATE=${BUILD_DATE} \
+    QWEN_STUDIO_IMAGE_VERSION=${IMAGE_VERSION}
 LABEL org.opencontainers.image.source="https://github.com/hangry-labs/faster-qwen3-tts-studio" \
     org.opencontainers.image.title="Hangry Labs Faster Qwen3-TTS Studio" \
     org.opencontainers.image.created="${BUILD_DATE}" \
@@ -49,11 +52,14 @@ FROM model-assets AS baked
 # Inherit the large model layer directly instead of keeping a second copy in
 # a separate asset stage and COPY layer during hosted-runner publication.
 COPY --from=app /app /app
-RUN python -m pip install --only-binary=:all: -c runtime-constraints.txt '.[studio]' \
+RUN python -m pip install --no-build-isolation --no-deps '.[studio]' \
     && python -m pip check
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
 ARG IMAGE_VERSION=dev
+ENV QWEN_STUDIO_BUILD_ID=${VCS_REF} \
+    QWEN_STUDIO_BUILD_DATE=${BUILD_DATE} \
+    QWEN_STUDIO_IMAGE_VERSION=${IMAGE_VERSION}
 LABEL org.opencontainers.image.source="https://github.com/hangry-labs/faster-qwen3-tts-studio" \
     org.opencontainers.image.title="Hangry Labs Faster Qwen3-TTS Studio" \
     org.opencontainers.image.created="${BUILD_DATE}" \
@@ -70,6 +76,7 @@ COPY --from=app /app/runtime-constraints.txt /runtime-constraints.txt
 COPY --from=model-assets /app/baked-models/huggingface/model-manifest.json /models/model-manifest.json
 
 FROM app AS checks
+COPY Dockerfile requirements.runtime.in ./
 COPY tests/ ./tests/
 COPY scripts/ ./scripts/
 COPY docs/ ./docs/

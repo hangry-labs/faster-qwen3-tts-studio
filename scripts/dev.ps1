@@ -130,7 +130,7 @@ switch ($Action) {
         if ($dryRun) { Write-Host "Planned UI/API: http://${bindAddress}:$port. No Docker resources changed." }
         else {
             Wait-ForStudio
-            Write-Host "UI/API ready: http://${bindAddress}:$port (load a model in the UI)."
+            Write-Host "UI/API ready: http://${bindAddress}:$port (configured models preload in the background)."
         }
     }
     'stop' {

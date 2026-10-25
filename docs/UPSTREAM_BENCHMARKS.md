@@ -60,7 +60,7 @@ receipt and scheduled-playback measurements.
 
 Smaller chunks = lower latency but more decode overhead. `chunk_size=2` is the smallest that stays real-time on Jetson.
 
-**Model seed:** The inherited comparison below reports similar speeds for its tested model modes. The first time you clone a voice, it takes longer, but later it's cached. Use `benchmarks/compare_modes.py` to reproduce. Example on 0.6B, `chunk_size=8`:
+**Model seed:** The inherited comparison below reports similar speeds for its tested model modes. The first time you clone a voice, it takes longer, but later it's cached. Use `benchmarks/research/compare_modes.py` to reproduce. Example on 0.6B, `chunk_size=8`:
 
 | Mode | TTFA (ms) | RTF | ms/step |
 | ---- | --------- | --- | ------- |
@@ -79,7 +79,7 @@ Smaller chunks = lower latency but more decode overhead. `chunk_size=2` is the s
 
 ## Benchmark tooling
 
-NVIDIA research scripts remain under `benchmarks/`. See its [usage notes](../benchmarks/README.md); legacy root setup/benchmark launchers have been removed.
+NVIDIA research scripts remain under `benchmarks/research/`. See their [usage notes](../benchmarks/research/README.md); legacy root setup/benchmark launchers have been removed. The maintained [product benchmark suite](../benchmarks/README.md) is separate from these upstream results.
 They are separate from the maintained Studio workflow and may need their own
 dependencies or GPU allocations. Optional Parakeet utilities are not part of
 the default image or Studio tests. Do not start a local ASR model when using an

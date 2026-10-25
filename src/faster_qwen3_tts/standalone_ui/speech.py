@@ -140,6 +140,10 @@ class SpeechService:
     def __init__(self, engine, voices: VoiceStore):
         self.engine, self.voices = engine, voices
 
+    def default_model(self, mode):
+        return getattr(self.engine, 'workflow_models', {}).get(mode,
+            {'custom': CUSTOM, 'clone': BASE, 'design': DESIGN}[mode])
+
     def prepare(self, request, reference=None):
         """No downloads, GPU calls, filesystem mutation or persistent writes."""
         default_language = language(request.language)
@@ -157,10 +161,10 @@ class SpeechService:
             if matches:
                 v = matches[0]
                 with self.voices.lock:
-                    binding = Binding(name, 'clone', BASE, language=language(v.get('language') or default_language),
+                    binding = Binding(name, 'clone', self.default_model('clone'), language=language(v.get('language') or default_language),
                                       reference=self.voices.audio(v), transcript=v.get('transcript', ''))
             elif native:
-                binding = Binding(name, 'custom', DIRECTED if request.instruct else CUSTOM, speaker=native,
+                binding = Binding(name, 'custom', self.default_model('custom'), speaker=native,
                                   language=NATIVE_LANGUAGES[native])
             else:
                 raise ValueError(f"Unknown voice '{name}'. Choose a Qwen speaker or a saved profile.")
@@ -174,11 +178,11 @@ class SpeechService:
             if not request.xvec_only and not request.ref_text.strip():
                 raise ValueError('Transcript-guided cloning requires the exact reference transcript. Set xvec_only=true for identity-only cloning.')
             mode = 'clone'
-            default = Binding('__reference__', mode, BASE, language=default_language, reference=reference, transcript=request.ref_text)
+            default = Binding('__reference__', mode, self.default_model('clone'), language=default_language, reference=reference, transcript=request.ref_text)
         elif request.voice_profile:
             default = resolve(request.voice_profile)
         elif mode == 'design':
-            default = Binding('__design__', 'design', DESIGN, language=default_language)
+            default = Binding('__design__', 'design', self.default_model('design'), language=default_language)
         else:
             default = resolve(request.voice)
             if mode == 'clone' and default.reference is None:
@@ -225,7 +229,7 @@ class SpeechService:
                 if binding:
                     self.config(request, compiled, binding, 0)
                 else:
-                    self.config(request, compiled, Binding(unit.voice, 'clone', BASE, transcript='Bootstrap transcript'), 0)
+                    self.config(request, compiled, Binding(unit.voice, 'clone', self.default_model('clone'), transcript='Bootstrap transcript'), 0)
                 units.append(compiled)
         if not any(u.kind == 'speech' for u in units):
             raise ValueError('Add at least one speech turn.')
@@ -241,7 +245,7 @@ class SpeechService:
         # A named native turn inherits the explicitly selected CustomVoice model.
         if binding.mode == 'custom' and request.model in MODELS and MODELS[request.model]['mode'] == 'custom':
             model = request.model
-        elif binding.mode == 'custom' and direction:
+        elif binding.mode == 'custom' and direction and not MODELS[model]['instructions']:
             model = DIRECTED
         return GenerationRequest(
             mode=binding.mode, model=model, text=unit.text, language=lang or request.language,
@@ -312,10 +316,10 @@ class SpeechService:
                 sample = definition.sample or DEFAULT_SAMPLE
                 sample_language = language(definition.sample_language or
                     ((definition.languages[0] if definition.languages else request.language) if definition.sample else 'English'))
-                design = replace(prepared.default, name=definition.name, mode='design', model=DESIGN,
+                design = replace(prepared.default, name=definition.name, mode='design', model=self.default_model('design'),
                                  reference=None, transcript='', language=sample_language)
                 seed = definition.seed if definition.seed is not None else (prepared.seed + index) % 2**32
-                bootstrap = request.model_copy(update={'model': DESIGN, 'instruct': design_description(definition)})
+                bootstrap = request.model_copy(update={'model': self.default_model('design'), 'instruct': design_description(definition)})
                 config = self.config(bootstrap, SSMLUnit('speech', text=sample), design, seed)
                 emit({'type': 'designing', 'voice': definition.name})
                 samples = render(config, design)
@@ -323,7 +327,7 @@ class SpeechService:
                     raise ValueError('Designed voice bootstrap exceeds 60 seconds.')
                 reference = audio.wav(samples)
                 voice_language = language(definition.languages[0] if definition.languages else request.language)
-                bindings[definition.name] = Binding(definition.name, 'clone', BASE, language=voice_language,
+                bindings[definition.name] = Binding(definition.name, 'clone', self.default_model('clone'), language=voice_language,
                                                     reference=reference, transcript=sample)
                 if definition.scope == 'profile':
                     pending.append(({'name': definition.name, 'transcript': sample, 'language': voice_language,

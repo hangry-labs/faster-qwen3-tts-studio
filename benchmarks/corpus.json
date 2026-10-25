@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "source": "Hangry Labs VoxCPMTTS multilingual benchmark corpus (Apache-2.0)",
+  "source_revision": "dde4562796ca0084a2f3df03056c6cad59686212",
+  "notes": "Ten Qwen-supported languages. Text and voice descriptions retained from the Vox corpus; model-specific settings and media paths omitted.",
+  "languages": [
+    {
+      "language": "English",
+      "slug": "english",
+      "design": [
+        {
+          "text": "The morning coffee negotiated hard, but eventually agreed to help.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "I put my keys somewhere safe, which was a bold move against myself.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "Hello, this is VoxCPMTTS from Hangry Labs. We build local, easy-to-run voice tools so people can create speech privately, offline, and in their own language."
+    },
+    {
+      "language": "Chinese",
+      "slug": "chinese",
+      "design": [
+        {
+          "text": "早上的咖啡像个严肃的教练，终于把我叫醒了。",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "钥匙被我放在安全的地方，安全到连我自己都找不到。",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "你好，这里是 Hangry Labs 的 VoxCPMTTS。我们打造本地运行、容易使用的语音工具，让人们可以私密、离线地用自己的语言生成语音。"
+    },
+    {
+      "language": "French",
+      "slug": "french",
+      "design": [
+        {
+          "text": "Le café du matin a négocié ferme, puis il a accepté de m'aider.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "J'ai rangé mes clés dans un endroit sûr, beaucoup trop sûr.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "Bonjour, voici VoxCPMTTS de Hangry Labs. Nous créons des outils vocaux locaux et faciles à lancer pour permettre de produire de la parole en privé, hors ligne et dans sa propre langue."
+    },
+    {
+      "language": "German",
+      "slug": "german",
+      "design": [
+        {
+          "text": "Der Morgenkaffee verhandelte hart, half dann aber doch.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "Ich legte die Schlüssel an einen sicheren Ort, leider zu sicher.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "Hallo, hier ist VoxCPMTTS von Hangry Labs. Wir bauen lokale, einfach startbare Sprachwerkzeuge, damit Menschen privat, offline und in ihrer eigenen Sprache Sprache erzeugen können."
+    },
+    {
+      "language": "Italian",
+      "slug": "italian",
+      "design": [
+        {
+          "text": "Il caffè del mattino ha trattato duramente, ma poi ha aiutato.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "Ho messo le chiavi in un posto sicuro, forse troppo sicuro.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "Ciao, questo è VoxCPMTTS di Hangry Labs. Costruiamo strumenti vocali locali e facili da avviare, così le persone possono creare parlato in privato, offline e nella propria lingua."
+    },
+    {
+      "language": "Japanese",
+      "slug": "japanese",
+      "design": [
+        {
+          "text": "朝のコーヒーは少し渋ったけれど、最後には助けてくれました。",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "鍵を安全な場所に置いたら、安全すぎて自分でも見つかりません。",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "こんにちは、Hangry Labs の VoxCPMTTS です。私たちはローカルで簡単に動かせる音声ツールを作り、誰もが自分の言語で、プライベートに、オフラインで音声を生成できるようにします。"
+    },
+    {
+      "language": "Korean",
+      "slug": "korean",
+      "design": [
+        {
+          "text": "아침 커피는 조금 버텼지만 결국 나를 도와주었습니다.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "열쇠를 안전한 곳에 두었더니 너무 안전해서 못 찾겠습니다.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "안녕하세요, Hangry Labs의 VoxCPMTTS입니다. 우리는 사람들이 자신의 언어로, 개인적으로, 오프라인에서 음성을 만들 수 있도록 로컬에서 쉽게 실행되는 음성 도구를 만듭니다."
+    },
+    {
+      "language": "Portuguese",
+      "slug": "portuguese",
+      "design": [
+        {
+          "text": "O café da manhã negociou bastante, mas acabou ajudando.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "Guardei as chaves em um lugar seguro, seguro demais.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "Olá, este é o VoxCPMTTS da Hangry Labs. Criamos ferramentas de voz locais e fáceis de executar para que as pessoas possam gerar fala com privacidade, offline e no próprio idioma."
+    },
+    {
+      "language": "Russian",
+      "slug": "russian",
+      "design": [
+        {
+          "text": "Утренний кофе долго торговался, но в итоге согласился помочь.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "Я положил ключи в надежное место, кажется, слишком надежное.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "Здравствуйте, это VoxCPMTTS от Hangry Labs. Мы создаем локальные и простые в запуске голосовые инструменты, чтобы люди могли создавать речь приватно, офлайн и на своем языке."
+    },
+    {
+      "language": "Spanish",
+      "slug": "spanish",
+      "design": [
+        {
+          "text": "El café de la mañana negoció duro, pero al final ayudó.",
+          "instruct": "warm adult female narrator, clear and friendly"
+        },
+        {
+          "text": "Guardé las llaves en un lugar seguro, quizá demasiado seguro.",
+          "instruct": "calm adult male narrator, natural pace"
+        }
+      ],
+      "clone_text": "Hola, esto es VoxCPMTTS de Hangry Labs. Creamos herramientas de voz locales y fáciles de ejecutar para que las personas puedan generar habla en privado, sin conexión y en su propio idioma."
+    }
+  ]
+}

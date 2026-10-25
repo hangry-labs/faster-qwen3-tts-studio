@@ -340,7 +340,9 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
 
     @router.get('/tts/ssml/capabilities')
     def ssml_capabilities():
-        return capabilities()
+        result = capabilities()
+        result['ssml_h']['design_processor'].update(model=service.default_model('design'), clone_model=service.default_model('clone'))
+        return result
 
     @router.post('/tts/plan')
     def plan(payload: SpeechRequest):

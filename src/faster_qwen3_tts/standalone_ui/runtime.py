@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import gc
+import sys
 import threading
 import time
 from contextlib import contextmanager
@@ -70,6 +71,9 @@ class StudioEngine:
         self.queued = 0
         self.waiters = deque()
         self.session_owner = threading.local()
+        self.models = {}
+        self.policy = None
+        self.residency_errors = {}
 
     @contextmanager
     def session(self, cancelled, emit):
@@ -82,13 +86,59 @@ class StudioEngine:
             yield
         finally:
             self.session_owner.active = False
-            self.gate.release()
+            try:
+                self._release_transient()
+            finally:
+                self.gate.release()
 
     def status(self):
+        torch = sys.modules.get('torch')
+        cuda = getattr(torch, 'cuda', None)
+        memory = None
+        if cuda is not None and cuda.is_initialized():
+            memory = {'allocated_mib': round(cuda.memory_allocated() / 1024**2, 2),
+                      'reserved_mib': round(cuda.memory_reserved() / 1024**2, 2)}
         with self.state_lock:
             return {'state': self.state, 'model': self.model_id, 'loaded': self.model is not None,
                     'error': self.error, 'queue_depth': self.queued, 'backend': 'torch',
-                    'default_backend': 'torch', 'available_backends': ['torch']}
+                    'default_backend': 'torch', 'available_backends': ['torch'],
+                    'resident_models': list(self.models),
+                    'requested_resident_models': sorted(self.policy.resident_models) if self.policy else [],
+                    'residency_errors': dict(self.residency_errors), 'gpu_memory': memory}
+
+    def configure_models(self, policy):
+        """Apply under the same lease as inference. Never evict pinned weights to hide OOM."""
+        with self.gate:
+            self.policy = policy
+            self.residency_errors = {}
+            self._release_transient()
+            for model_id in sorted(policy.resident_models):
+                try:
+                    self._load(model_id)
+                except Exception as exc:
+                    self.residency_errors[model_id] = str(exc)
+                    self._discard(model_id)
+            if self.residency_errors:
+                self._state('error', 'Some resident models could not load. Free GPU memory or change residency settings.')
+            else:
+                self._state('ready' if self.models else 'idle')
+        return self.status()
+
+    def _release_transient(self):
+        if self.policy is not None:
+            for model_id in list(self.models):
+                if model_id not in self.policy.resident_models:
+                    self._discard(model_id)
+            if self.state != 'error':
+                self._state('ready' if self.models else 'idle')
+
+    def _discard(self, model_id):
+        model = self.models.pop(model_id, None)
+        self._dispose(model)
+        if self.model_id == model_id:
+            self.model_id, self.model = next(iter(self.models.items()), (None, None))
+        del model
+        self._trim_cuda()
 
     def _state(self, state: str, error: str | None = None):
         with self.state_lock:
@@ -123,29 +173,62 @@ class StudioEngine:
                 self.queued = len(self.waiters)
 
     def _unload(self):
-        import torch
-        if hasattr(self.model, 'clear_voice_prompt_cache'):
-            self.model.clear_voice_prompt_cache()
+        removed = list(self.models.values())
+        if self.model is not None and not any(model is self.model for model in removed):
+            removed.append(self.model)
         self.model = None
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        self.models.clear()
+        while removed:
+            self._dispose(removed.pop())
+        self._trim_cuda()
         self.model_id = None
+
+    def _trim_cuda(self):
+        import torch
+        gc.collect()
+        if torch.cuda.is_initialized():
+            if not self.models and self.model is None:
+                # Torch 2.10 caches cuBLAS workspaces independently of empty_cache.
+                # Captured graphs retain workspace pointers: clear only after ALL
+                # models/graphs are disposed, never while another pin is alive.
+                torch.cuda.synchronize()
+                clear = getattr(torch._C, '_cuda_clearCublasWorkspaces', None)
+                if clear is not None:
+                    clear()
+            torch.cuda.empty_cache()
+
+    @staticmethod
+    def _dispose(model):
+        if callable(getattr(model, 'close', None)):
+            model.close()
+        elif hasattr(model, 'clear_voice_prompt_cache'):
+            model.clear_voice_prompt_cache()
 
     def _load(self, model_id: str):
         if model_id not in MODELS:
             raise ValueError('Unknown model.')
         if self.model_id == model_id and self.model is not None:
             return
+        if model_id in self.models:
+            self.model_id, self.model = model_id, self.models[model_id]
+            return
         from huggingface_hub import snapshot_download
         from faster_qwen3_tts import FasterQwen3TTS
         self._state('loading')
-        self._unload()
+        if self.policy is None:
+            self._unload()
         spec = MODELS[model_id]
         path = snapshot_download(model_id, revision=spec['revision'])
-        self.model = FasterQwen3TTS.from_pretrained(path, backend='torch', max_seq_len=2048)
-        self.model.warmup(prefill_len=100)
+        model = FasterQwen3TTS.from_pretrained(path, backend='torch', max_seq_len=2048)
+        try:
+            model.warmup(prefill_len=100)
+        except Exception:
+            self._dispose(model)
+            raise
+        self.model = model
+        self.models[model_id] = model
         self.model_id = model_id
+        self.residency_errors.pop(model_id, None)
         self._state('ready')
 
     def load(self, model_id: str):
@@ -153,7 +236,7 @@ class StudioEngine:
             try:
                 self._load(model_id)
             except Exception as exc:
-                self._unload()
+                self._discard(model_id)
                 self._state('error', str(exc))
                 raise
         return self.status()
@@ -261,7 +344,10 @@ class StudioEngine:
             raise
         finally:
             if not owned:
-                self.gate.release()
+                try:
+                    self._release_transient()
+                finally:
+                    self.gate.release()
 
 
 def flatten_audio(audio):

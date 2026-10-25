@@ -139,6 +139,21 @@ pauses and adds a 120 ms handoff only where no pause was specified.
 
 ## Discovery and utilities
 
+Operator model defaults live at `GET /system/settings` under `model_policy`.
+`PUT /system/settings` accepts either `asr_url`, `model_policy`, or both, preserving
+other settings. A policy contains `enabled` and all three `workflows` keys:
+`custom`, `clone`, `design`, each with a compatible full `model` id and a
+`keep_loaded` boolean. Disabling `enabled` releases weights after each request;
+it preserves per-workflow choices. Changes apply without a container restart.
+`GET /studio/status` lists actual `resident_models`, requested pins and individual
+`residency_errors`. Its `gpu_memory` reports this process's PyTorch allocated and
+reserved MiB once CUDA is initialized, independently of device-wide telemetry.
+A saved policy may need more VRAM than the GPU has available;
+inspect status after applying it. `GET /studio/capabilities` exposes workflow defaults.
+Explicit request model ids override defaults; interoperable aliases and `auto`
+use them. CustomVoice delivery direction automatically selects a capable 1.7B
+model when the configured 0.6B default cannot accept instructions.
+
 | Routes | Purpose |
 | --- | --- |
 | `GET /tts/ping`, `/tts/status`, `/tts/activity` | Version, model and queue status |
@@ -147,7 +162,7 @@ pauses and adds a 120 ms handoff only where no pause was specified.
 | `GET /tts/ssml/capabilities` | Exact supported markup and processor limits |
 | `POST /tts/transcribe-upload` | `reference_audio` forwarded to the configured ASR service |
 | `POST /tts/postprocess-upload` | Audio plus JSON `options`: speed, pitch in semitones, linear volume, normalization, output format, and finishing controls below |
-| `POST /tts/purge` | Unload this Studio's resident model |
+| `POST /tts/purge` | Unload all models in this Studio |
 
 Supply a unique `X-Qwen-Request-ID` (1 to 80 letters, digits or hyphens) with
 `/tts/generate`, `/tts/stream`, `/tts/magic/take` or `/tts/magic/render`, then poll

@@ -94,7 +94,8 @@ protection raises the unit limit to 1000 without silently truncating text.
 
 Full output, progressive audio, native SSE, Magic and plan inspection use the
 same validation, routing and boundary rules. Markup streaming emits assembled
-speech units; normalization requires complete buffering. Only one Qwen model
-resides on GPU at a time, under one request-owned FIFO lease. Crossing between
-native speakers and clones can reload checkpoints; design references are
+speech units; normalization requires complete buffering. One request-owned FIFO
+lease serializes inference across models. System controls which defaults remain
+resident; request-only weights release after the complete document. Crossing between
+native speakers and clones loads any missing checkpoints; design references are
 prepared together and reused across all matching turns. See [API](API.md).

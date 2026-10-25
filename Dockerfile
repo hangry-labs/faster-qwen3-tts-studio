@@ -73,6 +73,7 @@ FROM app AS checks
 COPY tests/ ./tests/
 COPY scripts/ ./scripts/
 COPY docs/ ./docs/
+COPY benchmarks/ ./benchmarks/
 RUN python -m pip install --only-binary=:all: 'pytest>=8,<10'
 RUN --network=none python -m pytest -q -p no:cacheprovider --ignore=tests/test_e2e_parity.py tests
 

@@ -1114,3 +1114,9 @@ button.magic-turn-portrait.ready:hover, button.magic-turn-portrait.ready:focus-v
   .primary-button, .secondary-button, .record-button { min-height: 38px; }
   .compact-command { min-height: 34px; }
 }
+/* Operator model defaults stay compact alongside the System controls. */
+.model-policy-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; margin: 12px 0; }
+.checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.checkbox-field input { width: auto; margin: 0; accent-color: var(--accent, #f58220); }
+#model-policy-status, #residency-status { overflow-wrap: anywhere; font-size: 12px; }
+@media (max-width: 480px) { .model-policy-row { grid-template-columns: minmax(0, 1fr); gap: 6px; } }

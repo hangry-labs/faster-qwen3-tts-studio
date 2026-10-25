@@ -30,8 +30,8 @@ docker volume create --label app.hangrylabs.project=faster-qwen3-tts-studio fast
 docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent faster-qwen3-tts-studio:dev
 ```
 
-Open **[http://localhost:7860](http://localhost:7860)**. Generate loads the selected
-model on demand. First use downloads its pinned checkpoint into the persistent
+Open **[http://localhost:7860](http://localhost:7860)**. By default the Studio keeps
+0.6B Base, 0.6B CustomVoice and 1.7B VoiceDesign ready in GPU memory. First use downloads their pinned checkpoints into the persistent
 volume; model weights are not baked into this development image.
 
 The same port serves the [API view](http://localhost:7860/docs) and
@@ -57,11 +57,14 @@ On Windows, the [Task workflow](docs/DEVELOPMENT.md) provides `task init`,
 - An explicit saved-voice library that survives container replacement
 - Optional reference transcription through an existing ASR service
 - FIFO generation progress, cancellation, timing diagnostics and bounded prompt reuse
-- On-demand model loading/unloading and GPU telemetry in System
+- Per-workflow default models, configurable GPU residency and GPU telemetry in System
 - Python 3.13, Torch 2.10.0 and CUDA 12.8 wheels in the development image
 
-The product targets **NVIDIA GPUs with the Torch backend**. It keeps one TTS
-model resident at a time and serializes inference.
+The product targets **NVIDIA GPUs with the Torch backend** and serializes inference.
+System lets you choose each workflow's default model and whether it stays loaded.
+Disable **Keep selected weights in GPU memory** to release all weights after each
+complete request. Explicit model choices override defaults. Pinned models stay
+loaded together when VRAM permits; loading failures are visible in System.
 
 ## Browser UI
 
@@ -120,7 +123,7 @@ the prepared [Docker Hub description](docs/dockerhub.md).
 
 Change `CUDA_VISIBLE_DEVICES=0` to another physical GPU index when needed. Allow
 headroom for other GPU workloads; memory needs depend on the selected checkpoint
-and request. System can unload the resident TTS model without stopping the UI.
+and request. System can unload all TTS weights without stopping the UI.
 
 The default port mapping binds to this computer only. The Studio has no account
 system. An optional `QWEN_STUDIO_API_KEY` protects only `/v1` routes. Publish the
@@ -216,7 +219,7 @@ for queue/loading progress around a complete generation.
 | `POST /studio/generate/stream` | Generation progress and WAV chunks as SSE |
 | `GET /studio/voices` | Explicitly saved voice profiles |
 | `POST /studio/models/load` | Load an official checkpoint |
-| `POST /studio/models/unload` | Release the active model |
+| `POST /studio/models/unload` | Release all loaded models |
 
 The [Studio guide](docs/STUDIO.md) covers the browser and existing multipart
 contracts. The [speech API guide](docs/API.md) covers OpenAI-compatible clients,
@@ -259,10 +262,19 @@ complete transitive Python/apt artifact lock. See [development tasks](docs/DEVEL
 
 ## Benchmarks And Engine Reference
 
-The Studio has real GPU generation/transcription smoke checks, not a qualified
-Hangry Labs performance benchmark suite yet. The
-[inherited benchmark tables](docs/UPSTREAM_BENCHMARKS.md) are upstream results
-and should not be presented as measurements of this Docker build.
+The [manual benchmark suite](benchmarks/README.md) follows VoxCPMTTS's speed,
+GPU-memory, transcript-quality, queue and SSML methodology, with separate
+Qwen checkpoints and streaming latency measurements. Start with
+`task benchmark-build`, `task benchmark-preflight` and `task benchmark-plan`;
+these do not run GPU inference. Controlled runs require an isolated GPU and the
+existing remote ASR service. Reviewed [0.6B](benchmarks/BASELINE_RESULTS.md) and
+[1.7B](benchmarks/BASELINE_1.7B_RESULTS.md) baselines cover 310 and 510 measured
+requests across ten languages, with one checkpoint loaded at a time. Use
+`task benchmark-full` for the Faster-only product run, including
+streaming first-audio latency, per-model VRAM, SSML and FIFO reliability.
+
+The [inherited tables](docs/UPSTREAM_BENCHMARKS.md) are upstream results and should
+not be presented as measurements of this Docker build.
 
 [Engine and Python reference](docs/ENGINE.md) covers the inherited library/CLI,
 streaming, clone conditioning and parity tests. These details are secondary to

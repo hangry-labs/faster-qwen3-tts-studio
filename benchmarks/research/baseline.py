@@ -1,4 +1,4 @@
-# Baseline benchmark - copy paste and run
+# Inherited baseline investigation; use ../run_baseline.py for product qualification.
 # Usage: python baseline_bench.py
 import os
 import sys

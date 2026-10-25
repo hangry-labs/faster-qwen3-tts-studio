@@ -15,8 +15,11 @@ Tiny downloads uncached models. Full seeds its baked files into an empty product
 cache before starting the UI and defaults to offline operation. See the
 [container workflow](RELEASING.md) for build targets and publishing rules.
 The five model revisions are fixed to
-the versions reviewed in the licensing audit. One TTS model occupies the GPU at
-a time; switching releases the previous model first.
+the versions reviewed in the licensing audit. System selects the default model
+for each workflow and whether it stays in GPU memory. By default, 0.6B Base,
+0.6B CustomVoice and 1.7B VoiceDesign load at startup. Kept models can coexist;
+other models are released after the complete request. A global toggle disables
+keeping weights. These settings survive browser and container replacement.
 
 ## Workflows
 

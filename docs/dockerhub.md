@@ -39,9 +39,10 @@ docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0
 Open **http://localhost:7860**. API documentation is at **http://localhost:7860/docs**
 and the schema is at **http://localhost:7860/openapi.json**.
 
-Model weights download on first use into the named volume. They are not baked
-into this development image. The browser opens without loading a model; generate
-speech to load the selected checkpoint. One TTS model is resident at a time.
+Model weights download into the named volume. They are not baked into this
+development image. The Studio keeps 0.6B Base, 0.6B CustomVoice and 1.7B VoiceDesign
+ready by default. In System, choose each workflow's default and whether it stays
+loaded, or disable keeping weights to release them after each complete request.
 
 ## Image Variants And Tags
 
@@ -70,7 +71,7 @@ The current commands intentionally use the local `:dev` target.
 - Explicitly saved voice profiles and generated-design reuse for cloning
 - Optional reference transcription through an existing ASR service
 - Queue progress, cancellation, timing diagnostics and content-based prompt reuse
-- System controls for model loading/unloading and on-demand GPU telemetry
+- System controls for per-workflow defaults, model residency and GPU telemetry
 - Python 3.13 with Torch 2.10.0 CUDA 12.8 wheels
 
 **Languages:** Chinese, English, Japanese, Korean, German, French, Russian,
@@ -101,7 +102,7 @@ ASR settings saved in **System > Reference transcription** override the initial
 environment value. No local ASR model is included or started. You can enter
 reference transcripts manually and generate speech without an ASR connection.
 
-Memory needs vary by model and request. System can unload the active model while
+Memory needs vary by model and request. System can unload all weights while
 keeping the UI available. Prepared clone prompts use a bounded CPU cache cleared
 on unload. Inference is serialized with FIFO waiting-request feedback.
 

@@ -38,8 +38,8 @@ part of our product.
   remains under `standalone_ui/`; both packages ship in one Python distribution.
 - `tests/`: Studio, cache, local inference, compatibility and GPU parity checks.
 - `scripts/`: Docker lifecycle, notices, model prefetch and speech smoke tooling.
-- `benchmarks/`: inherited NVIDIA research scripts, separate from qualified
-  product performance claims.
+- `benchmarks/`: manual product measurements adapted from VoxCPMTTS;
+  `benchmarks/research/` retains the inherited NVIDIA investigations separately.
 
 Local changes omit the upstream Gradio demo/launcher, training tools and package
 publisher. The unused 25 Hz codec and its assets/imports are omitted; this Studio

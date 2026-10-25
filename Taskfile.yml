@@ -12,6 +12,8 @@ vars:
   DEV_MOUNT: '1'
   DRY_RUN: '0'
   ASR_URL: '{{.QWEN_STUDIO_ASR_URL | default ""}}'
+  BENCHMARK_IMAGE: faster-qwen3-tts-studio:benchmark
+  BENCHMARK_PORT: '8812'
 
 env:
   QWEN_TASK_IMAGE: '{{.IMAGE}}'
@@ -22,6 +24,7 @@ env:
   QWEN_TASK_GPU_DEVICE: '{{.GPU_DEVICE}}'
   QWEN_TASK_DEV_MOUNT: '{{.DEV_MOUNT}}'
   QWEN_TASK_DRY_RUN: '{{.DRY_RUN}}'
+  QWEN_BENCHMARK_ASR_URL: '{{.ASR_URL}}'
 
 tasks:
   default:
@@ -114,6 +117,132 @@ tasks:
       - task: compile
       - task: test
       - task: licenses
+
+  benchmark-build:
+    desc: Package the manual benchmark harness on the current local image (no inference)
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - docker build --file benchmarks/Dockerfile --build-arg BASE_IMAGE={{.IMAGE}} --tag {{.BENCHMARK_IMAGE}} .
+
+  benchmark-smoke:
+    desc: Run product GPU smoke suites without publishing benchmark history
+    cmds:
+      - task: benchmark-baseline-smoke
+        vars:
+          CLI_ARGS: '{{.CLI_ARGS}}'
+      - task: benchmark-streaming-smoke
+        vars:
+          CLI_ARGS: '{{.CLI_ARGS}}'
+      - task: benchmark-ssml-smoke
+        vars:
+          CLI_ARGS: '{{.CLI_ARGS}}'
+      - task: benchmark-queue-smoke
+        vars:
+          CLI_ARGS: '--clients 4 {{.CLI_ARGS}}'
+
+  benchmark-plan:
+    desc: Show the baseline workload and settings without Docker, network or GPU operations
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - uv run --no-project --python 3.13 python -m benchmarks.run_baseline --plan {{.CLI_ARGS}}
+
+  benchmark-full:
+    desc: Run Faster Qwen speed, memory, streaming, SSML and FIFO suites with one checkpoint resident at a time
+    cmds:
+      - task: benchmark-baseline
+        vars:
+          CLI_ARGS: '--suite full {{.CLI_ARGS}}'
+
+  benchmark-preflight:
+    desc: Check cached pinned weights offline without exposing a GPU or loading a model
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - >-
+        docker run --rm --network none
+        --mount type=volume,source={{.DATA_VOLUME}},target=/cache,readonly
+        --env HF_HOME=/cache/huggingface --env HF_HUB_OFFLINE=1
+        --entrypoint python {{.BENCHMARK_IMAGE}} -m benchmarks.preflight {{.CLI_ARGS}}
+
+  benchmark-baseline:
+    desc: Measure multilingual speed, GPU memory and ASR transcript fidelity on an isolated GPU
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - >-
+        uv run --no-project --python 3.13 python -m benchmarks.run_baseline
+        --native-image {{.BENCHMARK_IMAGE}} --faster-image {{.BENCHMARK_IMAGE}}
+        --port {{.BENCHMARK_PORT}} --gpu-index {{.GPU_DEVICE}} --cache-volume {{.DATA_VOLUME}}
+        --stop-container {{.CONTAINER}} {{.CLI_ARGS}}
+
+  benchmark-baseline-smoke:
+    desc: Real GPU English baseline wiring check, retaining evidence without publishing history
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - task: benchmark-baseline
+        vars:
+          CLI_ARGS: '--languages English --design-sentences 1 --repeats 1 --clone-repeats 1 --no-write {{.CLI_ARGS}}'
+
+  benchmark-backends:
+    desc: Run the four-scenario native versus Faster Qwen diagnostic comparison
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - task: benchmark-baseline
+        vars:
+          CLI_ARGS: '--suite backends --backends native,faster {{.CLI_ARGS}}'
+
+  benchmark-backends-smoke:
+    desc: Real GPU backend pilot wiring check without publishing history
+    cmds:
+      - task: benchmark-backends
+        vars:
+          CLI_ARGS: '--repeats 1 --clone-repeats 1 --no-write {{.CLI_ARGS}}'
+
+  benchmark-streaming:
+    desc: Measure first incremental audio and complete stream latency with staged ASR judging
+    cmds:
+      - task: benchmark-baseline
+        vars:
+          CLI_ARGS: '--suite streaming {{.CLI_ARGS}}'
+
+  benchmark-streaming-smoke:
+    desc: Real GPU English streaming check without publishing history
+    cmds:
+      - task: benchmark-streaming
+        vars:
+          CLI_ARGS: '--languages English --design-sentences 1 --repeats 1 --clone-repeats 1 --no-write {{.CLI_ARGS}}'
+
+  benchmark-ssml:
+    desc: Measure paired ten-turn standard SSML and SSML-H completion with remote ASR
+    cmds:
+      - task: benchmark-baseline
+        vars:
+          CLI_ARGS: '--suite ssml {{.CLI_ARGS}}'
+
+  benchmark-ssml-smoke:
+    desc: Real GPU single-round SSML wiring check without publishing history
+    cmds:
+      - task: benchmark-ssml
+        vars:
+          CLI_ARGS: '--rounds 1 --no-write {{.CLI_ARGS}}'
+
+  benchmark-queue:
+    desc: Compare sequential and FIFO-queued fixed-seed requests on one GPU worker
+    cmds:
+      - task: benchmark-baseline
+        vars:
+          CLI_ARGS: '--suite queue {{.CLI_ARGS}}'
+
+  benchmark-queue-smoke:
+    desc: Real GPU one-round queue wiring check without publishing history
+    cmds:
+      - task: benchmark-queue
+        vars:
+          CLI_ARGS: '--clients 2 --rounds 1 --no-write {{.CLI_ARGS}}'
+
+  benchmark-test:
+    desc: Check benchmark planning, transport, statistics and isolation without GPU inference
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_benchmarks.py -q -p no:cacheprovider
 
   package:
     desc: Build local Python artifacts and verify their metadata and notices

@@ -8,6 +8,8 @@ recursive-include scripts *.py *.ps1
 recursive-include tests *.py *.ps1
 recursive-include tests/ui *.mjs
 recursive-include benchmarks *.py
+recursive-include benchmarks *.json *.md Dockerfile
+prune benchmark-artifacts
 global-exclude *.pyc
 global-exclude __pycache__/*
 exclude *.wav

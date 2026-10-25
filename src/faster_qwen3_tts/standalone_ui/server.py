@@ -26,6 +26,7 @@ import soundfile as sf
 from .gpu import GpuMonitor
 from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS, StudioEngine
 from .profiles import VoiceStore
+from .model_policy import ModelPolicy
 from faster_qwen3_tts import __version__
 
 ROOT = Path(__file__).resolve().parent
@@ -44,6 +45,7 @@ def wav_bytes(audio, rate):
 
 
 def create_app(engine=None, data_root: Path | None = None):
+    manage_models = engine is None
     engine = engine or StudioEngine()
     data = data_root or Path(os.getenv('QWEN_STUDIO_DATA', '/app/persistent/studio'))
     voices = data / 'voices'
@@ -53,12 +55,23 @@ def create_app(engine=None, data_root: Path | None = None):
     settings = {'asr_url': os.getenv('QWEN_STUDIO_ASR_URL', '').strip().rstrip('/')}
     if settings_path.exists():
         settings.update(json.loads(settings_path.read_text(encoding='utf-8')))
+    settings['model_policy'] = ModelPolicy.model_validate(settings.get('model_policy', {})).model_dump()
+    # Injected engines (including isolated benchmark workers) own their loading policy.
+    engine.workflow_models = {mode: choice['model'] for mode, choice in settings['model_policy']['workflows'].items()}
     gpu = GpuMonitor()
 
     @asynccontextmanager
     async def lifespan(app):
-        yield
-        gpu.close()
+        preload = None
+        if manage_models:
+            preload = asyncio.create_task(asyncio.to_thread(engine.configure_models,
+                ModelPolicy.model_validate(settings['model_policy'])))
+        try:
+            yield
+        finally:
+            if preload:
+                await preload
+            gpu.close()
 
     app = FastAPI(title='Faster Qwen3-TTS Studio', version=__version__, lifespan=lifespan,
                   docs_url=None, redoc_url=None)
@@ -105,10 +118,10 @@ def create_app(engine=None, data_root: Path | None = None):
                 'input_types': ['text', 'ssml', 'ssml-h'], 'openai': True, 'magic': True,
                 'max_text_chars': 1000, 'max_upload_bytes': MAX_UPLOAD,
                 'chunk_size': {'min': 1, 'max': 64, 'default': 8},
-                'workflow_defaults': {'custom': {'non_streaming_mode': True},
-                                      'design': {'non_streaming_mode': True},
-                                      'clone': {'non_streaming_mode': False, 'xvec_only': False}},
-                'generation_defaults': GenerationRequest(text='Example').model_dump(exclude={'text'})}
+                'workflow_defaults': {mode: {'non_streaming_mode': mode != 'clone',
+                    'model': choice['model'], **({'xvec_only': False} if mode == 'clone' else {})}
+                    for mode, choice in settings['model_policy']['workflows'].items()},
+                'generation_defaults': GenerationRequest(text='Example', model=engine.workflow_models['custom']).model_dump(exclude={'text'})}
 
     @app.post('/studio/models/load')
     async def load(selection: ModelSelection):
@@ -134,13 +147,20 @@ def create_app(engine=None, data_root: Path | None = None):
 
     @app.put('/system/settings')
     async def save_settings(payload: dict):
-        url = str(payload.get('asr_url', '')).strip().rstrip('/')
+        url = str(payload.get('asr_url', settings['asr_url'])).strip().rstrip('/')
         if url and not re.match(r'^https?://[^\s]+$', url):
             raise HTTPException(422, 'Enter an HTTP or HTTPS ASR service URL.')
-        settings['asr_url'] = url
+        try:
+            policy = ModelPolicy.model_validate(payload.get('model_policy', settings['model_policy']))
+        except ValidationError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        settings.update(asr_url=url, model_policy=policy.model_dump())
         temporary = settings_path.with_suffix('.tmp')
         temporary.write_text(json.dumps(settings, indent=2), encoding='utf-8')
         temporary.replace(settings_path)
+        engine.workflow_models = {mode: choice.model for mode, choice in policy.workflows.items()}
+        if 'model_policy' in payload and hasattr(engine, 'configure_models'):
+            await asyncio.to_thread(engine.configure_models, policy)
         return settings
 
     async def read_audio(upload: UploadFile):
@@ -230,10 +250,16 @@ def create_app(engine=None, data_root: Path | None = None):
         profile = voice_store.resolve(voice_id) if voice_id else None
         try:
             values = json.loads(options)
+            if isinstance(values, dict) and 'model' not in values:
+                mode = values.get('mode', 'custom')
+                if mode in engine.workflow_models:
+                    values['model'] = engine.workflow_models[mode]
+                    if mode == 'custom' and values.get('instruct') and not MODELS[values['model']]['instructions']:
+                        values['model'] = 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice'
             if profile and isinstance(values, dict) and not values.get('ref_text'):
                 values['ref_text'] = profile.get('transcript', '')
             config = GenerationRequest.model_validate(values)
-        except ValidationError as exc:
+        except (ValidationError, json.JSONDecodeError) as exc:
             raise HTTPException(422, str(exc)) from exc
         audio = None
         if reference is not None and reference.filename:

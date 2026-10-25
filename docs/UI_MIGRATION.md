@@ -63,9 +63,9 @@ guidance. It should not be described as a feature already exposed by the old UI.
   and theme preference are not carried over.
 - Complete generation presents an audio editor with a Play control; streaming
   plays incrementally. The old demo attempted to autoplay complete results.
-- The Studio keeps one TTS model resident. The demo's configurable multi-model
-  cache, model allowlist environment variable and startup preloading options are
-  not equivalent deployment controls in the Studio.
+- System now supplies persistent per-workflow defaults, startup preloading and
+  multi-model residency, with a global switch for request-only loading. The old
+  demo's model allowlist environment variable is not a Studio control.
 - Old route names and form contracts are replaced by Studio routes. No legacy
   API compatibility is claimed. Endpoint documentation is available in the API view.
 - Text areas are explicitly resizable rather than using the demo's automatic

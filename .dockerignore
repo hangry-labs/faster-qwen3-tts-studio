@@ -18,3 +18,4 @@ artifacts/
 **/*.egg-info/
 .ci-build/
 benchmark-data/
+benchmark-artifacts/

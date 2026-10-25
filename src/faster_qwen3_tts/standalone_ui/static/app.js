@@ -178,7 +178,9 @@ async function activateTab(tab) {
   $$('.workflow-pane').forEach((panel) => { panel.hidden = panel.dataset.workflow !== state.mode })
   if (workflow && state.capabilities) {
     const modelMode = tab === 'custom' && $('#saved-voice').value ? 'clone' : state.mode
-    selectOptions($('#model'), state.capabilities.models.filter((item) => item.mode === modelMode), state.models[state.mode])
+    const choices = state.capabilities.models.filter(item => item.mode === modelMode)
+    const selected = choices.some(item => item.id === state.models[state.mode]) ? state.models[state.mode] : state.capabilities.workflow_defaults[modelMode].model
+    selectOptions($('#model'), choices, selected)
     updateModelControls()
     $('#text-feed').value = String(state.textFeed[state.mode] ?? state.capabilities.workflow_defaults[state.mode].non_streaming_mode)
     $('#generate-button span').textContent = state.busy ? 'Stop generation' : names[state.mode]
@@ -369,9 +371,13 @@ async function refreshStatus() {
   const status = await fetchJson('/studio/status')
   const label = { idle: 'Ready to load a voice', ready: 'Inference ready', loading: 'Loading model', generating: 'Generating speech', error: 'Inference needs attention' }[status.state] || status.state
   $('#runtime-state').textContent = label
-  $('#runtime-model').textContent = status.model?.split('/').at(-1)?.replace('Qwen3-TTS-12Hz-', '') || 'NVIDIA · models load on demand'
+  const activeModel = status.model?.split('/').at(-1)?.replace('Qwen3-TTS-12Hz-', '')
+  $('#runtime-model').textContent = activeModel ? `${activeModel}${status.resident_models?.length > 1 ? ' · ' + status.resident_models.length + ' loaded' : ''}` : 'NVIDIA · models load on demand'
   $('#runtime-badge').dataset.state = status.state === 'ready' ? 'ready' : status.state === 'error' ? 'error' : status.state === 'idle' ? 'ready' : 'starting'
-  $('#residency-status').textContent = `${label}${status.model ? ' · ' + status.model : ''}${status.error ? ' · ' + status.error : ''}`
+  const resident = status.resident_models || (status.model ? [status.model] : [])
+  $('#residency-status').textContent = `${resident.length ? 'In memory: ' + resident.map(id => id.split('12Hz-').at(-1)).join(', ') : 'No weights in memory'}${status.error ? ' · ' + status.error : ''}`
+  const errors = Object.entries(status.residency_errors || {}).map(([id, error]) => `${id.split('12Hz-').at(-1)}: ${error}`)
+  if (errors.length) $('#model-policy-status').textContent = errors.join(' · ')
   if (!state.busy) $('#global-status').textContent = label
 }
 
@@ -462,7 +468,7 @@ $('#model').addEventListener('change', updateModelControls)
 $$('textarea[id^=text-]').forEach((input) => input.addEventListener('input', updateCount))
 $$('[data-example]').forEach((button) => button.addEventListener('click', () => example(button.dataset.example)))
 $('#examples-button').addEventListener('click', (event) => { event.preventDefault(); if (!['custom','design','clone'].includes(state.tab)) activateTab('design'); example(state.mode) })
-$('#models-button').addEventListener('click', (event) => { event.preventDefault(); activateTab('system'); $('#system-model').focus() })
+$('#models-button').addEventListener('click', (event) => { event.preventDefault(); activateTab('system'); $('#policy-model-custom')?.focus() })
 $$('[data-number]').forEach((slider) => {
   const number = $('#' + slider.dataset.number)
   slider.addEventListener('input', () => { number.value = slider.value })
@@ -527,6 +533,44 @@ window.addEventListener('hashchange', () => {
   if (state.capabilities && ['custom','design','clone','api','system'].includes(tab) && tab !== state.tab) activateTab(tab).catch((error) => toast(error.message))
 })
 
+function renderModelPolicy(policy) {
+  $('#keep-weights').checked = policy.enabled
+  const rows = ['custom', 'design', 'clone'].map(mode => {
+    const choice = policy.workflows[mode]
+    const row = document.createElement('div'); row.className = 'model-policy-row'
+    const label = document.createElement('label'); label.className = 'compact-field'
+    const title = document.createElement('span'); title.textContent = names[mode]
+    const select = document.createElement('select'); select.id = `policy-model-${mode}`
+    selectOptions(select, state.capabilities.models.filter(item => item.mode === mode), choice.model)
+    label.append(title, select)
+    const keepLabel = document.createElement('label'); keepLabel.className = 'checkbox-field'
+    const keep = document.createElement('input'); keep.type = 'checkbox'; keep.id = `policy-keep-${mode}`; keep.checked = choice.keep_loaded
+    keep.setAttribute('aria-label', `${names[mode]} always loaded`)
+    const text = document.createElement('span'); text.textContent = 'Always loaded'
+    keepLabel.append(keep, text); row.append(label, keepLabel)
+    return row
+  })
+  $('#model-policy-rows').replaceChildren(...rows)
+}
+
+$('#save-model-policy').addEventListener('click', async () => {
+  const button = $('#save-model-policy'); button.disabled = true
+  $('#model-policy-status').textContent = 'Applying defaults and loading selected weights…'
+  const policy = { enabled: $('#keep-weights').checked, workflows: Object.fromEntries(
+    ['custom', 'design', 'clone'].map(mode => [mode, {model: $(`#policy-model-${mode}`).value, keep_loaded: $(`#policy-keep-${mode}`).checked}])) }
+  try {
+    const settings = await fetchJson('/system/settings', { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({model_policy: policy}) })
+    renderModelPolicy(settings.model_policy)
+    for (const [mode, choice] of Object.entries(settings.model_policy.workflows)) {
+      state.capabilities.workflow_defaults[mode].model = choice.model
+      delete state.models[mode]
+    }
+    $('#model-policy-status').textContent = 'Defaults saved. Request-only weights unload after each request.'
+    await refreshStatus()
+  } catch (error) { $('#model-policy-status').textContent = error.message }
+  finally { button.disabled = false }
+})
+
 async function initialize() {
   await initializeI18n()
   const [capabilities, settings] = await Promise.all([fetchJson('/studio/capabilities'), fetchJson('/system/settings')])
@@ -539,6 +583,8 @@ async function initialize() {
   selectOptions($('#language'), capabilities.languages, 'English')
   selectOptions($('#speaker'), capabilities.speakers, 'Ryan')
   selectOptions($('#system-model'), capabilities.models)
+  renderModelPolicy(settings.model_policy)
+  $('#save-model-policy').disabled = false
   $('#asr-url').value = settings.asr_url
   $('#api-example').textContent = `curl ${location.origin}/v1/audio/speech -H 'Content-Type: application/json' -d '{"model":"qwen3-tts","input":"Hello from Qwen Studio.","voice":"Ryan","response_format":"mp3"}' --output speech.mp3`
   let saved = null

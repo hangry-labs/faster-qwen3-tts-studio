@@ -236,6 +236,21 @@ class FasterQwen3TTS:
         self._warmed_up = True
         logger.info("CUDA graphs captured and ready")
 
+    def close(self) -> None:
+        """Permanently release weights and captured graph pools before unloading."""
+        self.clear_voice_prompt_cache()
+        graphs = (self.predictor_graph, self.talker_graph)
+        if torch.cuda.is_initialized() and any(getattr(item, 'graph', None) is not None for item in graphs):
+            torch.cuda.synchronize(self.device)
+        for item in graphs:
+            graph = getattr(item, 'graph', None)
+            if graph is not None:
+                graph.reset()
+                item.graph = None
+                item.captured = False
+        self.predictor_graph = self.talker_graph = self.model = None
+        self._warmed_up = False
+
     def _warmup(self, prefill_len: int) -> None:
         """Compatibility alias for the former private warmup entry point."""
         self.warmup(prefill_len=prefill_len)

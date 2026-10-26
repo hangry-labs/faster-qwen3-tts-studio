@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       commit: ${{ steps.source.outputs.commit }}
     steps:
@@ -55,7 +55,7 @@ jobs:
   build:
     needs: validate
     if: github.event_name != 'pull_request' && github.repository == 'hangry-labs/faster-qwen3-tts-studio'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 180
     concurrency:
       group: qwen3-tts-container-publication

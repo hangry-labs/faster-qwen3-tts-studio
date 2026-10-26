@@ -37,6 +37,73 @@ speakers; they do not reproduce OpenAI voices. A saved voice works as either
 its id, unique name or `{"id":"saved-id"}`. `instructions` directs delivery,
 including experimental Base delivery with an audio-backed saved voice.
 
+### Create and delete saved voices
+
+`POST /v1/audio/voices` and `DELETE /v1/audio/voices/{voice_id}` follow the
+OpenAI voice resource shapes. They use the same saved library as the UI and
+native API. Creation returns `id`, `object: "audio.voice"`, `created_at`, `name`
+and `type`. Deletion requires the exact saved id and returns
+`{"id":"saved-id","deleted":true,"object":"audio.voice.deleted"}`; unknown
+or previously deleted ids return 404. Built-in speakers cannot be deleted.
+Existing names return 409; creation never silently replaces a recording.
+Use the native API for explicitly confirmed replacement or metadata editing.
+
+For a reference-based voice, upload a consent recording first, then send its
+local id with the sample. Both requests use multipart form data:
+
+```bash
+curl http://localhost:7860/v1/audio/voice_consents \
+  -F 'name=Speaker approval' -F 'language=en-US' \
+  -F 'recording=@consent.wav'
+
+curl http://localhost:7860/v1/audio/voices \
+  -F 'name=My narrator' -F 'consent=cons_RETURNED_ID' \
+  -F 'audio_sample=@reference.wav' -F 'ref_text=The exact reference words.'
+```
+
+The optional `type` defaults to `audio_sample`. `ref_text` and `language` are
+local extensions; without reference words, synthesis uses identity-only cloning.
+Names support up to 256 characters. Audio uploads share the native limits:
+10 MiB per file and two minutes, with supported formats normalized to mono float
+WAV. No model inference is needed to register a recording.
+
+`type="prompt"` accepts JSON or multipart `name`, `prompt` and optional
+`script_hint`. It generates a reference with the configured Qwen VoiceDesign
+model and publishes it only after successful generation:
+
+```bash
+curl http://localhost:7860/v1/audio/voices \
+  -H 'Content-Type: application/json' \
+  -d '{"type":"prompt","name":"Warm narrator","prompt":"A calm, warm adult storyteller."}'
+```
+
+Prompts and script hints support up to 2000 characters. Without a hint, the
+server uses a short fixed English sample. Set the `language` extension and
+provide an appropriate hint for another speech language. `model="auto"` uses
+the configured design checkpoint; the explicit Qwen VoiceDesign id is also
+accepted. OpenAI model revision names are not Qwen checkpoints and return 400.
+The response includes `type: "prompt"` and the stored `prompt`, without preview
+audio. In this Qwen implementation, prompt-created voices also work immediately
+with `/v1/audio/speech`; this extends OpenAI's Live-only prompt-voice behavior.
+
+Consent resources support POST/GET `/v1/audio/voice_consents` and GET/POST/DELETE
+`/v1/audio/voice_consents/{consent_id}`. Creation takes `name`, a BCP 47
+`language` tag and a `recording` file. Updates take JSON `{"name":"New label"}`.
+Listing uses `limit` (1..100, default 20) and an `after` cursor, with `data`,
+`has_more`, `first_id` and `last_id`. Consent objects use `audio.voice_consent`;
+deletion returns that same object type with `deleted: true`. Voice and consent
+deletion are independent: neither automatically deletes the other resource.
+Recordings and metadata stay in the local product volume. This service stores
+the supplied consent record; it does not verify the speaker's identity or match
+the spoken consent phrase. The native voice library does not require this
+OpenAI consent workflow. Existing `/v1` API-key authentication covers these routes.
+
+The reference contracts are OpenAI's [voice creation](https://developers.openai.com/api/reference/resources/audio/subresources/voices/methods/create),
+[voice deletion](https://developers.openai.com/api/reference/resources/audio/subresources/voices/methods/delete)
+and [consent resources](https://developers.openai.com/api/reference/resources/audio/subresources/voice_consents/methods/create).
+
+### Speech output and controls
+
 Formats: MP3 (default), WAV, FLAC, Opus in Ogg, AAC in ADTS, Ogg Vorbis, and raw
 PCM. PCM is **24 kHz, mono, signed 16-bit little endian, with no header**.
 WAV and FLAC complete before delivery; other formats use one progressive
@@ -155,7 +222,7 @@ request first; incremental text input and bidirectional sessions are not exposed
 `GET/POST /tts/voice-profiles` lists or explicitly saves references. POST takes
 multipart `name`, `reference_audio`, optional `ref_text`, `language`,
 `description`, JSON `tags`, JSON `recipe`, and `profile_type` (`clone`, `reference`
-or `design`). Names are unique ignoring case. `GET /tts/voice-profiles?q=warm`
+or `design`). Names support up to 256 characters and are unique ignoring case. `GET /tts/voice-profiles?q=warm`
 searches names, descriptions, tags and languages.
 
 Optional `original_audio`, `processed_audio` and `design_audio` uploads retain

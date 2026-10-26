@@ -64,8 +64,8 @@ class VoiceStore:
     @staticmethod
     def _metadata(metadata):
         name = metadata['name'].strip()
-        if not name or len(name) > 80 or len(metadata.get('transcript', '')) > 4000:
-            raise ValueError('Provide a voice name up to 80 characters and transcript up to 4000 characters.')
+        if not name or len(name) > 256 or len(metadata.get('transcript', '')) > 4000:
+            raise ValueError('Provide a voice name up to 256 characters and transcript up to 4000 characters.')
         tags = metadata.get('tags', [])
         if not isinstance(tags, list) or len(tags) > 12 or any(not isinstance(t, str) or len(t) > 32 for t in tags):
             raise ValueError('Use up to 12 tags, each up to 32 characters.')
@@ -159,6 +159,11 @@ class VoiceStore:
         with self.lock:
             old = self.resolve(identity)
             merged = {**old, **metadata}
+            if audio is not None and '_openai_type' not in metadata:
+                # A replacement recording has its own provenance. Do not label
+                # uploaded audio as the original prompt-generated resource.
+                for key in ('_openai_type', 'prompt', 'consent'):
+                    merged.pop(key, None)
             return self.commit([(merged, audio, True, assets or {})])[merged['name'].strip()]
 
     def delete(self, identity):

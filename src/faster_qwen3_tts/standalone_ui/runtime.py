@@ -64,7 +64,7 @@ class GenerationRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
     language: str = 'English'
     speaker: str = 'Ryan'
-    instruct: str = Field(default='', max_length=1500)
+    instruct: str = Field(default='', max_length=2000)
     ref_text: str = Field(default='', max_length=4000)
     xvec_only: bool = False
     non_streaming_mode: bool | None = None

@@ -24,6 +24,7 @@ import soundfile as sf
 
 from . import audio
 from .magic_takes import MAGIC_TAKE_MEDIA_TYPE, pack_magic_take_bundle
+from .openai_voices import attach_openai_voices, voice_object
 from .runtime import InferenceQueueFull, LANGUAGES, MODELS, SPEAKERS
 from .speech import (CUSTOM, MODEL_ALIASES, NATIVE_LANGUAGES, VOICE_ALIASES,
                      SpeechRequest, SpeechService, capabilities, start_worker)
@@ -37,7 +38,7 @@ class OpenAISpeechRequest(BaseModel):
     model: str
     input: str = Field(min_length=1, max_length=4096)
     voice: str | dict[str, str]
-    instructions: str | None = Field(default=None, max_length=1500)
+    instructions: str | None = Field(default=None, max_length=2000)
     response_format: Literal['mp3', 'opus', 'aac', 'flac', 'wav', 'pcm', 'ogg'] = 'mp3'
     speed: float = Field(default=1, ge=.25, le=4)
     stream_format: Literal['audio'] = 'audio'
@@ -344,7 +345,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     @router.get('/v1/')
     def index():
         return {'object': 'api', 'name': 'Qwen3-TTS Studio',
-                'endpoints': ['/v1/models', '/v1/audio/voices', '/v1/audio/speech']}
+                'endpoints': ['/v1/models', '/v1/audio/voices', '/v1/audio/voice_consents', '/v1/audio/speech']}
 
     def model_payload(identity):
         return {'id': identity, 'object': 'model', 'created': 0, 'owned_by': 'qwen',
@@ -366,7 +367,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
     def openai_voices():
         data = [{'id': s, 'object': 'voice', 'owned_by': 'qwen', 'language': NATIVE_LANGUAGES[s]} for s in SPEAKERS]
         data += [{'id': alias, 'object': 'voice', 'owned_by': 'hangry-labs', 'maps_to': speaker} for alias, speaker in VOICE_ALIASES.items()]
-        data += [{'id': v['id'], 'name': v['name'], 'object': 'voice', 'owned_by': 'local'} for v in store.list()]
+        data += [{**voice_object(v), 'object': 'voice', 'owned_by': 'local'} for v in store.list()]
         return {'object': 'list', 'data': data}
 
     @router.post('/v1/audio/speech')
@@ -507,6 +508,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
 
     from .profile_api import attach_profiles
     profile_list = attach_profiles(router, store, canonical_audio)
+    app.state.voice_consents = attach_openai_voices(router, store, canonical_audio, prepare_generation, complete)
 
     @router.post('/tts/transcribe-upload')
     async def transcribe_upload(reference_audio: UploadFile = File(...)):

@@ -46,7 +46,7 @@ class SpeechRequest(BaseModel):
     voice: str = 'Ryan'
     voice_profile: str | None = None
     language: str = 'English'
-    instruct: str = Field(default='', max_length=1500, validation_alias=AliasChoices('instruct', 'control', 'instructions'))
+    instruct: str = Field(default='', max_length=2000, validation_alias=AliasChoices('instruct', 'control', 'instructions'))
     ref_text: str = Field(default='', max_length=4000)
     ref_audio: str | None = Field(default=None, max_length=2048)
     xvec_only: bool = False
@@ -128,8 +128,8 @@ def design_description(definition):
     result = '. '.join(parts)
     if not result:
         raise ValueError(f"Voice definition '{definition.name}' needs a description or design attributes.")
-    if len(result) > 1500:
-        raise ValueError('Combined voice description exceeds 1500 characters.')
+    if len(result) > 2000:
+        raise ValueError('Combined voice description exceeds 2000 characters.')
     return result
 
 

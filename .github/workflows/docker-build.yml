@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       commit: ${{ steps.source.outputs.commit }}
     steps:
@@ -55,7 +55,7 @@ jobs:
   build:
     needs: validate
     if: github.event_name != 'pull_request' && github.repository == 'hangry-labs/faster-qwen3-tts-studio'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     concurrency:
       group: qwen3-tts-container-publication
@@ -77,16 +77,16 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
           docker system prune -af
           df -h
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           buildkitd-config: .github/buildkitd.toml
       - name: Log in to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -98,7 +98,7 @@ jobs:
           INPUT_PUSH_LATEST: ${{ inputs.push_latest }}
         run: python3 scripts/ci_images.py --check-existing
       - name: Validate the NVIDIA runtime on CPU before publication
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: checks
@@ -106,7 +106,7 @@ jobs:
           push: false
       - name: Build and publish the full image
         id: baked
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: baked
@@ -121,7 +121,7 @@ jobs:
             IMAGE_VERSION=${{ steps.images.outputs.image_version }}
       - name: Build and publish the tiny image
         id: tiny
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: tiny
@@ -140,18 +140,20 @@ jobs:
           TINY_DIGEST: ${{ steps.tiny.outputs.digest }}
         run: python3 scripts/ci_images.py --verify
       - name: Export runtime notices and pinned model manifest
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: evidence
           platforms: linux/amd64
           outputs: type=local,dest=.ci-build/evidence
       - name: Retain build and publication evidence
-        if: always()
+        if: always() && steps.images.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: container-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: .ci-build/
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 30
       - name: Report disk usage
         if: always()

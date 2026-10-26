@@ -16,7 +16,8 @@ Model checkpoints remain separate, pinned Hugging Face assets.
 
 Exact machine-readable revisions ship in
 [`upstreams.toml`](../src/faster_qwen3_tts/upstreams.toml). They record the last
-incorporated source, not a claim that we continually track a moving branch.
+incorporated branch baselines, not a claim that we continually
+track a moving branch.
 
 The compatibility branch contains the official base plus three commits:
 

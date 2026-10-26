@@ -5,15 +5,67 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+import soundfile as sf
 import torch
 from transformers import MimiConfig, MimiModel
 
 import faster_qwen3_tts
 import qwen_tts
-from qwen_tts import Qwen3TTSTokenizer
+from qwen_tts import Qwen3TTSModel, Qwen3TTSTokenizer
 from qwen_tts._transformers_compat import restore_mimi_full_attention, restore_rope_buffers
 from qwen_tts.core.models.configuration_qwen3_tts import Qwen3TTSTalkerConfig
 from qwen_tts.core.models.modeling_qwen3_tts import Qwen3TTSRotaryEmbedding
+
+
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+@pytest.mark.parametrize('sample_rate', [16000, 48000])
+def test_normalize_audio_stereo_tuple_downmixes_without_changing_input(dtype, sample_rate):
+    stereo = np.array([[.75, .25], [-1, 1], [.125, .375]], dtype=dtype)
+    original = stereo.copy()
+    stereo.setflags(write=False)
+    model = object.__new__(Qwen3TTSModel)
+
+    normalized = model._normalize_audio_inputs((stereo, sample_rate))
+
+    assert len(normalized) == 1
+    mono, rate = normalized[0]
+    np.testing.assert_array_equal(mono, np.array([.5, 0, .25], dtype=np.float32))
+    assert mono.shape == (3,) and mono.dtype == np.float32
+    assert rate == sample_rate
+    np.testing.assert_array_equal(stereo, original)
+
+
+@pytest.mark.parametrize('dtype', [np.float32, np.float64])
+def test_normalize_audio_mono_tuple_preserves_samples_and_rate(dtype):
+    waveform = np.array([.5, -.25, 0], dtype=dtype)
+    original = waveform.copy()
+    model = object.__new__(Qwen3TTSModel)
+
+    [(mono, rate)] = model._normalize_audio_inputs((waveform, 22050))
+
+    np.testing.assert_array_equal(mono, original)
+    assert mono.dtype == np.float32 and rate == 22050
+    np.testing.assert_array_equal(waveform, original)
+
+
+def test_normalize_audio_mixed_list_keeps_order_and_file_loading(tmp_path):
+    mono = np.array([.125, -.25, .5], dtype=np.float32)
+    stereo = np.array([[.75, .25], [-1, 1], [.125, .375]], dtype=np.float32)
+    stereo_original = stereo.copy()
+    file_path = tmp_path / 'stereo.wav'
+    sf.write(file_path, stereo, 22050, subtype='FLOAT')
+    inputs = [(mono, 16000), str(file_path), (stereo, 48000)]
+    model = object.__new__(Qwen3TTSModel)
+
+    normalized = model._normalize_audio_inputs(inputs)
+
+    assert len(normalized) == 3
+    assert [rate for _, rate in normalized] == [16000, 22050, 48000]
+    for (waveform, _), expected in zip(normalized, [mono, [.5, 0, .25], [.5, 0, .25]]):
+        np.testing.assert_array_equal(waveform, np.asarray(expected, dtype=np.float32))
+        assert waveform.ndim == 1 and waveform.dtype == np.float32
+    assert inputs[0][0] is mono and inputs[2][0] is stereo
+    np.testing.assert_array_equal(stereo, stereo_original)
 
 
 def test_both_packages_belong_to_our_installed_distribution():

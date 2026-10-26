@@ -1,4 +1,4 @@
-# Last incorporated revisions, not automatically downloaded build inputs.
+# Incorporated upstream branch baselines, not downloaded build inputs.
 [[upstreams]]
 id = "qwen3-tts"
 repository = "https://github.com/QwenLM/Qwen3-TTS"

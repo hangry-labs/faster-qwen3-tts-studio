@@ -360,6 +360,8 @@ The first Hangry Labs Studio development version. Python distributions use the
 PEP 440 version `1.0.dev0`. This snapshot name does not create a stable release
 or change the rolling Docker image tags.
 
+- Fix stereo waveform/sample-rate tuple inputs in the local Qwen Python cloning
+  interface while preserving mono inputs and the original sample rate.
 - Simplify full/tiny Docker Quick Starts to one command, move source builds into
   the development guide and add the Studio screenshot to all README languages.
 - Add six complete interface locales and translated README introductions. Switch

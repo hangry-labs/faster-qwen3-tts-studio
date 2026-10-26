@@ -1022,5 +1022,7 @@
   "text:Inference failed": "La inferencia falló",
   "text:Recording ready": "Grabación lista",
   "text:The client stopped this request": "El cliente detuvo esta solicitud",
-  "text:Preparing the selected voice": "Preparando la voz elegida"
+  "text:Preparing the selected voice": "Preparando la voz elegida",
+  "decoder.contextLabel": "Contexto del decodificador (fotogramas)",
+  "decoder.contextHelp": "Solo audio en streaming. Más contexto puede mejorar la continuidad entre fragmentos, con más trabajo de decodificación y memoria. Predeterminado: 25."
 }

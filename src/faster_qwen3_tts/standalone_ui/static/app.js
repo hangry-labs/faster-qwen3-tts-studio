@@ -224,7 +224,7 @@ function requestOptions() {
     ref_text: $('#reference-text').value.trim(), xvec_only: $('#clone-method').value === 'true',
     non_streaming_mode: $('#text-feed').value === 'true', temperature: Number($('#temperature').value),
     top_k: Number($('#top-k').value), repetition_penalty: Number($('#repetition').value),
-    chunk_size: Number($('#chunk-size').value), max_new_tokens: Number($('#max-tokens').value),
+    decoder_context_frames: Number($('#decoder-context').value), chunk_size: Number($('#chunk-size').value), max_new_tokens: Number($('#max-tokens').value),
     seed: $('#random-seed').checked ? null : Number($('#seed').value) }
 }
 
@@ -435,7 +435,7 @@ async function refineVoice(profile) {
     if (settings.model) state.models[mode] = settings.model
     await activateTab(mode)
     for (const [key, id] of Object.entries({ language: 'language', temperature: 'temperature', top_k: 'top-k',
-      repetition_penalty: 'repetition', chunk_size: 'chunk-size', max_new_tokens: 'max-tokens' })) {
+      decoder_context_frames: 'decoder-context', repetition_penalty: 'repetition', chunk_size: 'chunk-size', max_new_tokens: 'max-tokens' })) {
       if (settings[key] != null) { $('#' + id).value = settings[key]; $('#' + id).dispatchEvent(new Event('input', { bubbles: true })) }
     }
     $(`#text-${mode}`).value = settings.text || profile.ref_text || ''
@@ -534,6 +534,7 @@ $$('[data-number]').forEach((slider) => {
 $('#random-seed').addEventListener('change', () => { $('#seed').disabled = $('#random-seed').checked })
 $('#reset-controls').addEventListener('click', () => {
   for (const [id, value] of [['temperature',.9],['top-k',50],['repetition',1.05]]) { $('#' + id).value = value; $(`[data-number="${id}"]`).value = value }
+  $('#decoder-context').value = String(state.capabilities.decoder_context_frames.default); $('#decoder-context-slider').value = $('#decoder-context').value
   $('#chunk-size').value = '8'; $('#chunk-size-slider').value = '8'; updateChunkHelp(); $('#max-tokens').value = '360'
   $('#text-feed').value = String(state.capabilities.workflow_defaults[state.mode].non_streaming_mode)
   state.textFeed[state.mode] = $('#text-feed').value === 'true'
@@ -637,6 +638,10 @@ async function initialize() {
   for (const [mode, defaults] of Object.entries(capabilities.workflow_defaults)) state.textFeed[mode] = defaults.non_streaming_mode
   $('#clone-method').value = String(capabilities.workflow_defaults.clone.xvec_only)
   for (const id of ['chunk-size', 'chunk-size-slider']) { $('#' + id).min = capabilities.chunk_size.min; $('#' + id).max = capabilities.chunk_size.max }
+  for (const element of document.querySelectorAll('#decoder-context, #decoder-context-slider, [data-generation-proxy="context"]')) {
+    element.min = capabilities.decoder_context_frames.min; element.max = capabilities.decoder_context_frames.max
+    element.value = capabilities.decoder_context_frames.default
+  }
   updateChunkHelp()
   selectOptions($('#language'), capabilities.languages, 'English')
   selectOptions($('#voice-language'), capabilities.languages, 'English')

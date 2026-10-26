@@ -29,6 +29,7 @@ from .runtime import GenerationRequest, LANGUAGES, MODELS, SPEAKERS, StudioEngin
 from .profiles import VoiceStore, public_profile
 from .model_policy import ModelPolicy
 from .reference_inputs import ReferenceInputs
+from ..streaming_config import DEFAULT_DECODER_CONTEXT_FRAMES, MAX_DECODER_CONTEXT_FRAMES
 from faster_qwen3_tts import __version__
 
 ROOT = Path(__file__).resolve().parent
@@ -150,6 +151,8 @@ def create_app(engine=None, data_root: Path | None = None):
                 'input_types': ['text', 'ssml', 'ssml-h'], 'openai': True, 'magic': True,
                 'max_text_chars': 1000, 'max_upload_bytes': MAX_UPLOAD,
                 'chunk_size': {'min': 1, 'max': 64, 'default': 8},
+                'decoder_context_frames': {'min': 1, 'max': MAX_DECODER_CONTEXT_FRAMES,
+                    'default': DEFAULT_DECODER_CONTEXT_FRAMES, 'streaming_only': True},
                 'workflow_defaults': {mode: {'non_streaming_mode': mode != 'clone',
                     'model': choice['model'], **({'xvec_only': False} if mode == 'clone' else {})}
                     for mode, choice in settings['model_policy']['workflows'].items()},

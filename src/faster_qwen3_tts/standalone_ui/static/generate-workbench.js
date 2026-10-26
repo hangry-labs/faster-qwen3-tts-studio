@@ -322,7 +322,7 @@ export class GenerateWorkbench {
         this.drafts.replace(savedMode, settings.text); $('#text-custom').value = settings.text; this.count()
       }
       for (const [key, id] of Object.entries({ temperature: 'temperature', top_k: 'top-k', repetition_penalty: 'repetition',
-        chunk_size: 'chunk-size', max_new_tokens: 'max-tokens', output_format: 'output-format', speed: 'speech-speed', language: 'language', instruct: 'custom-instruct' })) {
+        decoder_context_frames: 'decoder-context', chunk_size: 'chunk-size', max_new_tokens: 'max-tokens', output_format: 'output-format', speed: 'speech-speed', language: 'language', instruct: 'custom-instruct' })) {
         if (settings[key] !== undefined) { $('#' + id).value = settings[key]; $('#' + id).dispatchEvent(new Event('input', { bubbles: true })) }
       }
       $('#random-seed').checked = settings.seed == null

@@ -362,6 +362,8 @@ or change the rolling Docker image tags.
 
 - Fix stereo waveform/sample-rate tuple inputs in the local Qwen Python cloning
   interface while preserving mono inputs and the original sample rate.
+- Expose bounded streaming decoder context in all three voice modes, the UI and
+  speech APIs; retain the 25-frame default and add a paired 25/100-frame benchmark.
 - Simplify full/tiny Docker Quick Starts to one command, move source builds into
   the development guide and add the Studio screenshot to all README languages.
 - Add six complete interface locales and translated README introductions. Switch

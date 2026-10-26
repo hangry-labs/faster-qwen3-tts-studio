@@ -75,6 +75,11 @@ dispatch overhead. Streaming yields codec chunks and decodes with left context
 to reduce boundary artifacts. It uses the same checkpoints as ordinary Qwen
 generation; it is not a separately trained model.
 
+All three Python streaming methods accept `decoder_context_frames=25`, bounded
+to 1–200 frames. It changes the codec's acoustic lookback, not generated token
+sampling. Larger contexts increase repeated waveform decoding work and may
+improve chunk continuity. The UI and native/OpenAI APIs expose the same control.
+
 ## Validation
 
 Docker's `checks` target runs CPU regressions without network access, including

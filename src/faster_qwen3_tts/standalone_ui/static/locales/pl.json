@@ -1022,5 +1022,7 @@
   "text:Inference failed": "Inferencja nie powiodła się",
   "text:Recording ready": "Nagranie gotowe",
   "text:The client stopped this request": "Klient zatrzymał to żądanie",
-  "text:Preparing the selected voice": "Przygotowywanie wybranego głosu"
+  "text:Preparing the selected voice": "Przygotowywanie wybranego głosu",
+  "decoder.contextLabel": "Kontekst dekodera (ramki)",
+  "decoder.contextHelp": "Tylko dźwięk strumieniowy. Większy kontekst może poprawić płynność między fragmentami, ale wymaga więcej dekodowania i pamięci. Domyślnie: 25."
 }

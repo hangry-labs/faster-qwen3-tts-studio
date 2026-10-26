@@ -15,6 +15,7 @@ import numpy as np
 from pydantic import BaseModel, Field, model_validator
 
 from .model_catalog import MODELS
+from ..streaming_config import DEFAULT_DECODER_CONTEXT_FRAMES, MAX_DECODER_CONTEXT_FRAMES
 
 
 LANGUAGES = ['Auto', 'Chinese', 'English', 'Japanese', 'Korean', 'German', 'French',
@@ -71,6 +72,8 @@ class GenerationRequest(BaseModel):
     top_k: int = Field(default=50, ge=1, le=200)
     repetition_penalty: float = Field(default=1.05, ge=1, le=2)
     chunk_size: int = Field(default=8, ge=1, le=64)
+    decoder_context_frames: int = Field(default=DEFAULT_DECODER_CONTEXT_FRAMES, strict=True,
+                                       ge=1, le=MAX_DECODER_CONTEXT_FRAMES)
     max_new_tokens: int = Field(default=360, ge=24, le=600)
     seed: int | None = Field(default=None, ge=0, le=4294967295)
 
@@ -385,6 +388,7 @@ class StudioEngine:
 
             if streaming:
                 kwargs['chunk_size'] = request.chunk_size
+                kwargs['decoder_context_frames'] = request.decoder_context_frames
                 generator = getattr(self.model, method + '_streaming')(**kwargs)
                 first_audio_ms = None
                 duration = 0.0

@@ -80,6 +80,25 @@ def test_request_progress_is_scoped_and_keeps_metrics(api):
     assert client.get('/tts/activity').json()['state'] == 'idle'
 
 
+@pytest.mark.parametrize('context', [True, 0, 201, 25.5])
+def test_decoder_context_invalid_requests_never_reach_inference(api, context):
+    client, engine, _ = api
+    assert client.post('/tts/stream', json={'text': 'Test', 'decoder_context_frames': context}).status_code == 422
+    assert client.post('/v1/audio/speech', json={'model': 'tts-1', 'input': 'Test', 'voice': 'Ryan',
+        'decoder_context_frames': context}).status_code == 400
+    assert not engine.requests
+
+
+def test_native_stream_and_capabilities_expose_decoder_context(api):
+    client, engine, _ = api
+    limits = client.get('/studio/capabilities').json()['decoder_context_frames']
+    assert limits == {'min': 1, 'max': 200, 'default': 25, 'streaming_only': True}
+    assert client.get('/tts/defaults').json()['decoder_context_frames'] == 25
+    assert client.post('/tts/stream', json={'text': 'Test', 'stream_format': 'pcm',
+        'decoder_context_frames': 100}).status_code == 200
+    assert engine.requests[0][0].decoder_context_frames == 100
+
+
 def test_finishing_controls_process_audio_and_shape_pitch_speed(api):
     client, engine, _ = api
     time_axis = np.arange(audio.RATE, dtype=np.float32) / audio.RATE
@@ -131,12 +150,13 @@ def test_openai_extensions_reach_the_same_native_controls(api):
     client, engine, _ = api
     response = client.post('/v1/audio/speech', json={'model': 'qwen3-tts', 'input': 'Hello', 'voice': 'Ryan',
         'response_format': 'wav', 'temperature': .7, 'top_k': 31, 'repetition_penalty': 1.2,
-        'chunk_size': 3, 'max_new_tokens': 120, 'non_streaming_mode': False,
+        'chunk_size': 3, 'decoder_context_frames': 100, 'max_new_tokens': 120, 'non_streaming_mode': False,
         'protect_long_audio': False, 'seed': 42, 'randomize_seed': False})
     assert response.status_code == 200, response.text
     request = engine.requests[-1][0]
     assert request.seed == 42 and request.temperature == .7 and request.top_k == 31
     assert request.chunk_size == 3 and request.max_new_tokens == 120
+    assert request.decoder_context_frames == 100
     assert not request.non_streaming_mode and request.repetition_penalty == 1.2
 
 

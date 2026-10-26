@@ -74,6 +74,18 @@ Add `--plan` for a fully offline, model-free plan instead. `task benchmark-test`
 runs synthetic transport, planning, statistics, reporting and isolation tests.
 CPU runtime adapter tests also run in the Docker checks target.
 
+For an isolated streaming decoder-context comparison, stop the Studio to free
+resident model memory and run `task benchmark-decoder-context`, then restart it.
+This uses the selected product `IMAGE`, cached weights mounted read-only and no
+network. It compares 25 and 100 frames in counterbalanced fresh processes with
+warmed models, across all five checkpoints and three prompts. Each run writes
+raw JSON, audio examples and an automatically generated `RESULTS.md` beneath
+`benchmark-artifacts/decoder-context/`. Optional Task arguments include
+`-- -Models 0.6B-CustomVoice -Repeats 2`. This is a decoder-control experiment,
+separate from the canonical speed/memory baseline history.
+The [first paired context results](streaming/DECODER_CONTEXT_RESULTS.md) retain
+25 frames as the default after speed, memory and transcript checks.
+
 The baseline defaults to the `faster` engine and the two 0.6B checkpoints,
 two short prompts repeated five times per language for CustomVoice/VoiceDesign,
 and one clone paragraph repeated three times per language for each Base model.

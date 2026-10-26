@@ -1022,5 +1022,7 @@
   "text:Inference failed": "Inferens mislyktes",
   "text:Recording ready": "Opptak klart",
   "text:The client stopped this request": "Klienten stoppet forespørselen",
-  "text:Preparing the selected voice": "Klargjør valgt stemme"
+  "text:Preparing the selected voice": "Klargjør valgt stemme",
+  "decoder.contextLabel": "Dekoderkontekst (rammer)",
+  "decoder.contextHelp": "Kun strømmelyd. Mer kontekst kan gi jevnere overganger, men krever mer dekoding og minne. Standard: 25."
 }

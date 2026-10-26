@@ -255,7 +255,13 @@ tasks:
     desc: Check benchmark planning, transport, statistics and isolation without GPU inference
     dir: '{{.TASKFILE_DIR}}'
     cmds:
-      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_benchmarks.py tests/test_queue_comparison.py tests/test_sustained_queue.py -q -p no:cacheprovider
+      - uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_benchmarks.py tests/test_queue_comparison.py tests/test_sustained_queue.py tests/test_decoder_context_benchmark.py -q -p no:cacheprovider
+
+  benchmark-decoder-context:
+    desc: Compare warmed streaming context 25 vs 100 across cached checkpoints (Studio must be stopped)
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/benchmark_decoder_context.ps1 {{.CLI_ARGS}}
 
   package:
     desc: Build local Python artifacts and verify their metadata and notices

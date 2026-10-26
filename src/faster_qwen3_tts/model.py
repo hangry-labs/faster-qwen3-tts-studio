@@ -20,6 +20,7 @@ import soundfile as sf
 import torch
 
 from .utils import suppress_flash_attn_warning
+from .streaming_config import DEFAULT_DECODER_CONTEXT_FRAMES, validate_decoder_context_frames
 
 logger = logging.getLogger(__name__)
 
@@ -988,6 +989,7 @@ class FasterQwen3TTS:
         parity_mode: bool = False,
         instruct: Optional[str] = None,
         voice_clone_prompt: Optional[Union[Dict[str, Any], List[Any]]] = None,
+        decoder_context_frames: int = DEFAULT_DECODER_CONTEXT_FRAMES,
     ) -> Generator[Tuple[np.ndarray, int, dict], None, None]:
         """
         Stream voice-cloned speech generation, yielding audio chunks.
@@ -1028,6 +1030,7 @@ class FasterQwen3TTS:
         Yields:
             Tuple of (audio_chunk_numpy, sample_rate, timing_dict)
         """
+        context_frames = validate_decoder_context_frames(decoder_context_frames)
         from .streaming import fast_generate_streaming, parity_generate_streaming
 
         non_streaming_mode = self._resolve_non_streaming_mode(
@@ -1051,9 +1054,8 @@ class FasterQwen3TTS:
 
         # Hybrid decode strategy:
         # 1. Accumulated decode for early chunks (correct, calibrates samples_per_frame)
-        # 2. Sliding window with 25-frame left context once calibrated (constant cost)
+        # 2. Sliding window with bounded left context once calibrated (constant cost)
         # This avoids boundary artifacts (pops) while keeping decode cost bounded.
-        context_frames = 25
         min_calibration_frames = max(context_frames, chunk_size)
         all_codes = []
         prev_gen_audio_len = 0  # tracks position within the generated (non-ref) audio
@@ -1244,7 +1246,9 @@ class FasterQwen3TTS:
         do_sample: bool = True,
         repetition_penalty: float = 1.05,
         chunk_size: int = 12,
+        decoder_context_frames: int = DEFAULT_DECODER_CONTEXT_FRAMES,
     ) -> Generator[Tuple[np.ndarray, int, dict], None, None]:
+        context_frames = validate_decoder_context_frames(decoder_context_frames)
         if self.model.model.tts_model_type != "custom_voice":
             raise ValueError("Loaded model does not support custom voice generation")
 
@@ -1271,7 +1275,6 @@ class FasterQwen3TTS:
 
         speech_tokenizer = m.speech_tokenizer
 
-        context_frames = 25
         min_calibration_frames = max(context_frames, chunk_size)
         all_codes = []
         prev_audio_len = 0
@@ -1431,7 +1434,9 @@ class FasterQwen3TTS:
         do_sample: bool = True,
         repetition_penalty: float = 1.05,
         chunk_size: int = 12,
+        decoder_context_frames: int = DEFAULT_DECODER_CONTEXT_FRAMES,
     ) -> Generator[Tuple[np.ndarray, int, dict], None, None]:
+        context_frames = validate_decoder_context_frames(decoder_context_frames)
         if self.model.model.tts_model_type != "voice_design":
             raise ValueError("Loaded model does not support voice design generation")
 
@@ -1454,7 +1459,6 @@ class FasterQwen3TTS:
 
         speech_tokenizer = m.speech_tokenizer
 
-        context_frames = 25
         min_calibration_frames = max(context_frames, chunk_size)
         all_codes = []
         prev_audio_len = 0

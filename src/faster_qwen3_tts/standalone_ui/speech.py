@@ -21,6 +21,7 @@ from . import audio
 from .profiles import VoiceStore
 from .runtime import GenerationIncomplete, GenerationRequest, LANGUAGES, MODELS, SPEAKERS, start_request_thread
 from .text_planning import split_text
+from ..streaming_config import DEFAULT_DECODER_CONTEXT_FRAMES, MAX_DECODER_CONTEXT_FRAMES
 
 CUSTOM = 'Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice'
 DIRECTED = 'Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice'
@@ -54,6 +55,8 @@ class SpeechRequest(BaseModel):
     top_k: int = Field(default=50, ge=1, le=200)
     repetition_penalty: float = Field(default=1.05, ge=1, le=2)
     chunk_size: int = Field(default=8, ge=1, le=64)
+    decoder_context_frames: int = Field(default=DEFAULT_DECODER_CONTEXT_FRAMES, strict=True,
+                                       ge=1, le=MAX_DECODER_CONTEXT_FRAMES)
     max_new_tokens: int = Field(default=360, ge=24, le=600)
     seed: int | None = Field(default=None, ge=0, le=2**32-1)
     randomize_seed: bool | None = None
@@ -253,6 +256,7 @@ class SpeechService:
             xvec_only=request.xvec_only or (binding.mode == 'clone' and not binding.transcript.strip()),
             non_streaming_mode=request.non_streaming_mode, temperature=request.temperature, top_k=request.top_k,
             repetition_penalty=request.repetition_penalty, chunk_size=request.chunk_size,
+            decoder_context_frames=request.decoder_context_frames,
             max_new_tokens=request.max_new_tokens, seed=seed)
 
     def inspect(self, prepared):

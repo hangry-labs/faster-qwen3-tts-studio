@@ -29,6 +29,9 @@ from .speech import (CUSTOM, MODEL_ALIASES, NATIVE_LANGUAGES, VOICE_ALIASES,
                      SpeechRequest, SpeechService, capabilities, start_worker)
 
 
+from ..streaming_config import DEFAULT_DECODER_CONTEXT_FRAMES, MAX_DECODER_CONTEXT_FRAMES
+
+
 class OpenAISpeechRequest(BaseModel):
     model_config = ConfigDict(extra='ignore', allow_inf_nan=False)
     model: str
@@ -49,6 +52,8 @@ class OpenAISpeechRequest(BaseModel):
     top_k: int = Field(default=50, ge=1, le=200)
     repetition_penalty: float = Field(default=1.05, ge=1, le=2)
     chunk_size: int = Field(default=8, ge=1, le=64)
+    decoder_context_frames: int = Field(default=DEFAULT_DECODER_CONTEXT_FRAMES, strict=True,
+                                       ge=1, le=MAX_DECODER_CONTEXT_FRAMES)
     max_new_tokens: int = Field(default=360, ge=24, le=600)
     non_streaming_mode: bool | None = None
     xvec_only: bool = False

@@ -46,7 +46,7 @@ are not implemented. `input` is always plain text; use native routes for markup.
 
 Optional extensions include `language`, `seed`, `randomize_seed`, `voice_profile`,
 `normalize_loudness`, `protect_long_audio`, `temperature`, `top_k`,
-`repetition_penalty`, `chunk_size`, `max_new_tokens`, `non_streaming_mode`
+`repetition_penalty`, `chunk_size`, `decoder_context_frames`, `max_new_tokens`, `non_streaming_mode`
 and `xvec_only`. They use the same validation and controls as native requests.
 Unknown harmless OpenAI fields are ignored. Unsupported formats, voices,
 models and conditioning combinations return OpenAI-shaped error objects.
@@ -91,6 +91,14 @@ are `temperature`, `top_k`, `repetition_penalty`, `seed`, `max_new_tokens`,
 `chunk_size` and `non_streaming_mode`. The last field controls Qwen text input,
 independently of response streaming. Qwen does not have VoxCPM diffusion steps,
 guidance, denoising or continuation controls; native unknown fields fail clearly.
+
+`decoder_context_frames` controls how many preceding codec frames are reused
+when reconstructing streamed audio. It accepts integers from 1 to 200 and defaults
+to 25 in every voice mode. Larger windows may improve continuity but require more
+decoder work and memory. It is independent of chunk size, sampling and text
+conditioning, and has no effect on complete waveform generation. Use it on native
+streaming routes or as an OpenAI extension with a progressive format such as PCM
+or MP3; OpenAI WAV/FLAC responses use complete generation.
 
 For uploaded cloning, send multipart `payload` JSON and `reference_audio` to
 `/tts/generate-upload` or `/tts/stream-upload`. Set `mode="clone"`, `ref_text`

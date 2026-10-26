@@ -2,7 +2,7 @@ import { msg } from './i18n.js'
 // Shared VoxCPMTTS menu behavior, mapped to Qwen's actual sampling controls.
 const CONTROL_IDS = {
   temperature: 'temperature', topK: 'top-k', repetition: 'repetition',
-  chunk: 'chunk-size', tokens: 'max-tokens', feed: 'text-feed', speed: 'speech-speed',
+  context: 'decoder-context', chunk: 'chunk-size', tokens: 'max-tokens', feed: 'text-feed', speed: 'speech-speed',
   seed: 'seed',
   randomize: 'random-seed',
   protect: 'protect-long',

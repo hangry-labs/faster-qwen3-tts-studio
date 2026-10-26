@@ -95,6 +95,7 @@ explicit instruction to persist a designed voice after successful generation.
 See [SSML-H](SSML-H.md) for exact semantics and [API](API.md) for endpoint contracts.
 
 Generation settings include temperature, top K, repetition penalty, chunk size,
+streaming decoder context (1–200 frames, default 25),
 maximum audio length, optional seed, and whole-text/incremental-text delivery.
 Text delivery controls model input; streaming controls browser playback. These
 are independent settings. The audio editor supports playback, volume, speed,

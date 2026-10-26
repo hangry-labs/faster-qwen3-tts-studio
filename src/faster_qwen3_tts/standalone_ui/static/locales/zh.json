@@ -1022,5 +1022,7 @@
   "text:Inference failed": "推理失败",
   "text:Recording ready": "录音已就绪",
   "text:The client stopped this request": "客户端已停止此请求",
-  "text:Preparing the selected voice": "正在准备所选声音"
+  "text:Preparing the selected voice": "正在准备所选声音",
+  "decoder.contextLabel": "解码器上下文（帧）",
+  "decoder.contextHelp": "仅用于流式音频。增加上下文可能改善音频块之间的连续性，但会增加解码计算和内存开销。默认值：25。"
 }

@@ -146,7 +146,7 @@ def test_invalid_capabilities_fail_before_inference(studio, overrides):
 def test_all_voice_workflows_reach_the_engine(studio, mode, streaming):
     client, engine = studio
     options = config(mode, temperature=.8, top_k=30, repetition_penalty=1.1,
-                     non_streaming_mode=False, chunk_size=4, seed=123)
+                     non_streaming_mode=False, chunk_size=4, decoder_context_frames=100, seed=123)
     if mode == 'design':
         options['instruct'] = 'A gentle, clear narrator.'
     files = {'reference': ('voice.wav', audio(), 'audio/wav')} if mode == 'clone' else None
@@ -156,6 +156,7 @@ def test_all_voice_workflows_reach_the_engine(studio, mode, streaming):
     request, reference, streamed = engine.requests[0]
     assert request.mode == mode and request.temperature == .8 and request.top_k == 30
     assert request.seed == 123 and request.chunk_size == 4 and not request.non_streaming_mode
+    assert request.decoder_context_frames == 100
     assert streamed is streaming
     assert bool(reference) is (mode == 'clone')
     if streaming:

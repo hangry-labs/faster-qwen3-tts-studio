@@ -65,7 +65,7 @@ def test_public_api_exposes_voice_clone_prompt_parameter():
     assert list(sig_clone.parameters).index("max_new_tokens") == 5
     assert list(sig_stream.parameters).index("max_new_tokens") == 5
     assert list(sig_clone.parameters)[-1] == "voice_clone_prompt"
-    assert list(sig_stream.parameters)[-1] == "voice_clone_prompt"
+    assert list(sig_stream.parameters)[-1] == "decoder_context_frames"
     assert sig_clone.parameters["xvec_only"].default is False
     assert sig_clone.parameters["non_streaming_mode"].default is None
     assert sig_stream.parameters["xvec_only"].default is False

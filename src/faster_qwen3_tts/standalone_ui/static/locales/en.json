@@ -1022,5 +1022,7 @@
   "text:Inference failed": "Inference failed",
   "text:Recording ready": "Recording ready",
   "text:The client stopped this request": "The client stopped this request",
-  "text:Preparing the selected voice": "Preparing the selected voice"
+  "text:Preparing the selected voice": "Preparing the selected voice",
+  "decoder.contextLabel": "Decoder context (frames)",
+  "decoder.contextHelp": "Streaming audio only. More context may improve chunk continuity, with more decoding work and memory. Default: 25."
 }

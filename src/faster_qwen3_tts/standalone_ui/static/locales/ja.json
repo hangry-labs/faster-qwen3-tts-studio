@@ -1022,5 +1022,7 @@
   "text:Inference failed": "推論に失敗しました",
   "text:Recording ready": "録音の準備完了",
   "text:The client stopped this request": "クライアントがこのリクエストを停止しました",
-  "text:Preparing the selected voice": "選択した声を準備中"
+  "text:Preparing the selected voice": "選択した声を準備中",
+  "decoder.contextLabel": "デコーダーコンテキスト（フレーム）",
+  "decoder.contextHelp": "ストリーミング音声のみ。コンテキストを増やすとチャンク間の連続性が改善する場合がありますが、デコード処理とメモリ使用量が増えます。既定値：25。"
 }

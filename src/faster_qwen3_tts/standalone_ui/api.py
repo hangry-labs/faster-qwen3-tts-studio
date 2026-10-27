@@ -211,7 +211,7 @@ def attach_api(app, *, engine, store, canonical_audio, transcribe):
         if request.url.path == '/v1' or request.url.path.startswith('/v1/'):
             key = os.getenv('QWEN_STUDIO_API_KEY', '').strip()
             scheme, _, provided = request.headers.get('authorization', '').partition(' ')
-            if key and (scheme.lower() != 'bearer' or not hmac.compare_digest(provided, key)):
+            if key and (scheme.lower() != 'bearer' or not hmac.compare_digest(provided.encode('utf-8'), key.encode('utf-8'))):
                 return error_payload('Incorrect API key provided.', 401)
         return await call_next(request)
 

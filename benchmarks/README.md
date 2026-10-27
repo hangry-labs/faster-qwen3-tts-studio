@@ -1,7 +1,6 @@
 # Hangry Labs Qwen benchmark suite
 
-Manual, Docker-first benchmarks adapted from
-[VoxCPMTTS](https://github.com/hangry-labs/VoxCPMTTS). They measure speed, GPU
+Manual, Docker-first benchmarks measure speed, GPU
 memory and transcript fidelity separately. The [first 0.6B baseline](BASELINE_RESULTS.md)
 completed 310 measured requests with one checkpoint loaded at a time.
 The [1.7B baseline](BASELINE_1.7B_RESULTS.md) adds 510 requests across CustomVoice,

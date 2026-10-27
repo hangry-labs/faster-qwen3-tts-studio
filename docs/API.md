@@ -36,8 +36,9 @@ with client.audio.speech.with_streaming_response.create(
 `GET /v1/models` lists the five actual checkpoints. `GET /v1/models/{id}` also
 accepts the routing aliases `qwen3-tts`, `faster-qwen3-tts`, `tts-1`, `tts-1-hd`
 and `gpt-4o-mini-tts`. These aliases select Qwen workflows, not OpenAI models.
-With an alias, a saved voice selects 0.6B Base; native voice instructions select
-1.7B CustomVoice; otherwise native voices select 0.6B CustomVoice. An explicit
+With an alias, saved voices use the Clone workflow default and built-in speakers
+use the Generate workflow default from System. Both initially select 0.6B models;
+delivery instructions automatically select 1.7B CustomVoice when needed. An explicit
 Qwen checkpoint must match the requested workflow and supported instructions.
 
 `GET /v1/audio/voices` lists native speakers, compatibility aliases and saved
@@ -130,6 +131,11 @@ Set `QWEN_STUDIO_API_KEY` to require a Bearer key on `/v1` routes. This does
 not authenticate the browser, native API or System routes; use a trusted bind
 address or an authenticated reverse proxy for the whole Studio.
 
+Browser requests that change state must come from the same service host. This
+blocks cross-site form submissions to the local service. Direct API clients
+without an `Origin` header remain supported; MCP uses its own configured
+host/origin validation.
+
 ## Native synthesis
 
 ```bash
@@ -165,8 +171,8 @@ See the [processor profile](SSML-H.md). `instruct`, `control` and `instructions`
 are equivalent names for a default delivery/voice description. Sampling controls
 are `temperature`, `top_k`, `repetition_penalty`, `seed`, `max_new_tokens`,
 `chunk_size` and `non_streaming_mode`. The last field controls Qwen text input,
-independently of response streaming. Qwen does not have VoxCPM diffusion steps,
-guidance, denoising or continuation controls; native unknown fields fail clearly.
+independently of response streaming. The native schemas list the supported
+controls; unknown native fields fail clearly.
 
 `decoder_context_frames` controls how many preceding codec frames are reused
 when reconstructing streamed audio. It accepts integers from 1 to 200 and defaults

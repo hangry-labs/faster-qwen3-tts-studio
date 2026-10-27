@@ -14,6 +14,7 @@ recursive-include src *.py *.toml *.html *.css *.js *.json LICENSE *.woff2 *.web
 recursive-include scripts *.py *.ps1
 recursive-include tests *.py *.ps1
 recursive-include tests/ui *.mjs
+include site/theme/assets/hangry-pages/i18n.mjs
 recursive-include benchmarks *.py
 recursive-include benchmarks *.json *.md Dockerfile
 recursive-include assets *.webp

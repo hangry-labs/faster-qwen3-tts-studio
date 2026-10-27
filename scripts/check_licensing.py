@@ -94,7 +94,7 @@ def check_artifact(path: Path) -> list[str]:
         parts = PurePosixPath(name).parts
         internal_docs = any(parts[index:index + 2] == ('docs', 'internal')
                             for index in range(len(parts) - 1))
-        if internal_docs or any(part in {".ai", ".idea", "AGENTS.md"} for part in parts):
+        if internal_docs or any(part in {".ai", ".idea", "AGENTS.md", "UPSTREAM_ISSUES.md", "UPSTREAM_PULL_REQUESTS.md"} for part in parts):
             errors.append(f"Private material in distribution: {name}")
         if name.lower().endswith((".wav", ".mp3", ".safetensors", ".gguf")):
             errors.append(f"Unqualified media/model payload in Python distribution: {name}")

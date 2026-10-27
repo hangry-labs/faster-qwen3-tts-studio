@@ -14,9 +14,10 @@ accepts arriving text and returns PCM audio on `/tts/live` with 1.7B Base, using
 and saved-voice library as the Studio. Full-reference cloning includes the saved
 reference transcript; speaker-only conditioning is also selectable.
 
-Open **Examples** in the Studio or visit `http://localhost:7860/examples/` to
-listen to the included multilingual gallery and download its voice recipes.
-Its artwork, player and generated audio are bundled for offline use.
+[Listen to voice examples](https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/?lang=en)
+on the project website. Open **Examples** in the Studio for the included offline
+gallery and downloadable voice recipes. Its artwork, player and generated audio
+are bundled with the image.
 
 The interface supports English, Norwegian Bokmål, Polish, Japanese, Simplified
 Chinese and Spanish. Change interface language without discarding browser work.
@@ -27,6 +28,7 @@ on Docker Hub and GHCR. Versioned tags follow stable Git releases.
 
 ## Project Links
 
+- [Project website and documentation](https://hangry-labs.github.io/faster-qwen3-tts-studio/)
 - [GitHub repository and README](https://github.com/hangry-labs/faster-qwen3-tts-studio)
 - Read the introduction in [Norsk bokmål](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.nb.md), [Polski](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.pl.md), [日本語](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.ja.md), [简体中文](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.zh.md) or [Español](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.es.md).
 - [Studio guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/STUDIO.md)
@@ -134,6 +136,8 @@ The example binds HTTP to this computer only. There is no account system.
 `QWEN_STUDIO_API_KEY` optionally protects `/v1` with a Bearer key, but the native
 and browser routes remain unauthenticated. Use trusted network controls if exposing
 the port elsewhere. Recording requires localhost or HTTPS and browser permission.
+Browser writes are restricted to the service host; direct API clients remain
+supported without an `Origin` header.
 
 ## API Example
 
@@ -207,8 +211,9 @@ Streaming adaptations and the VoxCPMTTS-based UI retain their source notices.
 
 The Python distribution is `MIT AND Apache-2.0`. Models and runtime dependencies
 retain separate terms; a root permissive license does not replace those terms.
-The development image still needs exact dependency, native-component and
-corresponding-source qualification before release distribution.
+Images retain runtime component notices under `/app/licenses/runtime`.
+Redistribution must also meet the applicable native-component and
+corresponding-source requirements described in the licensing guide.
 
 See [NOTICE](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/NOTICE),
 [Third-Party Notices](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/THIRD_PARTY_NOTICES.md)

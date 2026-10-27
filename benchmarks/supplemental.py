@@ -222,7 +222,7 @@ def render(data, args):
                     f"{comparison['matching_outputs']}/{comparison['compared_outputs']}", profile['queued']['peak_queued'], profile['passed']])
     headers = ['Run', 'Engine', 'Checkpoint'] + (['Input', 'Passed', 'Rounds', 'Complete tails', 'Mean similarity %', 'Median RTF']
         if args.suite == 'ssml' else ['Workload', 'Clients', 'Rounds', 'Sequential s', 'Queued s', 'Throughput change %', 'Identical WAVs', 'Peak queue', 'Pass'])
-    note = ('The same ten turns and final-tail checks as VoxCPMTTS; fixed Ryan/Aiden voices. Delivery directions are used only on capable checkpoints; each profile records this scope. ASR is a comparative judge.'
+    note = ('Ten-turn dialogues with final-tail checks and fixed Ryan/Aiden voices. Delivery directions are used only on capable checkpoints; each profile records this scope. ASR is a comparative judge.'
         if args.suite == 'ssml' else 'One GPU worker; alternate batch order each round. Queued latency includes waiting time. A throughput change is not a claim that FIFO accelerates model inference.')
     write(args.reports / ('ssml' if args.suite == 'ssml' else 'inference_queue') / 'BENCHMARKS.md', lines + [note, '', *table(headers, rows), ''])
     details = ['# ' + args.suite + ' details', '', 'Latest run: ' + data['latest']['run_id'], '']

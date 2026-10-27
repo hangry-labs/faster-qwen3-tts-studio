@@ -312,8 +312,8 @@ moving inputs. See [development tasks](docs/DEVELOPMENT.md).
 <details markdown="1">
 <summary><strong>Measured baselines, benchmark commands and engine reference</strong></summary>
 
-The [manual benchmark suite](benchmarks/README.md) follows VoxCPMTTS's speed,
-GPU-memory, transcript-quality, queue and SSML methodology, with separate
+The [manual benchmark suite](benchmarks/README.md) measures speed,
+GPU memory, transcript quality, queue throughput and SSML reliability, with separate
 Qwen checkpoints and streaming latency measurements. Start with
 `task benchmark-build`, `task benchmark-preflight` and `task benchmark-plan`;
 these do not run GPU inference. Controlled runs require an isolated GPU and the
@@ -372,6 +372,12 @@ The first Hangry Labs Studio development version. Python distributions use the
 PEP 440 version `1.0.dev0`. This snapshot name does not create a stable release
 or change the rolling Docker image tags.
 
+- Block unrelated browser origins from triggering state-changing HTTP requests
+  while preserving same-host Studio access and direct API clients.
+- Return an authentication error for malformed non-ASCII Bearer tokens instead
+  of an internal server error.
+- Keep shipped website tests self-contained in the Python source archive and
+  strengthen distribution content checks.
 - Fix stereo waveform/sample-rate tuple inputs in the local Qwen Python cloning
   interface while preserving mono inputs and the original sample rate.
 - Add a bounded text-in/audio-out WebSocket API for saved-voice cloning, including

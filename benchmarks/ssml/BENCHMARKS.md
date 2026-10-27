@@ -1,6 +1,6 @@
 # SSML dialogue reliability
 
-The same ten turns and final-tail checks as VoxCPMTTS; fixed Ryan/Aiden voices. Delivery directions are used only on capable checkpoints; each profile records this scope. ASR is a comparative judge.
+Ten-turn dialogues with final-tail checks and fixed Ryan/Aiden voices. Delivery directions are used only on capable checkpoints; each profile records this scope. ASR is a comparative judge.
 
 | Run | Engine | Checkpoint | Input | Passed | Rounds | Complete tails | Mean similarity % | Median RTF |
 |---|---|---|---|---|---|---|---|---|

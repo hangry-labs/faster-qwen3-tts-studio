@@ -43,6 +43,17 @@ class LicensingTests(unittest.TestCase):
                     archive.writestr("package-1.dist-info/licenses/" + name, (ROOT / name).read_text(encoding="utf-8"))
             self.assertEqual([], check_artifact(wheel))
 
+    def test_private_upstream_ledgers_are_rejected_in_artifacts(self):
+        for name in ('UPSTREAM_ISSUES.md', 'UPSTREAM_PULL_REQUESTS.md'):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as folder:
+                wheel = Path(folder) / 'bad.whl'
+                with zipfile.ZipFile(wheel, 'w') as archive:
+                    archive.writestr('package-1.dist-info/METADATA', 'License-Expression: MIT AND Apache-2.0\n')
+                    for notice in ('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md'):
+                        archive.writestr('package-1.dist-info/licenses/'+notice, (ROOT/notice).read_bytes())
+                    archive.writestr(name, 'Private triage')
+                self.assertEqual(['Private material in distribution: '+name], check_artifact(wheel))
+
     def test_internal_document_is_rejected_in_otherwise_valid_artifacts(self):
         with tempfile.TemporaryDirectory() as folder:
             wheel = Path(folder) / 'package.whl'

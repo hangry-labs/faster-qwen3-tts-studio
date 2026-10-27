@@ -4,7 +4,7 @@ The normative [SSML-H 1.0 specification](https://hangrylabs.app/ns/ssml-h/1.0)
 is maintained in [ssml-h-spec](https://github.com/hangry-labs/ssml-h-spec).
 This document describes this processor's supported subset. SSML-H is a Hangry
 Labs extension to W3C SSML 1.1, not a W3C standard or a claim of full conformance.
-The implementation uses `ssml-h-tools==0.3.1`, shared with VoxCPMTTS.
+The implementation uses `ssml-h-tools==0.3.1`.
 
 Choose `input_type="ssml"` or `"ssml-h"` explicitly on native API routes. Text
 mode and OpenAI input never auto-detect markup. Compile with `/tts/plan` or

@@ -72,8 +72,9 @@ build/linking choices and modifications. An external FFmpeg process does not
 automatically relicense independent application source or generated audio;
 an MIT root license also does not remove GPL/LGPL distribution obligations.
 
-Core dependencies and the Python base digest are pinned, but apt and the
-transitive Python tree are not a complete artifact lock. Review the exact
+Python runtime distributions are version- and hash-locked in
+`requirements.runtime.txt`, and the Python base image is pinned by digest.
+Debian apt inputs remain moving dependencies. Review the exact
 distributed payload and its original terms. See
 [container builds](RELEASING.md) and [Third-Party Notices](../THIRD_PARTY_NOTICES.md).
 

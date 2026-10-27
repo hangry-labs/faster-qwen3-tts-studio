@@ -16,8 +16,8 @@ languages remain the same; Norwegian and Polish are interface translations only.
 Example buttons use the selected speech language, or English when Auto is selected.
 Changing interface language never translates user text, voice names, saved scripts
 or protocol/model identifiers. Language switching is paused during generation.
-It adapts the VoxCPMTTS shell, audio editor, recording controls, and GPU monitor
-to Qwen's generation capabilities. It replaces the upstream demo.
+The Studio combines an audio editor, recording controls and GPU monitoring
+with Qwen's generation workflows.
 
 ```powershell
 task init

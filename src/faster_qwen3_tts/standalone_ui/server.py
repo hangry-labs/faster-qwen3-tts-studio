@@ -16,9 +16,10 @@ import re
 import subprocess
 import tempfile
 import threading
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 import httpx
 import numpy as np
@@ -41,6 +42,29 @@ if not GALLERY.is_dir():
     GALLERY = Path(__file__).resolve().parents[3] / 'examples'
 MAX_UPLOAD = 10 * 1024 * 1024
 LOG = logging.getLogger(__name__)
+
+
+def browser_write_allowed(origin: str | None, host: str) -> bool:
+    """Keep browser writes on the service host; ordinary API clients omit Origin.
+
+    Compare authorities so HTTPS termination at a reverse proxy remains usable.
+    MCP has its own configured host/origin validation and is checked separately.
+    """
+    if origin is None:
+        return True
+    try:
+        source, target = urlsplit(origin), urlsplit('//'+host)
+        if source.scheme not in {'http', 'https'} or not source.hostname or not target.hostname:
+            return False
+        if source.username or source.password or source.path not in {'', '/'} or source.query or source.fragment:
+            return False
+        default_port = 443 if source.scheme == 'https' else 80
+        return (source.hostname.casefold() == target.hostname.casefold() and
+                (source.port or default_port) == (target.port or default_port))
+    except ValueError:
+        return False
+
+
 UI_LOCALES = (
     {'code': 'en', 'name': 'English', 'path': '/en', 'direction': 'ltr', 'browserLanguage': 'en-US'},
     {'code': 'nb', 'name': 'Norsk bokmål', 'path': '/nb', 'direction': 'ltr', 'browserLanguage': 'nb-NO'},
@@ -113,6 +137,18 @@ def create_app(engine=None, data_root: Path | None = None):
 
     @app.middleware('http')
     async def no_cache(request, call_next):
+        mcp_request = request.url.path == '/mcp' or request.url.path.startswith('/mcp/')
+        if (request.method not in {'GET', 'HEAD', 'OPTIONS'} and
+                not mcp_request and
+                not browser_write_allowed(request.headers.get('origin'), request.headers.get('host', ''))):
+            message = 'Browser writes must originate from the same service host.'
+            if request.url.path == '/v1' or request.url.path.startswith('/v1/'):
+                from .api import error_payload
+                response = error_payload(message, 403)
+            else:
+                response = JSONResponse({'detail': message}, status_code=403)
+            response.headers['Cache-Control'] = 'no-store'
+            return response
         response = await call_next(request)
         response.headers['Cache-Control'] = 'no-store'
         return response

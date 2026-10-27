@@ -167,6 +167,16 @@ def test_openai_unknown_route_uses_compatible_error_envelope(api):
     assert response.json()['error']['type'] == 'invalid_request_error'
 
 
+def test_non_ascii_bearer_token_returns_auth_error_instead_of_server_error(api, monkeypatch):
+    monkeypatch.setenv('QWEN_STUDIO_API_KEY', 'test-key')
+    client, engine, _ = api
+    response = client.get('/v1/models', headers={b'Authorization': b'Bearer \xff'})
+    assert response.status_code == 401
+    assert response.json()['error']['type'] == 'authentication_error'
+    assert response.headers['WWW-Authenticate'] == 'Bearer'
+    assert not engine.requests
+
+
 def test_openai_auth_errors_and_discovery(api, monkeypatch):
     client, engine, _ = api
     monkeypatch.setenv('QWEN_STUDIO_API_KEY', 'unit-test-key')

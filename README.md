@@ -8,7 +8,7 @@
 
 # Hangry Labs Faster Qwen3-TTS Studio
 
-Source release **v1.0**. See the [version history](#version-history).
+Development version **v1.1-snapshot**. See the [version history](#version-history).
 
 Local Qwen3-TTS voice design, voice cloning and speech generation in a Docker
 Studio with a browser UI, streaming playback, HTTP APIs and a live WebSocket API.
@@ -362,6 +362,17 @@ and settings involved. Remove tokens, private recordings and personal informatio
 before sharing logs.
 
 ## Version History
+
+<details markdown="1">
+<summary><strong>v1.1-snapshot development notes</strong></summary>
+
+### v1.1-snapshot
+
+Development version after `v1.0`. Rolling `latest` and `latest_tiny` tags follow `main`; immutable release tags remain unchanged.
+
+- No changes recorded yet.
+
+</details>
 
 <details markdown="1">
 <summary><strong>v1.0 release notes</strong></summary>

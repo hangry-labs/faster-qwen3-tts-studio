@@ -128,7 +128,20 @@ def test_local_release_creates_annotated_tag_and_next_snapshot_without_pushing(t
     remote = tmp_path / 'remote.git'
     git('clone', '--bare', '--quiet', str(root), str(remote), cwd=tmp_path)
     git('remote', 'add', 'origin', str(remote))
-    run(root, skip_validation=True)
+    real_run = subprocess.run
+    checks = []
+
+    def release_command(command, *args, **kwargs):
+        if command[0] == 'task':
+            assert tuple(command) == ('task', 'validate'), 'Release must not build packages or images'
+            checks.append(tuple(command))
+            return subprocess.CompletedProcess(command, 0)
+        assert command[0] == 'git', 'Release must not invoke a build tool'
+        return real_run(command, *args, **kwargs)
+
+    with patch('scripts.release.subprocess.run', side_effect=release_command):
+        run(root)
+    assert checks == [('task', 'validate')]
     assert git('cat-file', '-t', 'refs/tags/v1.0') == 'tag'
     assert git('show', 'v1.0:VERSION') == '1.0'
     assert git('show', 'HEAD:VERSION') == '1.1-snapshot'

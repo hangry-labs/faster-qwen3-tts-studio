@@ -135,7 +135,8 @@ remain separate work requiring appropriate model assets.
 It promotes `VERSION`, Python package/runtime versions and README history, creates
 an annotated local release tag, then commits the next development snapshot.
 `NEXT_VERSION=1.1-snapshot` selects the next snapshot explicitly.
-`SKIP_VALIDATION=1` reuses prior exact-candidate qualification; the default runs
-validation, packaging and checks/full/tiny image builds. This is local preparation:
+The default runs lightweight `task validate` checks without building packages or
+Docker images. `SKIP_VALIDATION=1` reuses those checks when already run. Package
+and image builds belong to development tasks and publishing CI. This is local preparation:
 no push, PyPI upload or registry publication occurs. Publication is a separate
 authorized action through the [container workflow](RELEASING.md).

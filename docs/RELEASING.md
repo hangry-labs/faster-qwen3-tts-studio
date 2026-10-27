@@ -73,12 +73,13 @@ dirty checkout. A real promotion requires clean `main`, synchronized with
 `origin/main`, and an unused stable tag. It creates a local release commit,
 annotated `vX.Y`/`vX.Y.Z` tag and next-snapshot commit. It never pushes or publishes.
 
-Defaults run local checks, package validation and checks/tiny/full image builds.
-Use `NEXT_VERSION=1.1-snapshot` to choose a newer next version. Use
-`SKIP_VALIDATION=1` only when the exact candidate already has the required
-qualification. Build checks do not replace real GPU and model-cache lifecycle
-checks. If promotion stops after a release commit, inspect local refs before
-retrying; do not move a published tag.
+The default runs only lightweight `task validate` checks. Release preparation
+does not build packages or Docker images. Qualify runtime behavior during
+development; GitHub Actions performs package checks and image builds when the
+prepared refs are pushed. Use `NEXT_VERSION=1.1-snapshot` to choose a newer next
+version, or `SKIP_VALIDATION=1` to reuse the lightweight checks when already run.
+If promotion stops after a release commit, inspect local refs before retrying;
+do not move a published tag.
 
 When publication is separately authorized, the prepared refs can be pushed
 atomically with `git push --atomic origin main vX.Y`. The tag workflow builds the

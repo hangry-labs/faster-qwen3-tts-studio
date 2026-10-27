@@ -23,8 +23,7 @@ The interface supports English, Norwegian Bokmål, Polish, Japanese, Simplified
 Chinese and Spanish. Change interface language without discarding browser work.
 Speech language is a separate choice; Qwen supports ten synthesis languages.
 
-**Publication status:** rolling `latest` and `latest_tiny` images are available
-on Docker Hub and GHCR. Versioned tags follow stable Git releases.
+**Publication status:** source release `v1.0` prepares the versioned full/tiny tags. Availability requires a successful publishing workflow and verified registry digests.
 
 ## Project Links
 

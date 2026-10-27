@@ -8,7 +8,7 @@
 
 # Hangry Labs Faster Qwen3-TTS Studio
 
-Development version **v1.0-snapshot**. See the [version history](#version-history).
+Source release **v1.0**. See the [version history](#version-history).
 
 Local Qwen3-TTS voice design, voice cloning and speech generation in a Docker
 Studio with a browser UI, streaming playback, HTTP APIs and a live WebSocket API.
@@ -364,13 +364,11 @@ before sharing logs.
 ## Version History
 
 <details markdown="1">
-<summary><strong>v1.0-snapshot development notes</strong></summary>
+<summary><strong>v1.0 release notes</strong></summary>
 
-### v1.0-snapshot
+### v1.0
 
-The first Hangry Labs Studio development version. Python distributions use the
-PEP 440 version `1.0.dev0`. This snapshot name does not create a stable release
-or change the rolling Docker image tags.
+Source release `v1.0`, Python package `1.0.0`. The source tag triggers container publication. Verify full/tiny registry indexes and add their digest-pinned deployment references before announcing availability.
 
 - Publish matching third-party source images with verified archives, distribution
   patches and build recipes; include bundled-library identities and the Intel

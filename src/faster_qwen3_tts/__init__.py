@@ -3,5 +3,5 @@ faster-qwen3-tts: Hangry Labs Qwen3-TTS inference with NVIDIA CUDA graphs.
 """
 from .model import FasterQwen3TTS
 
-__version__ = "1.0-snapshot"
+__version__ = "1.0"
 __all__ = ["FasterQwen3TTS"]

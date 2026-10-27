@@ -11,7 +11,7 @@ include = ["faster_qwen3_tts*", "qwen_tts*"]
 
 [project]
 name = "faster-qwen3-tts"
-version = "1.0.dev0"
+version = "1.0.0"
 description = "Hangry Labs Qwen3-TTS Studio with local model code and NVIDIA CUDA graph inference"
 readme = "README.md"
 license = "MIT AND Apache-2.0"

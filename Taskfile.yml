@@ -305,7 +305,7 @@ tasks:
       - pwsh -NoProfile -File scripts/check-packages.ps1
 
   release:
-    desc: Promote a snapshot to a local release tag and prepare the next snapshot
+    desc: Run basic checks, tag the release and push it with the next snapshot
     vars:
       NEXT_VERSION: '{{.NEXT_VERSION | default ""}}'
       SKIP_VALIDATION: '{{.SKIP_VALIDATION | default "0"}}'

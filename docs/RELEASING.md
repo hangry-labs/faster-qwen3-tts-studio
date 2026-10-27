@@ -71,7 +71,8 @@ including README history, package/runtime versions and the Docker Hub publicatio
 notice. It does not fetch, build, write files or create refs, and can inspect a
 dirty checkout. A real promotion requires clean `main`, synchronized with
 `origin/main`, and an unused stable tag. It creates a local release commit,
-annotated `vX.Y`/`vX.Y.Z` tag and next-snapshot commit. It never pushes or publishes.
+annotated `vX.Y`/`vX.Y.Z` tag and next-snapshot commit, then atomically pushes
+`main` and the tag to `origin`. The task returns without waiting for image builds.
 
 The default runs only lightweight `task validate` checks. Release preparation
 does not build packages or Docker images. Qualify runtime behavior during
@@ -81,8 +82,10 @@ version, or `SKIP_VALIDATION=1` to reuse the lightweight checks when already run
 If promotion stops after a release commit, inspect local refs before retrying;
 do not move a published tag.
 
-When publication is separately authorized, the prepared refs can be pushed
-atomically with `git push --atomic origin main vX.Y`. The tag workflow builds the
-stable images; `main` builds the next moving snapshot. After registry verification,
-add top-level index digests to README history before announcing availability.
+If the push fails, inspect local and remote refs and retry the exact
+`git push --atomic origin main vX.Y` command printed by the task. Do not rerun the
+version promotion or replace the release tag. The tag workflow builds the stable
+images; `main` builds the next moving snapshot. After the builds finish, verify
+registry indexes and add their digests to the README release notes. Creating and
+locking the GitHub Release is a separate manual step.
 See [development tasks](DEVELOPMENT.md) for other commands.

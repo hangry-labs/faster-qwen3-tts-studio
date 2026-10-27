@@ -1,4 +1,4 @@
-"""Prepare local snapshot/stable Git transitions. Publishing is a separate action."""
+"""Promote a snapshot and push release refs without waiting for publishing CI."""
 from __future__ import annotations
 
 import argparse
@@ -113,7 +113,8 @@ def run(root, *, dry_run=False, next_version='', skip_validation=False, show_dif
     if dirty and not dry_run:
         raise ValueError('The working tree must be clean before a real release.')
     print(json.dumps({**plan, 'dry_run': dry_run, 'working_tree_clean': not bool(dirty),
-                      'changed_files': list(FILES), 'validation': [] if skip_validation else [' '.join(c) for c in VALIDATION]}, indent=2))
+                      'changed_files': list(FILES), 'validation': [] if skip_validation else [' '.join(c) for c in VALIDATION],
+                      'push': 'git push --atomic origin main ' + plan['tag']}, indent=2))
     if show_diff:
         for label, before, after in [('release', original, release), ('next snapshot', release, following)]:
             for file in FILES:
@@ -150,8 +151,16 @@ def run(root, *, dry_run=False, next_version='', skip_validation=False, show_dif
         else:
             print('Promotion stopped after the release commit. Inspect local refs before continuing; no refs were pushed.', file=sys.stderr)
         raise
-    print('Local release and next snapshot prepared. No publication occurred. Publish only when authorized:')
-    print('  git push --atomic origin main ' + plan['tag'])
+    push = ['git', 'push', '--atomic', 'origin', 'main', plan['tag']]
+    try:
+        subprocess.run(push, cwd=root, check=True)
+    except subprocess.CalledProcessError:
+        print('Release refs are prepared locally, but the push did not finish successfully. '
+              'Inspect local and remote refs; do not run task release again. Retry the prepared refs with:', file=sys.stderr)
+        print('  ' + ' '.join(push), file=sys.stderr)
+        raise
+    print('Release tag and next snapshot pushed. GitHub Actions will build and publish the images.')
+    print('This task does not wait for the builds or create/lock a GitHub Release.')
 
 
 if __name__ == '__main__':

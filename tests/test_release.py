@@ -115,7 +115,8 @@ def test_real_release_refuses_dirty_tree_before_mutation(tmp_path):
 
 
 @pytest.mark.skipif(shutil.which('git') is None, reason='Host Git qualification; runtime image intentionally omits Git')
-def test_local_release_creates_annotated_tag_and_next_snapshot_without_pushing(tmp_path):
+@pytest.mark.parametrize('reject_push', [False, True])
+def test_release_pushes_annotated_tag_and_snapshot_with_recoverable_push_failure(tmp_path, capsys, reject_push):
     root = tmp_path / 'checkout'; root.mkdir()
     for name, content in documents().items():
         target = root / name; target.parent.mkdir(parents=True, exist_ok=True); target.write_text(content, encoding='utf-8')
@@ -130,6 +131,7 @@ def test_local_release_creates_annotated_tag_and_next_snapshot_without_pushing(t
     git('remote', 'add', 'origin', str(remote))
     real_run = subprocess.run
     checks = []
+    pushes = []
 
     def release_command(command, *args, **kwargs):
         if command[0] == 'task':
@@ -137,14 +139,31 @@ def test_local_release_creates_annotated_tag_and_next_snapshot_without_pushing(t
             checks.append(tuple(command))
             return subprocess.CompletedProcess(command, 0)
         assert command[0] == 'git', 'Release must not invoke a build tool'
+        if command[1] == 'push':
+            assert command == ['git', 'push', '--atomic', 'origin', 'main', 'v1.0']
+            pushes.append(tuple(command))
+            if reject_push:
+                raise subprocess.CalledProcessError(1, command)
         return real_run(command, *args, **kwargs)
 
     with patch('scripts.release.subprocess.run', side_effect=release_command):
-        run(root)
+        if reject_push:
+            with pytest.raises(subprocess.CalledProcessError):
+                run(root)
+        else:
+            run(root)
     assert checks == [('task', 'validate')]
+    assert len(pushes) == 1
     assert git('cat-file', '-t', 'refs/tags/v1.0') == 'tag'
     assert git('show', 'v1.0:VERSION') == '1.0'
     assert git('show', 'HEAD:VERSION') == '1.1-snapshot'
-    assert git('rev-parse', 'refs/remotes/origin/main') == initial
-    assert git('rev-parse', 'HEAD', cwd=remote) == initial
+    if reject_push:
+        assert git('rev-parse', 'HEAD', cwd=remote) == initial
+        assert git('tag', '--list', 'v1.0', cwd=remote) == ''
+        assert 'do not run task release again' in capsys.readouterr().err
+        # Retrying the exact push requires no new commits or tag replacement.
+        real_run(['git', 'push', '--atomic', 'origin', 'main', 'v1.0'], cwd=root, check=True)
+    assert git('rev-parse', 'HEAD', cwd=remote) == git('rev-parse', 'HEAD')
+    assert git('rev-parse', 'refs/remotes/origin/main') == git('rev-parse', 'HEAD')
+    assert git('rev-parse', 'v1.0^{commit}', cwd=remote) == git('rev-parse', 'v1.0^{commit}')
     assert git('status', '--porcelain') == ''

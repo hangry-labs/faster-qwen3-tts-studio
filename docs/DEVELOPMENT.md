@@ -133,10 +133,11 @@ remain separate work requiring appropriate model assets.
 
 `task release` requires a clean, synchronized `main` and an unused stable version.
 It promotes `VERSION`, Python package/runtime versions and README history, creates
-an annotated local release tag, then commits the next development snapshot.
+an annotated release tag, commits the next development snapshot, then atomically
+pushes `main` and the tag to `origin`.
 `NEXT_VERSION=1.1-snapshot` selects the next snapshot explicitly.
 The default runs lightweight `task validate` checks without building packages or
 Docker images. `SKIP_VALIDATION=1` reuses those checks when already run. Package
-and image builds belong to development tasks and publishing CI. This is local preparation:
-no push, PyPI upload or registry publication occurs. Publication is a separate
-authorized action through the [container workflow](RELEASING.md).
+and image builds belong to development tasks and publishing CI. The task returns
+after pushing; the [container workflow](RELEASING.md) builds and publishes images
+asynchronously. It does not upload to PyPI or create/lock a GitHub Release.

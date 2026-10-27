@@ -14,6 +14,10 @@ accepts arriving text and returns PCM audio on `/tts/live` with 1.7B Base, using
 and saved-voice library as the Studio. Full-reference cloning includes the saved
 reference transcript; speaker-only conditioning is also selectable.
 
+Open **Examples** in the Studio or visit `http://localhost:7860/examples/` to
+listen to the included multilingual gallery and download its voice recipes.
+Its artwork, player and generated audio are bundled for offline use.
+
 The interface supports English, Norwegian Bokmål, Polish, Japanese, Simplified
 Chinese and Spanish. Change interface language without discarding browser work.
 Speech language is a separate choice; Qwen supports ten synthesis languages.

@@ -111,6 +111,22 @@ tasks:
     cmds:
       - uv run --no-project --python 3.13 python scripts/smoke_studio.py --base-url http://127.0.0.1:{{.PORT}} --asr-url "{{.ASR_URL}}" {{.CLI_ARGS}}
 
+  examples:
+    desc: Preview the static audio gallery at http://127.0.0.1:9000 without a GPU
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - uv run --no-project --python 3.13 python -m http.server 9000 --bind 127.0.0.1 --directory examples
+
+  examples-generate:
+    desc: Regenerate gallery audio through the running Studio, reusing completed samples
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - >-
+        docker run --rm --network container:{{.CONTAINER}}
+        --mount "type=bind,source={{.TASKFILE_DIR}},target=/workspace"
+        --workdir /workspace --env PYTHONDONTWRITEBYTECODE=1
+        {{.IMAGE}} python -m scripts.generate_gallery {{.CLI_ARGS}}
+
   validate:
     desc: Run syntax, lightweight tests, and source notice checks
     cmds:

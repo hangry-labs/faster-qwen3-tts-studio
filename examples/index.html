@@ -1,0 +1,85 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0; adapted from Hangry Labs VoxCPMTTS. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hangry Labs Faster Qwen3-TTS Studio Examples</title>
+    <link rel="icon" type="image/webp" href="branding/qwen3_tts_logo.webp">
+    <link rel="stylesheet" href="gallery.css">
+  </head>
+  <body>
+    <canvas id="shapes" aria-hidden="true"></canvas>
+    <main class="page-shell">
+      <section class="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+        <header class="mb-8 pt-0">
+          <div class="hero">
+            <div>
+              <div class="topbar">
+                <a class="brand-lockup" href="https://hangrylabs.app/" target="_blank" rel="noopener noreferrer">
+                  <img class="brand-logo" src="branding/hangrylabs_logo.webp" alt="Hangry Labs logo">
+                  <div>
+                    <div class="brand-name">Hangry Labs</div>
+                    <div class="brand-subtitle">Useful tools, easy to run</div>
+                  </div>
+                </a>
+                <div class="top-actions">
+                  <a class="pill gallery-link" href="https://github.com/hangry-labs/faster-qwen3-tts-studio" target="_blank" rel="noopener noreferrer">GitHub</a>
+                  <a class="pill gallery-link" href="definitions.json" download>Voice recipes JSON</a>
+                  <div class="volume-control" aria-label="Volume control">
+                    <button class="volume-button" type="button" aria-label="Mute audio" data-muted="false">
+                      <svg class="volume-icon-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6.5 15.5H4.75A1.75 1.75 0 013 13.75v-3.5c0-.97.78-1.75 1.75-1.75H6.5l5-4.25v15.5l-5-4.25zM16 8.5a5 5 0 010 7M18.75 6a8.5 8.5 0 010 12"></path>
+                      </svg>
+                      <svg class="volume-icon-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" hidden>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6.5 15.5H4.75A1.75 1.75 0 013 13.75v-3.5c0-.97.78-1.75 1.75-1.75H6.5l5-4.25v15.5l-5-4.25zM17 9.5l4 4M21 9.5l-4 4"></path>
+                      </svg>
+                    </button>
+                    <input class="volume-slider" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Volume">
+                  </div>
+                </div>
+              </div>
+              <h1 class="brand-glow max-w-4xl text-4xl font-extrabold leading-none sm:text-6xl">
+                Qwen3-TTS examples
+              </h1>
+              <p class="mt-5 max-w-3xl text-base leading-7 text-[#ffb076] sm:text-lg">
+                Design a voice, then hear it speak. Explore ten synthetic voices, native-language samples, translated introductions, and cross-language cloning.
+              </p>
+              <div class="mt-5 flex flex-wrap gap-2">
+                <span class="pill px-3 py-1 text-sm font-semibold">10 languages</span>
+                <span class="pill px-3 py-1 text-sm font-semibold">Designed voices</span>
+                <span class="pill px-3 py-1 text-sm font-semibold">10 voices in every language</span>
+                <span class="pill px-3 py-1 text-sm font-semibold">translated intro demos</span>
+                <span class="pill px-3 py-1 text-sm font-semibold">cross-language clone demos</span>
+              </div>
+            </div>
+            <div class="hero-logo-panel" aria-hidden="true">
+              <a class="hero-logo-link" href="./" target="_blank" rel="noopener noreferrer" tabindex="-1">
+                <img class="hero-logo" src="branding/qwen3_tts_logo.webp" alt="">
+              </a>
+              <a class="hero-site-link" href="https://hangrylabs.app/" target="_blank" rel="noopener noreferrer">hangrylabs.app</a>
+            </div>
+          </div>
+        </header>
+
+        <section class="mb-8" aria-label="Featured examples" data-featured-examples hidden></section>
+
+        <section class="mb-4" aria-label="Choose a language">
+          <div class="mb-3 status-strip">
+            <span class="pill px-3 py-2 text-sm font-semibold" data-load-status>Loading examples...</span>
+            <span class="pill px-3 py-2 text-sm font-semibold" data-now-playing role="status" aria-live="polite">Ready</span>
+          </div>
+          <div class="language-filter" data-language-list></div>
+        </section>
+
+        <section class="pb-12" aria-label="Selected language examples" data-language-detail></section>
+        <footer class="gallery-footer">All references are synthetic voices designed with Qwen3-TTS. No third-party speaker recordings are used.
+          <a href="assets/manifest.json" download>Download sample manifest</a> · <a href="README.md">Generation guide</a>
+        </footer>
+      </section>
+    </main>
+    <script src="voices.js"></script>
+    <script src="player.js"></script>
+    <script src="background.js"></script>
+  </body>
+</html>

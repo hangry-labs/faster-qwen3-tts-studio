@@ -524,7 +524,6 @@ $('.app-tabs').addEventListener('keydown', (event) => {
 $('#model').addEventListener('change', updateModelControls)
 $$('textarea[id^=text-]').forEach((input) => input.addEventListener('input', updateCount))
 $$('[data-example]').forEach((button) => button.addEventListener('click', () => example(button.dataset.example)))
-$('#examples-button').addEventListener('click', (event) => { event.preventDefault(); if (!['custom','design','clone'].includes(state.tab)) activateTab('design'); example(state.mode) })
 $('#models-button').addEventListener('click', (event) => { event.preventDefault(); activateTab('system'); $('#policy-model-custom')?.focus() })
 $$('[data-number]').forEach((slider) => {
   const number = $('#' + slider.dataset.number)

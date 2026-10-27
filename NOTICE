@@ -37,8 +37,8 @@ the project is a required runtime dependency.
 
 No endorsement by upstream authors, model providers, or NVIDIA is implied.
 
-The Hangry Labs Studio shell, media components, styles, GPU monitor, Magic
-take bundle, dialogue script storage and adapted API contracts are
+The Hangry Labs Studio shell, example gallery, media components, styles, GPU
+monitor, Magic take bundle, dialogue script storage and adapted API contracts are
 adapted from Hangry Labs VoxCPMTTS (Apache-2.0):
 https://github.com/hangry-labs/VoxCPMTTS
 Qwen-specific workflow, runtime, and API changes are maintained in this project.

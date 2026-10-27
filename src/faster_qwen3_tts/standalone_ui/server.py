@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import io
 import json
 import logging
+import mimetypes
 import os
 from pathlib import Path
 from functools import lru_cache
@@ -33,6 +34,11 @@ from ..streaming_config import DEFAULT_DECODER_CONTEXT_FRAMES, MAX_DECODER_CONTE
 from faster_qwen3_tts import __version__
 
 ROOT = Path(__file__).resolve().parent
+# Gallery .opus files contain Ogg, rather than raw Opus/RTP packets.
+mimetypes.add_type('audio/ogg', '.opus')
+GALLERY = Path('/app/examples')
+if not GALLERY.is_dir():
+    GALLERY = Path(__file__).resolve().parents[3] / 'examples'
 MAX_UPLOAD = 10 * 1024 * 1024
 LOG = logging.getLogger(__name__)
 UI_LOCALES = (
@@ -102,6 +108,8 @@ def create_app(engine=None, data_root: Path | None = None):
     app.state.references = ReferenceInputs(data / 'mcp-input')
     app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')
     app.mount('/assets', StaticFiles(directory=ROOT / 'assets'), name='assets')
+    if (GALLERY / 'index.html').is_file():
+        app.mount('/examples', StaticFiles(directory=GALLERY, html=True), name='examples')
 
     @app.middleware('http')
     async def no_cache(request, call_next):

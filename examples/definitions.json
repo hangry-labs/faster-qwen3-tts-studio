@@ -1,0 +1,829 @@
+{
+  "schema_version": 1,
+  "project_name": "Faster Qwen3-TTS Studio",
+  "models": {
+    "design": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "clone": "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+  },
+  "generation": {
+    "temperature": 0.9,
+    "top_k": 50,
+    "repetition_penalty": 1.05,
+    "max_new_tokens": 600,
+    "chunk_size": 8,
+    "decoder_context_frames": 25
+  },
+  "reference_voice": "warm_female_narrator",
+  "voices": [
+    {
+      "id": "warm_female_narrator",
+      "label": "Warm female narrator",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "A warm adult woman with a rich middle register, gentle breath, clear diction and an inviting storytelling rhythm.",
+        "seed": 7300
+      }
+    },
+    {
+      "id": "calm_male_narrator",
+      "label": "Calm male narrator",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "A calm adult man with a resonant baritone, unhurried phrasing and a reassuring, softly textured voice.",
+        "seed": 7301
+      }
+    },
+    {
+      "id": "bright_female",
+      "label": "Bright female",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "A bright adult woman with a light, lively voice, crisp consonants and a curious, smiling conversational tone.",
+        "seed": 7302
+      }
+    },
+    {
+      "id": "confident_male",
+      "label": "Confident male",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "A confident adult man with a firm middle register, clean articulation and the poised delivery of a documentary presenter.",
+        "seed": 7303
+      }
+    },
+    {
+      "id": "gentle_female",
+      "label": "Gentle female",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "A gentle adult woman with a soft low voice, intimate close-microphone warmth and a relaxed, comforting cadence.",
+        "seed": 7304
+      }
+    },
+    {
+      "id": "clear_male",
+      "label": "Clear male",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "An adult man with a clear tenor voice, precise diction and an engaged, friendly educational presentation style.",
+        "seed": 7305
+      }
+    },
+    {
+      "id": "relaxed_female",
+      "label": "Relaxed female",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "An adult woman with a mellow, slightly husky voice and an easy, natural conversational rhythm.",
+        "seed": 7306
+      }
+    },
+    {
+      "id": "deep_male",
+      "label": "Deep male",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "An older adult man with a deep gravelly bass, smooth measured pacing and the expressive warmth of a fireside storyteller.",
+        "seed": 7307
+      }
+    },
+    {
+      "id": "cheerful_female",
+      "label": "Cheerful female",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "A cheerful adult woman with a buoyant middle-high voice, playful intonation and upbeat but natural energy.",
+        "seed": 7308
+      }
+    },
+    {
+      "id": "balanced_male",
+      "label": "Balanced male",
+      "design": {
+        "language": "English",
+        "text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows.",
+        "instruct": "An adult man with a balanced middle register, lightly textured timbre and a relaxed, thoughtful podcast delivery.",
+        "seed": 7309
+      }
+    }
+  ],
+  "languages": [
+    {
+      "slug": "english",
+      "language": "English",
+      "native_name": "English",
+      "icon": "EN",
+      "intro_text": "Hello, this is Qwen Studio from Hangry Labs. We build local, easy-to-run voice tools so people can create speech privately, offline, and in their own language.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "Hello, this is Qwen Studio from Hangry Labs. We build local, easy-to-run voice tools so people can create speech privately, offline, and in their own language.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "The morning coffee negotiated hard, but eventually agreed to help."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "I put my keys somewhere safe, which was a bold move against myself."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "After the rain stopped, the street looked freshly edited."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "The bakery smell made my detour feel like responsible planning."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "My calendar has jokes; it put Monday right after Sunday again."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "I meant to send a short message and produced a tiny novel."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "At the market, the tomatoes looked more organized than my week."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "The train was late, so everyone became an expert in phone inspection."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "I cleaned my desk and found a pen from an earlier version of my life."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "The evening wind made the whole city sound a little calmer."
+        }
+      ],
+      "reference_text": "The little bookshop was quiet when I arrived. Outside, the rain had stopped, and warm sunlight was finding its way through the windows."
+    },
+    {
+      "slug": "chinese",
+      "language": "Chinese",
+      "native_name": "中文",
+      "icon": "中",
+      "intro_text": "你好，这里是 Hangry Labs 的 Qwen Studio。我们打造本地运行、容易使用的语音工具，让人们可以私密、离线地用自己的语言生成语音。",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "你好，这里是 Hangry Labs 的 Qwen Studio。我们打造本地运行、容易使用的语音工具，让人们可以私密、离线地用自己的语言生成语音。",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "早上的咖啡像个严肃的教练，终于把我叫醒了。"
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "钥匙被我放在安全的地方，安全到连我自己都找不到。"
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "雨刚停，街道像重新打开的一页纸。"
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "菜市场的番茄看起来比我更有周末计划。"
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "日历很有幽默感，又把星期一安排在星期天后面。"
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "我只想写一条短消息，结果写成了一封小论文。"
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "面包刚出炉，回家的路突然变得很短。"
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "整理桌面时，我发现一支比计划还长寿的笔。"
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "地铁稍微晚点，大家就开始认真研究手机屏幕。"
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "夜里的茶壶很安静，但好像什么都明白。"
+        }
+      ],
+      "reference_text": "雨刚停，街道像重新打开的一页纸。 夜里的茶壶很安静，但好像什么都明白。"
+    },
+    {
+      "slug": "japanese",
+      "language": "Japanese",
+      "native_name": "日本語",
+      "icon": "日",
+      "intro_text": "こんにちは、Hangry Labs の Qwen Studio です。私たちはローカルで簡単に動かせる音声ツールを作り、誰もが自分の言語で、プライベートに、オフラインで音声を生成できるようにします。",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "こんにちは、Hangry Labs の Qwen Studio です。私たちはローカルで簡単に動かせる音声ツールを作り、誰もが自分の言語で、プライベートに、オフラインで音声を生成できるようにします。",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "朝のコーヒーは少し渋ったけれど、最後には助けてくれました。"
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "鍵を安全な場所に置いたら、安全すぎて自分でも見つかりません。"
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "雨上がりの道は、新しい一日のページみたいでした。"
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "パン屋の香りで、遠回りが急に正しい判断になりました。"
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "カレンダーは冗談好きで、また日曜日の次に月曜日を置きました。"
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "短いメッセージを書くつもりが、小さな物語になりました。"
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "市場のトマトは、私の予定より整って見えました。"
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "電車が遅れて、みんな真剣にスマートフォンを眺めました。"
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "机を片づけたら、昔の計画から来たようなペンが出てきました。"
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "夕方の風で、街の音が少しやわらぎました。"
+        }
+      ],
+      "reference_text": "雨上がりの道は、新しい一日のページみたいでした。 夕方の風で、街の音が少しやわらぎました。"
+    },
+    {
+      "slug": "korean",
+      "language": "Korean",
+      "native_name": "한국어",
+      "icon": "한",
+      "intro_text": "안녕하세요, Hangry Labs의 Qwen Studio입니다. 우리는 사람들이 자신의 언어로, 개인적으로, 오프라인에서 음성을 만들 수 있도록 로컬에서 쉽게 실행되는 음성 도구를 만듭니다.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "안녕하세요, Hangry Labs의 Qwen Studio입니다. 우리는 사람들이 자신의 언어로, 개인적으로, 오프라인에서 음성을 만들 수 있도록 로컬에서 쉽게 실행되는 음성 도구를 만듭니다.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "아침 커피는 조금 버텼지만 결국 나를 도와주었습니다."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "열쇠를 안전한 곳에 두었더니 너무 안전해서 못 찾겠습니다."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "비가 그친 뒤 거리는 새로 시작하는 하루처럼 보였습니다."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "빵집 냄새 덕분에 돌아가는 길도 합리적인 선택이 되었습니다."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "달력은 농담을 좋아해서 또 일요일 다음에 월요일을 놓았습니다."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "짧은 메시지를 쓰려다 작은 이야기가 되었습니다."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "시장의 토마토가 내 한 주보다 더 잘 정리되어 보였습니다."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "기차가 늦어서 모두 진지하게 휴대폰을 바라보았습니다."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "책상을 정리하다가 오래된 계획 속 펜을 찾았습니다."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "저녁 바람이 도시의 소리를 조금 부드럽게 만들었습니다."
+        }
+      ],
+      "reference_text": "비가 그친 뒤 거리는 새로 시작하는 하루처럼 보였습니다. 저녁 바람이 도시의 소리를 조금 부드럽게 만들었습니다."
+    },
+    {
+      "slug": "german",
+      "language": "German",
+      "native_name": "Deutsch",
+      "icon": "DE",
+      "intro_text": "Hallo, hier ist Qwen Studio von Hangry Labs. Wir bauen lokale, einfach startbare Sprachwerkzeuge, damit Menschen privat, offline und in ihrer eigenen Sprache Sprache erzeugen können.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "Hallo, hier ist Qwen Studio von Hangry Labs. Wir bauen lokale, einfach startbare Sprachwerkzeuge, damit Menschen privat, offline und in ihrer eigenen Sprache Sprache erzeugen können.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "Der Morgenkaffee verhandelte hart, half dann aber doch."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "Ich legte die Schlüssel an einen sicheren Ort, leider zu sicher."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "Nach dem Regen sah die Straße aus wie ein neuer Anfang."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "Der Duft der Bäckerei machte den Umweg völlig vernünftig."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "Mein Kalender hat Humor; Montag kommt wieder direkt nach Sonntag."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "Ich wollte eine kurze Nachricht schreiben und landete bei einem kleinen Roman."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "Auf dem Markt wirkten die Tomaten besser organisiert als meine Woche."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "Der Zug hatte Verspätung, also prüften alle sehr ernst ihre Telefone."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "Ich räumte den Schreibtisch auf und fand einen Stift aus einem alten Plan."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "Der Abendwind machte die Stadt ein wenig freundlicher."
+        }
+      ],
+      "reference_text": "Nach dem Regen sah die Straße aus wie ein neuer Anfang. Der Abendwind machte die Stadt ein wenig freundlicher.",
+      "design_seeds": {
+        "balanced_male": 7719
+      }
+    },
+    {
+      "slug": "french",
+      "language": "French",
+      "native_name": "Français",
+      "icon": "FR",
+      "intro_text": "Bonjour, voici Qwen Studio de Hangry Labs. Nous créons des outils vocaux locaux et faciles à lancer pour permettre de produire de la parole en privé, hors ligne et dans sa propre langue.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "Bonjour, voici Qwen Studio de Hangry Labs. Nous créons des outils vocaux locaux et faciles à lancer pour permettre de produire de la parole en privé, hors ligne et dans sa propre langue.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "Le café du matin a négocié ferme, puis il a accepté de m'aider."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "J'ai rangé mes clés dans un endroit sûr, beaucoup trop sûr."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "Après la pluie, la rue semblait recommencer la journée."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "L'odeur de la boulangerie a rendu mon détour parfaitement raisonnable."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "Mon calendrier plaisante encore; lundi suit toujours dimanche."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "Je voulais écrire un message court et j'ai produit un petit roman."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "Au marché, les tomates semblaient mieux organisées que ma semaine."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "Le train avait du retard, alors chacun a étudié son téléphone avec sérieux."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "J'ai rangé mon bureau et trouvé un stylo venu d'un ancien projet."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "Le vent du soir a rendu la ville un peu plus douce."
+        }
+      ],
+      "reference_text": "Après la pluie, la rue semblait recommencer la journée. Le vent du soir a rendu la ville un peu plus douce."
+    },
+    {
+      "slug": "russian",
+      "language": "Russian",
+      "native_name": "Русский",
+      "icon": "RU",
+      "intro_text": "Здравствуйте, это Qwen Studio от Hangry Labs. Мы создаем локальные и простые в запуске голосовые инструменты, чтобы люди могли создавать речь приватно, офлайн и на своем языке.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "Здравствуйте, это Qwen Studio от Hangry Labs. Мы создаем локальные и простые в запуске голосовые инструменты, чтобы люди могли создавать речь приватно, офлайн и на своем языке.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "Утренний кофе долго торговался, но в итоге согласился помочь."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "Я положил ключи в надежное место, кажется, слишком надежное."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "После дождя улица выглядела как новое начало."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "Запах пекарни сделал обходной путь совершенно разумным."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "У моего календаря есть чувство юмора: понедельник снова после воскресенья."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "Я хотел написать короткое сообщение, а получился маленький рассказ."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "На рынке помидоры выглядели организованнее моей недели."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "Поезд задержался, и все серьезно изучали свои телефоны."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "Я убрал стол и нашел ручку из старого плана."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "Вечерний ветер сделал город немного спокойнее."
+        }
+      ],
+      "reference_text": "После дождя улица выглядела как новое начало. Вечерний ветер сделал город немного спокойнее."
+    },
+    {
+      "slug": "portuguese",
+      "language": "Portuguese",
+      "native_name": "Português",
+      "icon": "PT",
+      "intro_text": "Olá, este é o Qwen Studio da Hangry Labs. Criamos ferramentas de voz locais e fáceis de executar para que as pessoas possam gerar fala com privacidade, offline e no próprio idioma.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "Olá, este é o Qwen Studio da Hangry Labs. Criamos ferramentas de voz locais e fáceis de executar para que as pessoas possam gerar fala com privacidade, offline e no próprio idioma.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "O café da manhã negociou bastante, mas acabou ajudando."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "Guardei as chaves em um lugar seguro, seguro demais."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "Depois da chuva, a rua parecia um novo começo."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "O cheiro da padaria tornou o desvio totalmente razoável."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "Meu calendário tem humor; segunda-feira veio de novo depois de domingo."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "Eu queria escrever uma mensagem curta e saiu uma pequena história."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "Na feira, os tomates pareciam mais organizados que minha semana."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "O trem atrasou, então todos estudaram o celular com seriedade."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "Arrumei a mesa e encontrei uma caneta de um plano antigo."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "O vento da tarde deixou a cidade um pouco mais calma."
+        }
+      ],
+      "reference_text": "Depois da chuva, a rua parecia um novo começo. O vento da tarde deixou a cidade um pouco mais calma."
+    },
+    {
+      "slug": "spanish",
+      "language": "Spanish",
+      "native_name": "Español",
+      "icon": "ES",
+      "intro_text": "Hola, esto es Qwen Studio de Hangry Labs. Creamos herramientas de voz locales y fáciles de ejecutar para que las personas puedan generar habla en privado, sin conexión y en su propio idioma.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "Hola, esto es Qwen Studio de Hangry Labs. Creamos herramientas de voz locales y fáciles de ejecutar para que las personas puedan generar habla en privado, sin conexión y en su propio idioma.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "El café de la mañana negoció duro, pero al final ayudó."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "Guardé las llaves en un lugar seguro, quizá demasiado seguro."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "Después de la lluvia, la calle parecía un nuevo comienzo."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "El olor de la panadería hizo que el desvío pareciera sensato."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "Mi calendario tiene humor; el lunes vuelve justo después del domingo."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "Quise escribir un mensaje corto y salió una pequeña historia."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "En el mercado, los tomates parecían más organizados que mi semana."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "El tren llegó tarde, así que todos estudiaron el teléfono con seriedad."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "Ordené el escritorio y encontré un bolígrafo de un plan antiguo."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "El viento de la tarde hizo que la ciudad sonara más tranquila."
+        }
+      ],
+      "reference_text": "Después de la lluvia, la calle parecía un nuevo comienzo. El viento de la tarde hizo que la ciudad sonara más tranquila."
+    },
+    {
+      "slug": "italian",
+      "language": "Italian",
+      "native_name": "Italiano",
+      "icon": "IT",
+      "intro_text": "Ciao, questo è Qwen Studio di Hangry Labs. Costruiamo strumenti vocali locali e facili da avviare, così le persone possono creare parlato in privato, offline e nella propria lingua.",
+      "intro_voices": [
+        "warm_female_narrator",
+        "confident_male",
+        "relaxed_female"
+      ],
+      "clone_text": "Ciao, questo è Qwen Studio di Hangry Labs. Costruiamo strumenti vocali locali e facili da avviare, così le persone possono creare parlato in privato, offline e nella propria lingua.",
+      "samples": [
+        {
+          "voice": "warm_female_narrator",
+          "seed": 8100,
+          "text": "Il caffè del mattino ha trattato duramente, ma poi ha aiutato."
+        },
+        {
+          "voice": "calm_male_narrator",
+          "seed": 8101,
+          "text": "Ho messo le chiavi in un posto sicuro, forse troppo sicuro."
+        },
+        {
+          "voice": "bright_female",
+          "seed": 8102,
+          "text": "Dopo la pioggia, la strada sembrava un nuovo inizio."
+        },
+        {
+          "voice": "confident_male",
+          "seed": 8103,
+          "text": "Il profumo del forno ha reso la deviazione molto sensata."
+        },
+        {
+          "voice": "gentle_female",
+          "seed": 8104,
+          "text": "Il mio calendario scherza; lunedì arriva ancora dopo domenica."
+        },
+        {
+          "voice": "clear_male",
+          "seed": 8105,
+          "text": "Volevo scrivere un messaggio breve ed è uscito un piccolo romanzo."
+        },
+        {
+          "voice": "relaxed_female",
+          "seed": 8106,
+          "text": "Al mercato, i pomodori sembravano più organizzati della mia settimana."
+        },
+        {
+          "voice": "deep_male",
+          "seed": 8107,
+          "text": "Il treno era in ritardo, quindi tutti hanno studiato il telefono con serietà."
+        },
+        {
+          "voice": "cheerful_female",
+          "seed": 8108,
+          "text": "Ho riordinato la scrivania e trovato una penna di un vecchio piano."
+        },
+        {
+          "voice": "balanced_male",
+          "seed": 8109,
+          "text": "Il vento della sera ha reso la città più calma."
+        }
+      ],
+      "reference_text": "Dopo la pioggia, la strada sembrava un nuovo inizio. Il vento della sera ha reso la città più calma."
+    }
+  ],
+  "clone_options": {
+    "non_streaming_mode": true
+  },
+  "featured": [
+    {
+      "document": "ssml-h/three-designed-voices.ssml",
+      "file": "featured/three-designed-voices.opus",
+      "seed": 9100,
+      "eyebrow": "Designed characters",
+      "title": "Three voices in the voice lab",
+      "description": "A three-character SSML-H scene. Each voice is designed from its description, then reused for its dialogue. Two explicit pauses keep the turns clear.",
+      "label": "Three designed voices dialogue",
+      "badge": "SSML-H",
+      "characters": [
+        {
+          "name": "Lena",
+          "voice": "warm_female_narrator"
+        },
+        {
+          "name": "Orion",
+          "voice": "calm_male_narrator"
+        },
+        {
+          "name": "Pip",
+          "voice": "cheerful_female"
+        }
+      ],
+      "turns": [
+        {
+          "text": "The voice lab is ready. Have we checked the microphone?",
+          "break_after_ms": 300,
+          "character": "Lena"
+        },
+        {
+          "text": "Twice. Even the kettle has promised to stay quiet.",
+          "break_after_ms": 300,
+          "character": "Orion"
+        },
+        {
+          "text": "Perfect. Three different voices, and one very important cup of tea.",
+          "character": "Pip"
+        }
+      ]
+    }
+  ]
+}

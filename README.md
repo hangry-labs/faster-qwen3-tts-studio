@@ -15,6 +15,11 @@ Describe a new voice, turn it into a cloning reference, or generate speech with
 one of Qwen's built-in speakers. This Hangry Labs fork brings those workflows
 together with audio editing, saved voices and NVIDIA GPU controls.
 
+**Listen first:** open the [example gallery](http://localhost:7860/examples/) in
+your running Studio, with ten designed voices across ten languages, shared-voice
+cloning comparisons and downloadable voice recipes. See [the gallery guide](examples/README.md)
+for a static preview and regeneration commands.
+
 ## Quick Start
 
 With Docker, NVIDIA GPU support and a CUDA 12.8-compatible driver installed, run:
@@ -49,6 +54,7 @@ See [building from source](docs/DEVELOPMENT.md#build-from-source) for developmen
 - Reference cloning with 0.6B or 1.7B Base, including optional delivery direction
 - Nine built-in CustomVoice speakers, with style instructions on the 1.7B model
 - Ten languages plus automatic language selection
+- An offline audio example gallery with voice descriptions, reference transcripts and JSON recipes
 - Complete WAV output or incremental browser playback
 - Live text input with simultaneous PCM audio output through a native WebSocket API (1.7B Base)
 - OpenAI-compatible speech in MP3, WAV, FLAC, Opus, AAC, Ogg and PCM
@@ -368,6 +374,10 @@ or change the rolling Docker image tags.
 - Add a bounded text-in/audio-out WebSocket API for saved-voice cloning, including
   reference transcripts, continuous inference, queue sharing and disconnect cleanup.
   Restrict live text input to 1.7B Base for consistent delivery.
+- Add an offline listening gallery with native-language designed references,
+  ten-language speech samples, cross-language cloning and a three-character
+  SSML-H scene. Include editable JSON definitions and downloadable recipes.
+  Encode listening clips as 64 kbps VBR Opus while keeping lossless cloning references.
 - Add OpenAI-compatible saved voice creation/deletion and local consent resources,
   including prompt-based Qwen voice design, over the shared Studio voice library.
 - Expose bounded streaming decoder context in all three voice modes, the UI and

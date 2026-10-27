@@ -32,6 +32,7 @@ RUN python -c "from importlib.metadata import distributions; print('\n'.join(sor
 COPY scripts/collect_runtime_licenses.py ./scripts/
 COPY docs/LICENSING.md docs/UPSTREAMS.md ./docs/
 RUN python scripts/collect_runtime_licenses.py --output /app/licenses/runtime
+COPY examples/ ./examples/
 
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown

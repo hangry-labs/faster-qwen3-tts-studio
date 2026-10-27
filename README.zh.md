@@ -4,7 +4,7 @@
 
 <p align="center"><a href="README.md">English</a> · <a href="README.nb.md">Norsk bokmål</a> · <a href="README.pl.md">Polski</a> · <a href="README.ja.md">日本語</a> · <strong>简体中文</strong> · <a href="README.es.md">Español</a></p>
 
-<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/"><strong>🎧 试听语音示例</strong></a></p>
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/?lang=zh"><strong>🎧 试听语音示例</strong></a></p>
 
 # Hangry Labs Faster Qwen3-TTS Studio
 

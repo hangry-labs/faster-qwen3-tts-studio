@@ -49,6 +49,7 @@ defaults:
     values:
       lang: es
 hangry:
+  languages: [en, nb, pl, ja, zh, es]
   asset_root: /site/theme/assets/hangry-pages
   examples_path: /examples/
   docs_path: /docs/STUDIO.html

@@ -43,6 +43,23 @@ definitions, media and player code remain shared between both presentations.
 Rich pages can set `wide`, `sidebar: false`, `content_class`, `stylesheets` and
 `scripts` in front matter to use the same theme with their own content.
 
+## Languages
+
+`hangry.languages` enables the six website languages. The header remembers the
+choice and keeps it in `?lang=` links between the overview, documentation and
+examples. Each overview uses the actual translated README. Pages without a
+translation keep their original content and show a notice in the selected
+language. Translated content comes from the committed Markdown files.
+
+Add a translated guide alongside its original, for example `docs/API.nb.md`, to
+have it selected automatically for Norwegian. Set `lang: nb` in its front matter
+for the correct language in the initial HTML and metadata. Keep relative links to
+the original guide names; the theme resolves available translations. Use an
+explicit `?lang=en` when a link should always open the English version.
+
+The README examples links open the public website directly with the relevant
+language selected. On a local website preview, those links stay in the preview.
+
 ## Reusing the theme
 
 [`theme/`](theme/) is a self-contained Apache-2.0 Jekyll theme package, containing

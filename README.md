@@ -4,7 +4,7 @@
 
 <p align="center"><strong>English</strong> · <a href="README.nb.md">Norsk bokmål</a> · <a href="README.pl.md">Polski</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh.md">简体中文</a> · <a href="README.es.md">Español</a></p>
 
-<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/"><strong>🎧 Listen to voice examples</strong></a></p>
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/?lang=en"><strong>🎧 Listen to voice examples</strong></a></p>
 
 # Hangry Labs Faster Qwen3-TTS Studio
 
@@ -17,7 +17,7 @@ Describe a new voice, turn it into a cloning reference, or generate speech with
 one of Qwen's built-in speakers. This Hangry Labs fork brings those workflows
 together with audio editing, saved voices and NVIDIA GPU controls.
 
-The [public example gallery](https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/)
+The [public example gallery](https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/?lang=en)
 includes ten designed voices across ten languages, shared-voice
 cloning comparisons and downloadable voice recipes. See [the gallery guide](examples/README.md)
 for a static preview and regeneration commands. The gallery is also available
@@ -383,6 +383,9 @@ or change the rolling Docker image tags.
   Encode listening clips as 64 kbps VBR Opus while keeping lossless cloning references.
 - Present the README and documentation through a reusable Hangry Labs Pages theme,
   with section navigation, command copying and direct access to the listening gallery.
+- Add six-language website navigation, translated README routing and explicit
+  fallback notices for pages without translations. Keep language choices in
+  gallery links and between documentation pages.
 - Add OpenAI-compatible saved voice creation/deletion and local consent resources,
   including prompt-based Qwen voice design, over the shared Studio voice library.
 - Expose bounded streaming decoder context in all three voice modes, the UI and

@@ -1,20 +1,72 @@
 // SPDX-License-Identifier: Apache-2.0. Copyright 2026 Hangry Labs.
+import {LANGUAGE_NAMES, MESSAGES, chooseLanguage, createRouter} from './i18n.mjs';
+
 (() => {
   const content = document.querySelector('#main-content article');
   if (!content) return;
   // README HTML anchors remain useful on GitHub; map them to rendered pages here.
   const pages = JSON.parse(document.querySelector('#hangry-page-map').textContent);
-  const destinations = new Map(Object.entries(pages).map(([source,target]) => [new URL(source,location.origin).pathname,target]));
   const base = document.body.dataset.baseurl || '';
-  for (const anchor of content.querySelectorAll('a[href]')) {
-    const target = new URL(anchor.href,location.href);
-    if (target.origin !== location.origin) continue;
-    if (destinations.has(target.pathname)) {
-      anchor.href = destinations.get(target.pathname)+target.search+target.hash;
-    } else if (document.body.dataset.repository && /\.(?:md|py|ps1|toml|yml|gemspec)$/.test(target.pathname) && target.pathname.startsWith(base+'/')) {
-      anchor.href = document.body.dataset.repository+'/blob/'+document.body.dataset.sourceBranch+'/'+target.pathname.slice(base.length+1)+target.hash;
+  const defaultLanguage = document.body.dataset.defaultLang || 'en';
+  const configured = JSON.parse(document.querySelector('#hangry-language-config').textContent);
+  const languages = Array.isArray(configured) && configured.length ? configured : [defaultLanguage];
+  const router = createRouter(pages,{base,origin:location.origin,siteUrl:document.body.dataset.siteUrl,languages,defaultLanguage});
+  const current = router.bySource.get(document.body.dataset.pagePath);
+  const storageKey = 'hangry-pages-language:'+base;
+  let stored;
+  try { stored = localStorage.getItem(storageKey); } catch { /* Storage can be disabled. */ }
+  let language = chooseLanguage({query:new URL(location.href).searchParams.get('lang'),page:current?.language,stored,languages,defaultLanguage});
+  const text = key => (MESSAGES[language] || MESSAGES.en)[key] || MESSAGES.en[key];
+  const selector = document.querySelector('#site-language');
+
+  function applyLanguage() {
+    const url = new URL(location.href);
+    if (current) {
+      const target = router.resolve(current,language);
+      if (target.path !== location.pathname) {
+        location.replace(router.url(target,language,url));
+        return false;
+      }
+      document.documentElement.lang = current.language;
     }
+    url.searchParams.set('lang',language);
+    history.replaceState(null,'',url);
+    try { localStorage.setItem(storageKey,language); } catch { /* Navigation still works. */ }
+    for (const element of document.querySelectorAll('[data-site-text]')) element.textContent = text(element.dataset.siteText);
+    for (const element of document.querySelectorAll('.site-header,.section-sidebar,.site-footer')) element.lang = language;
+    for (const button of document.querySelectorAll('.copy-code')) { button.textContent = text('copy'); button.setAttribute('aria-label',text('copyCode')); button.lang = language; }
+    for (const table of document.querySelectorAll('.table-scroll')) table.setAttribute('aria-label',text('table'));
+    document.querySelector('.site-navigation').setAttribute('aria-label',text('project'));
+    document.querySelector('#page-sections')?.setAttribute('aria-label',text('sections'));
+    selector.value = language; selector.setAttribute('aria-label',text('language'));
+    const notice = document.querySelector('#translation-notice');
+    notice.hidden = !current || current.language === language;
+    notice.lang = language;
+    notice.textContent = text('fallback').replace('{language}',LANGUAGE_NAMES[current?.language] || current?.language || defaultLanguage);
+    for (const anchor of document.querySelectorAll('.site-navigation a[href], #main-content a[href], .skip-link')) {
+      if (!anchor.dataset.sourceHref) anchor.dataset.sourceHref = anchor.getAttribute('href');
+      const href = anchor.dataset.sourceHref;
+      const target = router.rewrite(href,location.href,language,{explicitOverview:content.contains(anchor)});
+      if (target) {
+        anchor.href = target;
+        if (anchor.closest('.site-navigation')) {
+          const destination = router.byPath.get(target.pathname);
+          if (current?.key === destination?.key) anchor.setAttribute('aria-current','page');
+          else anchor.removeAttribute('aria-current');
+        }
+      } else {
+        const original = new URL(href,location.href);
+        if (original.origin === location.origin && document.body.dataset.repository && /\.(?:md|py|ps1|toml|yml|gemspec)$/.test(original.pathname) && original.pathname.startsWith(base+'/')) {
+          anchor.href = document.body.dataset.repository+'/blob/'+document.body.dataset.sourceBranch+'/'+original.pathname.slice(base.length+1)+original.hash;
+        }
+      }
+    }
+    return true;
   }
+  for (const code of languages) { const option = new Option(LANGUAGE_NAMES[code] || code,code); option.lang = code; selector.append(option); }
+  selector.closest('label').hidden = languages.length < 2;
+  selector.addEventListener('change',() => { language = selector.value; applyLanguage(); });
+  if (!applyLanguage()) return;
   const header = document.querySelector('.site-header');
   const updateHeader = () => document.documentElement.style.setProperty('--header-height', `${header.getBoundingClientRect().height}px`);
   new ResizeObserver(updateHeader).observe(header);
@@ -28,6 +80,7 @@
       const link = document.createElement('a');
       link.href = `#${heading.id}`;
       link.textContent = heading.textContent;
+      link.lang = document.documentElement.lang;
       navigation.append(link);
     }
     if (!headings.length) toc.parentElement.hidden = true;
@@ -61,26 +114,27 @@
   for (const table of content.querySelectorAll('.readme-content table')) {
     const wrapper = document.createElement('div');
     wrapper.className = 'table-scroll'; wrapper.tabIndex = 0;
-    wrapper.setAttribute('role','region'); wrapper.setAttribute('aria-label','Scrollable table');
+    wrapper.setAttribute('role','region'); wrapper.setAttribute('aria-label',text('table'));
     table.before(wrapper); wrapper.append(table);
   }
   for (const pre of content.querySelectorAll('.readme-content pre')) {
     const code = pre.querySelector('code');
     if (!code) continue;
     const button = document.createElement('button');
-    button.className = 'copy-code'; button.type = 'button'; button.textContent = 'Copy';
-    button.setAttribute('aria-label','Copy code');
+    button.className = 'copy-code'; button.type = 'button'; button.textContent = text('copy');
+    button.lang = language;
+    button.setAttribute('aria-label',text('copyCode'));
     button.addEventListener('click',async () => {
       try {
         await navigator.clipboard.writeText(code.textContent);
-        button.textContent = 'Copied';
-        document.querySelector('#copy-status').textContent = 'Code copied to clipboard.';
+        button.textContent = text('copied');
+        document.querySelector('#copy-status').textContent = text('copiedStatus');
       } catch {
         const range = document.createRange(); range.selectNodeContents(code);
         const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range);
-        document.querySelector('#copy-status').textContent = 'Code selected. Use your copy shortcut.';
+        document.querySelector('#copy-status').textContent = text('selectStatus');
       }
-      setTimeout(() => { button.textContent = 'Copy'; },1800);
+      setTimeout(() => { button.textContent = text('copy'); },1800);
     });
     pre.prepend(button);
   }

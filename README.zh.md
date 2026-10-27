@@ -17,7 +17,7 @@
 安装好 Docker、NVIDIA GPU 支持及兼容 CUDA 12.8 的驱动后，只需运行一条命令：
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0@sha256:a8a3643b077e05c2ccf33e9b97978f082d2e89ac33b3d1368ab0e25df628899d
 ```
 
 打开 **[http://localhost:7860](http://localhost:7860)**，即可开始生成语音。完整镜像包含五个固定版本的模型，拉取后可离线运行。模型、已保存的声音和脚本会保留在持久卷中。
@@ -26,7 +26,7 @@ docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0
 <summary><strong>更小的下载：tiny 镜像</strong></summary>
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0_tiny@sha256:29f06b3226da4a55244727e111e7700786e53049a54560efeef4bb12a62bd0bd
 ```
 
 Tiny 会在首次使用时将模型下载到同一持久卷。请保持联网，直至所选模型缓存完成。选择 full 或 tiny 其中一种即可。

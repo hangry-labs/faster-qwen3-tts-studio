@@ -17,7 +17,7 @@ Aktualną wersję, historię zmian i stan publikacji znajdziesz w [głównej dok
 Mając Docker, obsługę GPU NVIDIA i sterownik zgodny z CUDA 12.8, uruchom jedną komendę:
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0@sha256:a8a3643b077e05c2ccf33e9b97978f082d2e89ac33b3d1368ab0e25df628899d
 ```
 
 Otwórz **[http://localhost:7860](http://localhost:7860)** i zacznij generować mowę. Pełny obraz zawiera pięć przypiętych modeli i po pobraniu może działać bez sieci. Wolumin zachowuje modele, zapisane głosy i skrypty.
@@ -26,7 +26,7 @@ Otwórz **[http://localhost:7860](http://localhost:7860)** i zacznij generować 
 <summary><strong>Mniejsze pobieranie: obraz tiny</strong></summary>
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0_tiny@sha256:29f06b3226da4a55244727e111e7700786e53049a54560efeef4bb12a62bd0bd
 ```
 
 Tiny pobiera modele do tego samego woluminu przy pierwszym użyciu. Zachowaj połączenie z siecią do zapisania wybranych modeli. Wybierz full albo tiny.

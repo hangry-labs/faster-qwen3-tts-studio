@@ -28,7 +28,7 @@ offline through the Studio's **Examples** button.
 With Docker, NVIDIA GPU support and a CUDA 12.8-compatible driver installed, run:
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0@sha256:a8a3643b077e05c2ccf33e9b97978f082d2e89ac33b3d1368ab0e25df628899d
 ```
 
 Open **[http://localhost:7860](http://localhost:7860)** and start generating speech.
@@ -39,7 +39,7 @@ the image pull. The named volume preserves models, saved voices and scripts.
 <summary><strong>Smaller download: tiny image</strong></summary>
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0_tiny@sha256:29f06b3226da4a55244727e111e7700786e53049a54560efeef4bb12a62bd0bd
 ```
 
 Tiny downloads models into the same persistent volume on first use. Keep it
@@ -363,24 +363,62 @@ before sharing logs.
 
 ## Version History
 
-<details markdown="1">
+<details open markdown="1">
 <summary><strong>v1.1-snapshot development notes</strong></summary>
 
 ### v1.1-snapshot
 
 Development version after `v1.0`. Rolling `latest` and `latest_tiny` tags follow `main`; immutable release tags remain unchanged.
 
-- No changes recorded yet.
+**Rolling full image**
+
+```bash
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
+```
+
+**Rolling tiny image**
+
+```bash
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+```
+
+- Keep release preparation lightweight: run basic checks, promote versions and
+  atomically push the release tag with the next snapshot. Return without package
+  or image builds, with a safe retry command if the push fails.
+- Render the example guide within the project website. Let documentation without
+  a section sidebar use the full content width, and extend the navigation bar's
+  background across the viewport while keeping its contents centered.
 
 </details>
+
+### v1.0
+
+Published on **2026-10-27** from [source tag `v1.0`](https://github.com/hangry-labs/faster-qwen3-tts-studio/tree/v1.0),
+Python package `1.0.0`. Docker Hub and GHCR expose matching full, tiny and
+corresponding-source OCI indexes.
+
+**Full image**
+
+```bash
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0@sha256:a8a3643b077e05c2ccf33e9b97978f082d2e89ac33b3d1368ab0e25df628899d
+```
+
+**Tiny image**
+
+```bash
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0_tiny@sha256:29f06b3226da4a55244727e111e7700786e53049a54560efeef4bb12a62bd0bd
+```
+
+Matching corresponding sources: `hangrylabs/faster-qwen3-tts-studio:v1.0_sources@sha256:515ff1591aa438af475fb22deebb7b8efd619b6258d5f08ff5f12fb3b82b9831`.
+See [source extraction and rebuilding](docs/LICENSING.md#obtaining-corresponding-source).
+For GHCR, replace `hangrylabs/faster-qwen3-tts-studio` with
+`ghcr.io/hangry-labs/faster-qwen3-tts-studio`; keep the same tag and digest.
 
 <details markdown="1">
 <summary><strong>v1.0 release notes</strong></summary>
 
-### v1.0
-
-Source release `v1.0`, Python package `1.0.0`. The source tag triggers container publication. Verify full/tiny registry indexes and add their digest-pinned deployment references before announcing availability.
-
+- Validate the current-version Python wheel and source archive without including
+  unrelated historical builds left in the output directory.
 - Publish matching third-party source images with verified archives, distribution
   patches and build recipes; include bundled-library identities and the Intel
   oneMKL redistribution notice.

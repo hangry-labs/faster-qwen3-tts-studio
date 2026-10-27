@@ -1,48 +1,27 @@
 <p align="center">
-  <a href="https://hangrylabs.app/">
+  <a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/?lang=en">
     <img src="https://raw.githubusercontent.com/hangry-labs/faster-qwen3-tts-studio/main/src/faster_qwen3_tts/standalone_ui/assets/qwen3_tts_logo_horizontal.webp" alt="Hangry Labs Faster Qwen3-TTS Studio logo" width="900">
   </a>
 </p>
 
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/?lang=en">English</a> · <a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/?lang=nb">Norsk bokmål</a> · <a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/?lang=pl">Polski</a> · <a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/?lang=ja">日本語</a> · <a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/?lang=zh">简体中文</a> · <a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/?lang=es">Español</a></p>
+
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/?lang=en"><strong>🎧 Listen to voice examples</strong></a></p>
+
 # Hangry Labs Faster Qwen3-TTS Studio
 
-Local Qwen3-TTS voice design, reference cloning and speech generation with a
-browser Studio, streaming playback, HTTP APIs and a live WebSocket API.
+Local voice design, reference cloning and expressive speech generation in one
+Docker container, with a browser Studio, streaming audio, OpenAI-compatible APIs
+and optional MCP tools.
 
-The [live speech API](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/LIVE_API.md)
-accepts arriving text and returns PCM audio on `/tts/live` with 1.7B Base, using the same port
-and saved-voice library as the Studio. Full-reference cloning includes the saved
-reference transcript; speaker-only conditioning is also selectable.
-
-[Listen to voice examples](https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/?lang=en)
-on the project website. Open **Examples** in the Studio for the included offline
-gallery and downloadable voice recipes. Its artwork, player and generated audio
-are bundled with the image.
-
-The interface supports English, Norwegian Bokmål, Polish, Japanese, Simplified
-Chinese and Spanish. Change interface language without discarding browser work.
-Speech language is a separate choice; Qwen supports ten synthesis languages.
-
-**Publication status:** source release `v1.0` prepares the versioned full/tiny tags. Availability requires a successful publishing workflow and verified registry digests.
-
-## Project Links
-
-- [Project website and documentation](https://hangry-labs.github.io/faster-qwen3-tts-studio/)
-- [GitHub repository and README](https://github.com/hangry-labs/faster-qwen3-tts-studio)
-- Read the introduction in [Norsk bokmål](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.nb.md), [Polski](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.pl.md), [日本語](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.ja.md), [简体中文](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.zh.md) or [Español](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/README.es.md).
-- [Studio guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/STUDIO.md)
-- [Development tasks](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/DEVELOPMENT.md)
-- [Container builds and releases](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/RELEASING.md)
-- [Original accelerated engine](https://github.com/andimarafioti/faster-qwen3-tts)
-- [Qwen3-TTS models and research](https://github.com/QwenLM/Qwen3-TTS)
-- [Hangry Labs](https://hangrylabs.app/)
+**Publication status:** `v1.0`, `v1.0_tiny` and `v1.0_sources` are published on Docker Hub and GHCR. The commands below pin the verified matching OCI indexes.
 
 ## Quick Start
 
 With Docker, NVIDIA GPU support and a CUDA 12.8-compatible driver installed, run:
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0@sha256:a8a3643b077e05c2ccf33e9b97978f082d2e89ac33b3d1368ab0e25df628899d
 ```
 
 Open **http://localhost:7860**. API documentation is at **http://localhost:7860/docs**
@@ -54,7 +33,7 @@ the image pull. The named volume preserves models, saved voices and scripts.
 For a smaller download, use the tiny image instead:
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0_tiny@sha256:29f06b3226da4a55244727e111e7700786e53049a54560efeef4bb12a62bd0bd
 ```
 
 Tiny downloads its models into the same volume on first use. Keep it online
@@ -72,40 +51,55 @@ until the selected models are cached. Choose either full or tiny.
 
 | Variant | Rolling tag | Stable release | Model assets |
 | --- | --- | --- | --- |
-| Full | `latest` | `vX.Y` or `vX.Y.Z` | All five pinned checkpoints baked in |
-| Tiny | `latest_tiny` | Matching stable version plus `_tiny` | Download on first use |
+| Full | `latest` | `v1.0` | All five pinned checkpoints baked in |
+| Tiny | `latest_tiny` | `v1.0_tiny` | Download on first use |
+| Sources | `latest_sources` | `v1.0_sources` | Corresponding-source archives and build recipes |
 
 Both variants are built to `hangrylabs/faster-qwen3-tts-studio` and mirrored to
 `ghcr.io/hangry-labs/faster-qwen3-tts-studio`. Full merges baked models into the
 same persistent cache and defaults to offline use. Tiny needs network access
 to populate its cache. Neither runs local ASR.
 
-`main` builds rolling tags; stable Git tags build fixed releases. After publishing,
-stable installation commands will use the verified tag and top-level OCI digest.
-The Quick Start uses rolling tags. See the repository's development guide for
-local source builds.
+The Quick Start uses the published `v1.0` release with verified top-level OCI
+index digests. GHCR uses the same tags and digests: replace `hangrylabs/faster-qwen3-tts-studio` with
+`ghcr.io/hangry-labs/faster-qwen3-tts-studio` in either command.
+
+`main` publishes the moving `latest` and `latest_tiny` tags. They remain unpinned
+for users deliberately following development; see the
+[version history](https://github.com/hangry-labs/faster-qwen3-tts-studio#version-history)
+for those commands and fixed release references.
+
+Matching source image: `hangrylabs/faster-qwen3-tts-studio:v1.0_sources@sha256:515ff1591aa438af475fb22deebb7b8efd619b6258d5f08ff5f12fb3b82b9831`.
+Use the [corresponding-source guide](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/LICENSING.html#obtaining-corresponding-source)
+to extract the archives and rebuild recipes without running an inference server.
 
 ## What You Get
 
-- VoiceDesign 1.7B for voices described in natural language
-- Base 0.6B and 1.7B for cloning authorized reference recordings
-- Optional experimental Base delivery direction; transcript-assisted cloning recommended
-- CustomVoice 0.6B and 1.7B with nine built-in speakers; style instructions on 1.7B
-- Complete WAV generation and incremental playback
-- Upload, drag and drop, microphone selection, recording and waveform trimming
-- Explicitly saved voice profiles and generated-design reuse for cloning
-- Optional reference transcription through an existing ASR service
-- Queue progress, cancellation, timing diagnostics and content-based prompt reuse
-- System controls for per-workflow defaults, model residency and GPU telemetry
-- Python 3.13 with Torch 2.10.0 CUDA 12.8 wheels
+- Create voices from descriptions with 1.7B VoiceDesign, then save them as cloning references
+- Clone authorized recordings with 0.6B or 1.7B Base using reference audio and its transcript
+- Choose nine built-in CustomVoice speakers, with style instructions on the 1.7B model
+- Generate speech in ten languages, with automatic language selection
+- Use incremental playback and live text-in/audio-out cloning with 1.7B Base
+- Generate multi-character dialogue with Magic, a bounded SSML subset or SSML-H
+- Organize saved voices with portraits, metadata, creation recipes and voice refinement
+- Keep scripts and reusable takes, with long-text planning and FIFO queue progress
+- Trim audio, compare original and processed previews, and apply optional effects and mastering
+- Connect OpenAI-compatible speech/voice APIs or separately enabled compact and advanced MCP tools
+- Choose per-workflow defaults and GPU residency, with timing and GPU telemetry in System
+- Use the browser UI in English, Norwegian Bokmål, Polish, Japanese, Simplified Chinese or Spanish
 
-**Languages:** Chinese, English, Japanese, Korean, German, French, Russian,
-Portuguese, Spanish and Italian, plus automatic selection.
+The included offline gallery has ten designed voices, multilingual speech and
+cloning comparisons, and downloadable voice recipes. Open **Examples** in the
+Studio or use the listening link at the top of this page.
 
-The maintained Studio supports NVIDIA/Torch. CUDA graph acceleration uses the
-official Qwen checkpoints with locally maintained inference code. See
-[source provenance](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/UPSTREAMS.md)
-for all three upstreams and exact incorporated revisions.
+**Speech languages:** Chinese, English, Japanese, Korean, German, French, Russian,
+Portuguese, Spanish and Italian. Interface language is independent of speech.
+
+Base delivery direction remains experimental; transcript-assisted cloning is
+recommended. The maintained Studio supports NVIDIA/Torch, with Python 3.13,
+Torch 2.10.0 CUDA 12.8 wheels and locally maintained CUDA graph acceleration.
+See [source provenance](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/UPSTREAMS.html)
+for the three upstreams and incorporated revisions.
 
 ## Persistent Data And Runtime Settings
 
@@ -157,8 +151,13 @@ ids work with the speech endpoint, including optional delivery `instructions`.
 Formats include MP3, WAV, FLAC, Opus, AAC, Ogg and raw 24 kHz mono PCM16.
 OpenAI input remains plain text. Native `/tts/generate`, `/tts/stream` and
 `/tts/events` support explicit `input_type="ssml"` or `"ssml-h"`.
-See the [API guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/API.md)
-and exact [SSML-H profile](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/SSML-H.md).
+See the [API guide](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/API.html)
+and exact [SSML-H profile](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/SSML-H.html).
+
+For LLM integrations, the [live speech API](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/LIVE_API.html)
+accepts arriving text and returns PCM on `/tts/live`. It uses 1.7B Base and a saved
+voice, including its reference transcript for full-reference cloning. Speaker-only
+conditioning is also available. The service, UI and all APIs share port 7860.
 
 Use this Python example with `httpx` installed:
 
@@ -201,6 +200,17 @@ Generation runs locally. First-use checkpoint downloads contact the model host.
 Reference transcription sends audio to the operator-selected service only when
 explicitly requested. Saved reference recordings remain in the product volume.
 
+## Project Links
+
+- [Project website and documentation](https://hangry-labs.github.io/faster-qwen3-tts-studio/)
+- [GitHub repository and README](https://github.com/hangry-labs/faster-qwen3-tts-studio)
+- [Studio guide](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/STUDIO.html)
+- [Development tasks](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/DEVELOPMENT.html)
+- [Container builds and releases](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/RELEASING.html)
+- [Original accelerated engine](https://github.com/andimarafioti/faster-qwen3-tts)
+- [Qwen3-TTS models and research](https://github.com/QwenLM/Qwen3-TTS)
+- [Hangry Labs](https://hangrylabs.app/)
+
 ## Attribution And Licensing
 
 The accelerated engine comes from Faster Qwen3-TTS by Andres Marafioti; Qwen
@@ -216,6 +226,6 @@ corresponding-source requirements described in the licensing guide.
 
 See [NOTICE](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/NOTICE),
 [Third-Party Notices](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/THIRD_PARTY_NOTICES.md)
-and the [licensing guide](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/LICENSING.md).
+and the [licensing guide](https://hangry-labs.github.io/faster-qwen3-tts-studio/docs/LICENSING.html).
 Report product issues in the
 [GitHub issue tracker](https://github.com/hangry-labs/faster-qwen3-tts-studio/issues).

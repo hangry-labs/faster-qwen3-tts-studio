@@ -17,7 +17,7 @@ Qwen3-TTS による声のデザイン、声のクローン、音声生成をロ�
 Docker、NVIDIA GPU 対応、CUDA 12.8 に対応するドライバーがあれば、次の 1 コマンドで起動できます。
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0@sha256:a8a3643b077e05c2ccf33e9b97978f082d2e89ac33b3d1368ab0e25df628899d
 ```
 
 **[http://localhost:7860](http://localhost:7860)** を開いて音声を生成します。完全版には固定リビジョンのモデルが 5 つ含まれ、イメージ取得後はオフラインで動作します。モデル、保存した声、台本はボリュームに保持します。
@@ -26,7 +26,7 @@ docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0
 <summary><strong>ダウンロード容量を抑える：tiny イメージ</strong></summary>
 
 ```bash
-docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:latest_tiny
+docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0.1:7860:7860 --gpus all -e CUDA_VISIBLE_DEVICES=0 -v faster_qwen3_tts_studio_data:/app/persistent hangrylabs/faster-qwen3-tts-studio:v1.0_tiny@sha256:29f06b3226da4a55244727e111e7700786e53049a54560efeef4bb12a62bd0bd
 ```
 
 Tiny は初回使用時に同じボリュームへモデルを取得します。選択したモデルのキャッシュが完了するまでネットワークに接続してください。full または tiny のいずれかを選びます。

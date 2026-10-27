@@ -47,6 +47,19 @@ def test_actual_snapshot_promotes_and_preserves_every_note():
     assert old == documents()
 
 
+def test_release_and_next_snapshot_preserve_jekyll_markdown_details():
+    original = documents()
+    opening = '<details markdown="1">'
+    original['README.md'] = original['README.md'].replace('<details>',opening)
+    _, release, following = prepare(original)
+    assert release['README.md'].count(opening) == 1
+    assert following['README.md'].count(opening) == 2
+    assert '<details>' not in following['README.md']
+    _, next_release, _ = prepare(following)
+    assert next_release['README.md'].count(opening) == 2
+    assert '- Preserve this improvement.' in next_release['README.md']
+
+
 def test_intro_version_and_shared_history_stay_in_sync_for_translated_readme_links():
     original = documents()
     original['README.md'] = 'Development version **v1.0-snapshot**. See the [version history](#version-history).\n\n' + original['README.md']

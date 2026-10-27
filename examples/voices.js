@@ -44,7 +44,7 @@ window.EXAMPLE_MANIFEST = {
   "schema_version": 1,
   "project_name": "Faster Qwen3-TTS Studio",
   "generated_at": "2026-10-27T07:22:18.911427+00:00",
-  "definitions_sha256": "4e51bb8f7fb00dbbfe96e237fcbf0e33726cf850825974f2f9d913b67847d447",
+  "definitions_sha256": "c2a712a6bc7a9ae703aed3a4dbebca9dd23312d8265dac13ebcc9a013faefc8e",
   "models": {
     "design": {
       "id": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",

@@ -19,7 +19,8 @@ def test_published_gallery_files_match_generation_manifest():
     root = ROOT/'examples'
     definitions = json.loads((root/'definitions.json').read_text(encoding='utf-8'))
     manifest = json.loads((root/'assets/manifest.json').read_text(encoding='utf-8'))
-    assert manifest['definitions_sha256'] == hashlib.sha256((root/'definitions.json').read_bytes()).hexdigest()
+    definition_bytes = (root/'definitions.json').read_bytes().replace(b'\r\n',b'\n')
+    assert manifest['definitions_sha256'] == hashlib.sha256(definition_bytes).hexdigest()
     assert len(definitions['voices']) == len(manifest['voices']) == 10
     assert {row['language'] for row in manifest['languages']} == set(server.LANGUAGES)-{'Auto'}
     samples = [reference for voice in manifest['voices'] for reference in voice['references'].values()]
@@ -47,6 +48,16 @@ def test_published_gallery_files_match_generation_manifest():
         else:
             assert sample['recipe']['request']['model'] in {value['id'] for value in manifest['models'].values()}
     assert (root/'voices.js').read_text(encoding='utf-8').split('window.EXAMPLE_MANIFEST = ',1)[1].strip() == json.dumps(manifest,ensure_ascii=False,indent=2)+';'
+
+
+@pytest.mark.parametrize('newline',['\n','\r\n'])
+def test_definitions_checksum_is_portable_but_detects_content_edits(tmp_path,newline):
+    text = '{\n  "text": "Hello 世界"\n}\n'
+    path = tmp_path/'definitions.json'
+    path.write_bytes(text.replace('\n',newline).encode('utf-8'))
+    assert generate_gallery.definitions_checksum(path) == hashlib.sha256(text.encode('utf-8')).hexdigest()
+    path.write_bytes(text.replace('Hello','Goodbye').replace('\n',newline).encode('utf-8'))
+    assert generate_gallery.definitions_checksum(path) != hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
 def test_featured_json_builds_declared_voices_with_escaped_text_and_exact_pauses():

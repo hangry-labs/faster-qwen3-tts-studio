@@ -25,6 +25,11 @@ def checksum(content):
     return hashlib.sha256(content).hexdigest()
 
 
+def definitions_checksum(path):
+    # Git checkouts can use LF or CRLF. Hash the same UTF-8/LF text on both hosts.
+    return checksum(path.read_text(encoding='utf-8').encode('utf-8'))
+
+
 def fingerprint(value):
     return checksum(json.dumps(value, sort_keys=True, ensure_ascii=False).encode())
 
@@ -65,7 +70,7 @@ def generate(base, request, reference=None):
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix+'.tmp')
-    temporary.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    temporary.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')
     temporary.replace(path)
 
 
@@ -145,7 +150,7 @@ def build(args):
                 previous[sample['file']] = sample
     manifest.update(schema_version=1,project_name=definition['project_name'],
                     generated_at=datetime.now(timezone.utc).isoformat(),
-                    definitions_sha256=checksum(args.definitions.read_bytes()),
+                    definitions_sha256=definitions_checksum(args.definitions),
                     models={name:dict(id=model,revision=revisions[model]) for name,model in definition['models'].items()})
 
     def save():
@@ -154,7 +159,7 @@ def build(args):
                 for language in definition['languages']}
         js = 'window.LANGUAGE_META = '+json.dumps(meta,ensure_ascii=False,indent=2)+';\n'
         js += 'window.EXAMPLE_MANIFEST = '+json.dumps(manifest,ensure_ascii=False,indent=2)+';\n'
-        (root/'voices.js').write_text(js,encoding='utf-8')
+        (root/'voices.js').write_text(js,encoding='utf-8',newline='\n')
 
     if args.phase in {'all','design'}:
         manifest['voices'] = []

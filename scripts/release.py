@@ -57,16 +57,18 @@ def prepare(original, next_version=''):
     heading_index = readme.find(heading + '\n')
     if heading_index < 0:
         raise ValueError('README Version History is missing the snapshot heading.')
-    start = readme.rfind('<details>', 0, heading_index)
+    openings = list(re.finditer(r'<details(?:\s[^>]*)?>', readme[:heading_index]))
     end = readme.find('</details>', heading_index)
-    if start < 0 or end < 0:
+    if not openings or end < 0:
         raise ValueError('Snapshot history must live in a collapsible details section.')
+    start = openings[-1].start()
+    opening = openings[-1].group()
     end += len('</details>')
     section = readme[start:end]
     bullets = section.find('\n- ', section.find(heading))
     if bullets < 0:
         raise ValueError('The snapshot needs release-note bullets before promotion.')
-    promoted = (f'<details>\n<summary><strong>v{stable} release notes</strong></summary>\n\n### v{stable}\n\n'
+    promoted = (f'{opening}\n<summary><strong>v{stable} release notes</strong></summary>\n\n### v{stable}\n\n'
         f'Source release `v{stable}`, Python package `{package_version(stable)}`. The source tag triggers '
         'container publication. Verify full/tiny registry indexes and add their digest-pinned '
         'deployment references before announcing availability.\n' + section[bullets:])
@@ -83,11 +85,11 @@ def prepare(original, next_version=''):
     following['VERSION'] = next_snapshot + '\n'
     following['pyproject.toml'] = replace_once(r'^version = "[^"]+"$', f'version = "{next_display}.dev0"', release['pyproject.toml'])
     following[FILES[2]] = replace_once(r'^__version__ = "[^"]+"$', f'__version__ = "{next_snapshot}"', release[FILES[2]])
-    new_section = (f'<details>\n<summary><strong>v{next_snapshot} development notes</strong></summary>\n\n'
+    new_section = (f'{opening}\n<summary><strong>v{next_snapshot} development notes</strong></summary>\n\n'
         f'### v{next_snapshot}\n\nDevelopment version after `v{stable}`. Rolling `latest` and `latest_tiny` '
         'tags follow `main`; immutable release tags remain unchanged.\n\n- No changes recorded yet.\n\n</details>\n\n')
     history_start = release['README.md'].index(
-        f'<details>\n<summary><strong>v{stable} release notes</strong></summary>')
+        f'{opening}\n<summary><strong>v{stable} release notes</strong></summary>')
     following['README.md'] = release['README.md'][:history_start] + new_section + release['README.md'][history_start:]
     following['README.md'] = following['README.md'].replace(
         f'Source release **v{stable}**.', f'Development version **v{next_snapshot}**.')

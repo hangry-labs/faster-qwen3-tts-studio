@@ -23,7 +23,7 @@ button{font:inherit;cursor:pointer}
 .language-picker select:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
 .translation-notice{margin:20px 24px 0;padding:10px 14px;background:#2c1c10;border-left:3px solid var(--orange);border-radius:4px;color:#ffd0aa;font-size:14px}
 .site-grid{position:relative;display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;max-width:1440px;margin:28px auto 50px;padding:0 28px}
-.site-grid.site-grid--wide{grid-template-columns:minmax(0,1fr);max-width:1280px}
+.site-grid.site-grid--wide,.site-grid:has(>.section-sidebar[hidden]),.site-grid:has(>.document:only-child){grid-template-columns:minmax(0,1fr);max-width:1280px}
 .section-sidebar{min-width:0}.section-index{position:sticky;top:calc(var(--header-height) + 24px);max-height:calc(100vh - var(--header-height) - 48px);overflow:auto;scrollbar-width:thin}
 .section-index summary{color:#ffbd87;cursor:pointer;font-size:13px;font-weight:750;text-transform:uppercase;letter-spacing:.08em;padding:10px 8px;list-style:none}
 .section-index summary::-webkit-details-marker{display:none}

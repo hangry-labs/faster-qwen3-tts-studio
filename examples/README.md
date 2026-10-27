@@ -1,3 +1,8 @@
+---
+layout: default
+title: Examples guide
+permalink: /examples/guide/
+---
 # Faster Qwen3-TTS Studio examples
 
 Open **Examples** in the Studio, or visit `http://localhost:7860/examples/`.

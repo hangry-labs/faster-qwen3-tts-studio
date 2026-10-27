@@ -7,7 +7,7 @@ import unittest
 import zipfile
 
 from scripts.check_licensing import ROOT, check_artifact, check_notice_text, check_source
-from scripts.collect_runtime_licenses import notice_name, supplemental_notice
+from scripts.collect_runtime_licenses import native_file, native_name, notice_name, supplemental_notice
 
 
 class LicensingTests(unittest.TestCase):
@@ -80,10 +80,30 @@ class LicensingTests(unittest.TestCase):
         self.assertTrue(notice_name("pkg/COPYING.LGPL"))
         self.assertFalse(notice_name("pkg/model.safetensors"))
 
+    def test_runtime_collector_includes_bundled_versioned_libraries(self):
+        for name in ('torch/lib/libgomp.so.1', 'numpy.libs/libgfortran-hash.so.5.0.0',
+                     'nvidia/cublas/lib/libcublas.so.12', 'pkg/extension.so',
+                     r'pkg\extension.PYD', 'pkg/libdevice.a', 'pkg/kernel.cubin'):
+            with self.subTest(name=name):
+                self.assertTrue(native_name(name))
+        for name in ('pkg/foo.so.py', 'pkg/README.so.txt', 'pkg/model.safetensors'):
+            with self.subTest(name=name):
+                self.assertFalse(native_name(name))
+
+    def test_runtime_collector_identifies_extensionless_elf_tools(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'ptxas'
+            path.write_bytes(b'\x7fELF' + b'\0' * 32)
+            self.assertTrue(native_file(path, 'triton/backends/nvidia/bin/ptxas'))
+            path.write_text('ordinary source text', encoding='utf-8')
+            self.assertFalse(native_file(path, 'package/module.py'))
+
     def test_supplemental_notice_is_limited_to_verified_version_and_present_document(self):
         document = ROOT / 'THIRD_PARTY_NOTICES.md'
         self.assertTrue(supplemental_notice('tokenizers', '0.22.2', document))
         self.assertFalse(supplemental_notice('tokenizers', '0.22.3', document))
+        self.assertTrue(supplemental_notice('torch', '2.10.0+cu128', document))
+        self.assertFalse(supplemental_notice('torch', '2.11.0+cu128', document))
         self.assertFalse(supplemental_notice('unrelated', '0.22.2', document))
         self.assertFalse(supplemental_notice('tokenizers', '0.22.2', document / 'absent'))
         with tempfile.TemporaryDirectory() as folder:

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from scripts.ci_images import (REGISTRIES, check_release_checkout, check_unpublished,
+from scripts.ci_images import (REGISTRIES, add_source_plan, check_release_checkout, check_unpublished,
                               inspect_digest, plan_images, run, verify_publication)
 
 
@@ -104,3 +104,35 @@ def test_mirrors_and_all_tags_must_match_both_build_outputs():
 def test_invalid_build_digest_cannot_be_verified():
     with pytest.raises(ValueError, match='valid OCI digest'):
         verify_publication(plan_images('push', 'refs/heads/main'), '', 'not a digest')
+
+
+def test_sources_have_unique_build_identity_and_matching_stable_alias():
+    plan = add_source_plan(plan_images('push', 'refs/tags/v1.0'), 'a'*40, '1234', '2')
+    assert plan['source_image'] == f'{REGISTRIES[0]}:sources-' + 'a'*40 + '-1234-2'
+    assert len(plan['source_tags']) == 4
+    assert f'{REGISTRIES[0]}:v1.0_sources' in plan['source_tags']
+    other = add_source_plan(plan_images('push', 'refs/heads/main'), 'a'*40, '1235', '1')
+    assert other['source_image'] != plan['source_image']
+    assert f'{REGISTRIES[0]}:latest_sources' in other['source_tags']
+    with pytest.raises(ValueError, match='Source identity'):
+        add_source_plan(plan, 'a'*40, '../bad', '1')
+
+
+def test_source_only_partial_publication_cannot_be_overwritten():
+    plan = add_source_plan(plan_images('push', 'refs/tags/v1.0'), 'a'*40, '1234', '1')
+    def inspect(*command):
+        return CompletedProcess([], 0, 'manifest', '') if command[-1].endswith('_sources') else CompletedProcess([], 1, '', 'manifest unknown')
+    with patch('scripts.ci_images.run', side_effect=inspect):
+        with pytest.raises(ValueError, match='already exists'):
+            check_unpublished(plan)
+
+
+def test_source_indexes_are_verified_in_both_registries():
+    full, tiny, sources = ['sha256:'+char*64 for char in 'abc']
+    plan = add_source_plan(plan_images('push', 'refs/tags/v1.0'), 'a'*40, '1234', '1')
+    def digest(ref):
+        return sources if ':sources-' in ref or ref.endswith('_sources') else tiny if ref.endswith('_tiny') else full
+    with patch('scripts.ci_images.inspect_digest', side_effect=digest):
+        assert len(verify_publication(plan, full, tiny, sources)) == 8
+    with pytest.raises(ValueError, match='valid OCI digest'):
+        verify_publication(plan, full, tiny)

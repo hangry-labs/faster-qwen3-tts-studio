@@ -78,7 +78,87 @@ Debian apt inputs remain moving dependencies. Review the exact
 distributed payload and its original terms. See
 [container builds](RELEASING.md) and [Third-Party Notices](../THIRD_PARTY_NOTICES.md).
 
+## Obtaining corresponding source
+
+The publishing workflow creates a matching source image before application
+images. Its application images include an `app.hangrylabs.sources` label
+pointing to that source image in the same public registry repository.
+The source reference includes the Git commit and workflow run/attempt: rebuilding
+the same commit with different Debian inputs creates a different source reference.
+Stable releases also publish `vX.Y_sources` (or `vX.Y.Z_sources`); moving builds
+publish `latest_sources`. Use the exact reference from your application image,
+since a moving source tag may describe a newer build.
+
+After pulling the application image, inspect it and read `app.hangrylabs.sources`
+under `Config.Labels`:
+
+```bash
+docker image inspect hangrylabs/faster-qwen3-tts-studio:latest
+```
+
+Substitute that source reference for `SOURCE_IMAGE` below. The source image is
+a file archive, not an application to start; creating a stopped container lets
+Docker copy its contents without running anything:
+
+```bash
+docker create --name qwen3-sources SOURCE_IMAGE /unused
+docker cp qwen3-sources:/sources ./qwen3-sources
+docker rm qwen3-sources
+```
+
+Docker Hub and GHCR carry the same source index. The equivalent GHCR reference
+uses `ghcr.io/hangry-labs/faster-qwen3-tts-studio` with the same source tag.
+Source images must remain available while distributing their matching binaries;
+temporary CI evidence artifacts are not the source-delivery mechanism.
+
+The archive includes:
+
+- Exact Debian source packages, including descriptors, upstream archives,
+  distribution patches and build scripts, for every installed Debian package.
+- Reviewed wheel-bundled GCC runtime sources with their distribution patches and
+  specifications; SoundFile's libsndfile and static codec sources/build recipe;
+  the Python-SoXR archive containing its patched libsoxr; certifi and tqdm sources.
+- Installed notices, native-file identities, build inputs, `manifest.json` and
+  `SHA256SUMS`. Source files are verified against signed apt indexes or reviewed
+  SHA-256 pins. No downloaded source is executed during collection.
+
+Collectors fail when an exact Debian source is unavailable or a reviewed wheel
+version/bundled binary changes. Update the review and source inputs rather than
+substituting a newer upstream release. Local builds can produce the same archive
+with `task sources`; local images labelled `local-build` do not claim a published
+source reference. From the repository, verify the collected source-file hashes:
+
+```bash
+python scripts/collect_runtime_sources.py --verify --output qwen3-sources
+```
+
+### Replacement and rebuilding
+
+GPL/LGPL/MPL-covered components retain their original rights. No project term
+prohibits modifying them or debugging modifications to the LGPL components.
+The application uses FFmpeg as a separate executable and replaceable native
+libraries through ordinary dynamic loading. A derived image can replace an
+interface-compatible library or executable; no application signature check locks
+these components to the original bytes.
+
+SoundFile's LGPL libsndfile is a separate shared library in `_soundfile_data`;
+its archive includes the statically incorporated codec sources and build recipe.
+The Python-SoXR extension includes LGPL libsoxr statically. Its complete wrapper,
+patched library, headers and CMake/build configuration are included so users can
+rebuild and replace the extension together. The GCC runtime exception covers
+eligible application linking; it does not remove the bundled runtime libraries'
+own source/notice requirements. Component build instructions and original license
+texts in the archive take precedence over this summary.
+
+NVIDIA and Intel binary components retain their separate redistribution terms.
+These proprietary terms are not applied to the independent GPL/LGPL/MPL source.
+In particular, Torch includes Intel oneMKL 2024.2.0 under the
+[Intel Simplified Software License](../THIRD_PARTY_NOTICES.md#intel-onemkl-license-text).
+The source archive is not a promise of a bit-for-bit rebuild of every proprietary
+component, and collection success does not automatically approve a future image.
+
 ## Reference audio and generated speech
+
 
 No inherited reference recordings or local ASR model are distributed. The
 Studio starts with an empty saved-voice library. Optional transcription sends

@@ -42,7 +42,7 @@ jobs:
       - name: Check notices and publication rules
         run: |
           uv run --no-project --python 3.13 python scripts/check_licensing.py
-          uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_ci_images.py tests/test_release.py tests/test_runtime_lock.py -q -p no:cacheprovider
+          uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_runtime_sources.py tests/test_ci_images.py tests/test_release.py tests/test_runtime_lock.py -q -p no:cacheprovider
           uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_benchmarks.py -q -p no:cacheprovider
       - name: Check Python distribution notices and metadata
         run: |
@@ -104,6 +104,21 @@ jobs:
           target: checks
           platforms: linux/amd64
           push: false
+      - name: Collect, verify and publish corresponding sources before binaries
+        id: sources
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: sources
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.images.outputs.source_tags }}
+          provenance: mode=max
+          build-args: |
+            BUILD_DATE=${{ steps.images.outputs.build_date }}
+            VCS_REF=${{ steps.images.outputs.vcs_ref }}
+            IMAGE_VERSION=${{ steps.images.outputs.image_version }}
+            SOURCE_IMAGE=${{ steps.images.outputs.source_image }}
       - name: Build and publish the full image
         id: baked
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -119,6 +134,7 @@ jobs:
             BUILD_DATE=${{ steps.images.outputs.build_date }}
             VCS_REF=${{ steps.images.outputs.vcs_ref }}
             IMAGE_VERSION=${{ steps.images.outputs.image_version }}
+            SOURCE_IMAGE=${{ steps.images.outputs.source_image }}
       - name: Build and publish the tiny image
         id: tiny
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -134,10 +150,12 @@ jobs:
             BUILD_DATE=${{ steps.images.outputs.build_date }}
             VCS_REF=${{ steps.images.outputs.vcs_ref }}
             IMAGE_VERSION=${{ steps.images.outputs.image_version }}
-      - name: Verify both registries report the built OCI indexes
+            SOURCE_IMAGE=${{ steps.images.outputs.source_image }}
+      - name: Verify both registries report the built application and source indexes
         env:
           BAKED_DIGEST: ${{ steps.baked.outputs.digest }}
           TINY_DIGEST: ${{ steps.tiny.outputs.digest }}
+          SOURCE_DIGEST: ${{ steps.sources.outputs.digest }}
         run: python3 scripts/ci_images.py --verify
       - name: Export runtime notices and pinned model manifest
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -146,6 +164,11 @@ jobs:
           target: evidence
           platforms: linux/amd64
           outputs: type=local,dest=.ci-build/evidence
+          build-args: |
+            BUILD_DATE=${{ steps.images.outputs.build_date }}
+            VCS_REF=${{ steps.images.outputs.vcs_ref }}
+            IMAGE_VERSION=${{ steps.images.outputs.image_version }}
+            SOURCE_IMAGE=${{ steps.images.outputs.source_image }}
       - name: Retain build and publication evidence
         if: always() && steps.images.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

@@ -37,6 +37,7 @@ COPY examples/ ./examples/
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
 ARG IMAGE_VERSION=dev
+ARG SOURCE_IMAGE=local-build
 ENV QWEN_STUDIO_BUILD_ID=${VCS_REF} \
     QWEN_STUDIO_BUILD_DATE=${BUILD_DATE} \
     QWEN_STUDIO_IMAGE_VERSION=${IMAGE_VERSION}
@@ -44,7 +45,8 @@ LABEL org.opencontainers.image.source="https://github.com/hangry-labs/faster-qwe
     org.opencontainers.image.title="Hangry Labs Faster Qwen3-TTS Studio" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${VCS_REF}" \
-    org.opencontainers.image.version="${IMAGE_VERSION}"
+    org.opencontainers.image.version="${IMAGE_VERSION}" \
+    app.hangrylabs.sources="${SOURCE_IMAGE}"
 
 EXPOSE 7860
 CMD ["python", "-m", "faster_qwen3_tts.standalone_ui.docker_entrypoint"]
@@ -58,6 +60,7 @@ RUN python -m pip install --no-build-isolation --no-deps '.[studio]' \
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
 ARG IMAGE_VERSION=dev
+ARG SOURCE_IMAGE=local-build
 ENV QWEN_STUDIO_BUILD_ID=${VCS_REF} \
     QWEN_STUDIO_BUILD_DATE=${BUILD_DATE} \
     QWEN_STUDIO_IMAGE_VERSION=${IMAGE_VERSION}
@@ -65,16 +68,39 @@ LABEL org.opencontainers.image.source="https://github.com/hangry-labs/faster-qwe
     org.opencontainers.image.title="Hangry Labs Faster Qwen3-TTS Studio" \
     org.opencontainers.image.created="${BUILD_DATE}" \
     org.opencontainers.image.revision="${VCS_REF}" \
-    org.opencontainers.image.version="${IMAGE_VERSION}"
+    org.opencontainers.image.version="${IMAGE_VERSION}" \
+    app.hangrylabs.sources="${SOURCE_IMAGE}"
 ENV HF_HUB_OFFLINE=1 \
     TRANSFORMERS_OFFLINE=1
 EXPOSE 7860
 CMD ["python", "-m", "faster_qwen3_tts.standalone_ui.docker_entrypoint"]
 
+FROM app AS source-assets
+COPY scripts/collect_runtime_sources.py scripts/runtime_sources.toml ./scripts/
+# Source indexes are enabled only in this build stage, never in product images.
+RUN python -c "from pathlib import Path; import re; files=list(Path('/etc/apt/sources.list.d').glob('*.sources')); assert files, 'Expected Debian deb822 sources'; [p.write_text(re.sub(r'^Types: deb$', 'Types: deb deb-src', p.read_text(), flags=re.M)) for p in files]" \
+    && apt-get update \
+    && python scripts/collect_runtime_sources.py --output /sources
+COPY --from=app /app/licenses/runtime /sources/notices
+COPY Dockerfile requirements.runtime.txt requirements.runtime.in /sources/build/
+COPY scripts/collect_runtime_licenses.py scripts/collect_runtime_sources.py scripts/runtime_sources.toml /sources/build/
+COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md docs/LICENSING.md /sources/
+
+FROM scratch AS sources
+COPY --from=source-assets /sources /sources
+ARG VCS_REF=unknown
+ARG IMAGE_VERSION=dev
+LABEL org.opencontainers.image.source="https://github.com/hangry-labs/faster-qwen3-tts-studio" \
+    org.opencontainers.image.title="Faster Qwen3-TTS Studio corresponding sources" \
+    org.opencontainers.image.revision="${VCS_REF}" \
+    org.opencontainers.image.version="${IMAGE_VERSION}"
+
 FROM scratch AS evidence
 COPY --from=app /app/licenses/runtime /runtime
 COPY --from=app /app/runtime-constraints.txt /runtime-constraints.txt
 COPY --from=model-assets /app/baked-models/huggingface/model-manifest.json /models/model-manifest.json
+COPY --from=source-assets /sources/manifest.json /sources/manifest.json
+COPY --from=source-assets /sources/SHA256SUMS /sources/SHA256SUMS
 
 FROM app AS checks
 COPY Dockerfile requirements.runtime.in ./

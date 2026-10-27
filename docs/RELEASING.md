@@ -20,6 +20,10 @@ Pull requests run validation without publishing. Manual dispatch can select a
 stable tag and/or rolling tags. Snapshot version tags are not published. Stable
 tags are checked for existing publications; the workflow rejects replacement.
 Both registries receive the same built OCI indexes, checked after publication.
+Each build also publishes a matching source image before publishing application
+images. Source tags include `latest_sources`, stable `vX.Y_sources`/`vX.Y.Z_sources`,
+and a unique `sources-<commit>-<run>-<attempt>` identity. Application image labels
+reference the unique source identity so later rebuilds cannot silently replace it.
 
 For reproducible deployment, use a published readable tag with its verified
 top-level OCI index digest. Rolling tags intentionally remain unpinned.
@@ -35,7 +39,7 @@ Neither includes a local ASR model.
 
 Images carry OCI source, revision, version and build-date labels, plus runtime
 notices under `/app/licenses/runtime`. The workflow exports component inventories,
-model file hashes and verified image references as build evidence. License and
+model file hashes, source manifests and verified image references as build evidence. License and
 source obligations are described in [licensing](LICENSING.md#container-release-requirements).
 
 ## Local builds
@@ -44,6 +48,7 @@ source obligations are described in [licensing](LICENSING.md#container-release-r
 task validate
 task package
 docker build --target checks .
+docker build --target sources -t faster-qwen3-tts-studio:sources .
 docker build --target tiny -t faster-qwen3-tts-studio:tiny .
 docker build --target baked -t faster-qwen3-tts-studio:full .
 ```

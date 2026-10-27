@@ -13,6 +13,7 @@ import tomllib
 FILES = ('VERSION', 'pyproject.toml', 'src/faster_qwen3_tts/__init__.py', 'README.md', 'docs/dockerhub.md')
 VALIDATION = [('task', 'validate'), ('task', 'package'), ('docker', 'build', '--check', '.'),
               ('docker', 'build', '--target', 'checks', '.'),
+              ('docker', 'build', '--target', 'sources', '-t', 'faster-qwen3-tts-studio:release-sources', '.'),
               ('docker', 'build', '--target', 'tiny', '-t', 'faster-qwen3-tts-studio:release-tiny', '.'),
               ('docker', 'build', '--target', 'baked', '-t', 'faster-qwen3-tts-studio:release-full', '.')]
 

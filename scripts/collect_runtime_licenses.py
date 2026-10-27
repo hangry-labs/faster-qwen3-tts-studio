@@ -17,11 +17,12 @@ import subprocess
 import sys
 
 SUPPLEMENTAL_APACHE = {('tokenizers', '0.22.2')}
+SUPPLEMENTAL_BUNDLED = {('torch', '2.10.0+cu128')}
 
 
 def supplemental_notice(name: str, version: str, document: Path) -> str:
     normalized = re.sub(r'[-_.]+', '-', name).lower()
-    if (normalized, version) in SUPPLEMENTAL_APACHE and document.is_file():
+    if (normalized, version) in SUPPLEMENTAL_APACHE | SUPPLEMENTAL_BUNDLED and document.is_file():
         listed_name = normalized
         row = rf'^\| {re.escape(listed_name)} {re.escape(version)} \|'
         if re.search(row, document.read_text(encoding='utf-8'), re.M):
@@ -35,10 +36,30 @@ def notice_name(path: str) -> bool:
     return any(word in base for word in ("license", "licence", "copying", "copyright", "notice", "authors")) or "licenses" in (part.lower() for part in parts)
 
 
+def native_name(path: str) -> bool:
+    """Include versioned SONAMEs and static/device libraries carried by wheels."""
+    name = PurePosixPath(path.replace("\\", "/")).name.lower()
+    return bool(re.search(r"\.so(?:\.[0-9]+)*$", name)) or name.endswith(
+        (".dll", ".dylib", ".pyd", ".a", ".cubin", ".fatbin"))
+
+
+def native_file(path: Path, relative: str) -> bool:
+    if native_name(relative):
+        return True
+    # Wheels also carry tools such as ptxas with no library extension.
+    with path.open('rb') as stream:
+        return stream.read(4) == b'\x7fELF'
+
+
+def file_sha256(path: Path) -> str:
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
 def save_notice(source: Path, destination: Path) -> str:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, destination)
-    return hashlib.sha256(destination.read_bytes()).hexdigest()
+    return file_sha256(destination)
 
 
 def collect_python(output: Path) -> list[dict]:
@@ -51,14 +72,17 @@ def collect_python(output: Path) -> list[dict]:
         slug = re.sub(r"[^a-zA-Z0-9_.-]", "_", name + "-" + dist.version)
         notices = []
         native = []
+        native_files = []
         for entry in dist.files or ():
             relative = PurePosixPath(str(entry).replace("\\", "/"))
-            if str(relative).lower().endswith((".so", ".dll", ".dylib", ".pyd")):
-                native.append(str(relative))
-            if not notice_name(str(relative)):
-                continue
             source = Path(dist.locate_file(entry))
             if not source.is_file():
+                continue
+            if native_file(source, str(relative)):
+                native.append(str(relative))
+                native_files.append({'file': str(relative), 'size': source.stat().st_size,
+                                     'sha256': file_sha256(source)})
+            if not notice_name(str(relative)):
                 continue
             # Keep RECORD-relative identity without allowing ../../ to escape.
             safe = Path(*(re.sub(r"[^a-zA-Z0-9_.-]", "_", part)
@@ -72,7 +96,7 @@ def collect_python(output: Path) -> list[dict]:
             "declared_license": dist.metadata.get("License-Expression") or dist.metadata.get("License") or "",
             "license_classifiers": [value for value in dist.metadata.get_all("Classifier", []) if value.startswith("License ::")],
             "declared_license_files": dist.metadata.get_all("License-File", []),
-            "notices": notices, "native_members": native,
+            "notices": notices, "native_members": native, "native_files": native_files,
             "supplemental_notice": supplemental,
             "review_required": not bool(notices or supplemental),
         })

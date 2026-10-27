@@ -12,6 +12,7 @@ include docs/LIVE_API.md
 recursive-include examples *.py
 recursive-include src *.py *.toml *.html *.css *.js *.json LICENSE *.woff2 *.webp *.svg
 recursive-include scripts *.py *.ps1
+include scripts/runtime_sources.toml
 recursive-include tests *.py *.ps1
 recursive-include tests/ui *.mjs
 include site/theme/assets/hangry-pages/i18n.mjs

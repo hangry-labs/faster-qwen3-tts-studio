@@ -20,6 +20,7 @@ LICENSE_EXPRESSION = "MIT AND Apache-2.0"
 # SHA-256 of the original upstream texts, with LF newlines and outer whitespace
 # removed. Keep the copyright, grant, and disclaimer intact when editing prose.
 LICENSE_TEXT_HASHES = {
+    "Intel oneMKL license text": "ea830e2ec30835937c028de78235f0d1aef7a455cd12f810010fa996b48a8ddb",
     "nano-qwen3tts-vllm MIT notice": "cad241ce93ea8cf56730f2b9ca37950d8a11d845cfb0fb9d1b3a3ebbbd285435",
     "Apache-2.0 license text": "f843da8c75d96e7303bc6dc92ebf88926921d16d6bd3b8c04d8cbe3de810821f",
 }

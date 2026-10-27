@@ -372,6 +372,9 @@ The first Hangry Labs Studio development version. Python distributions use the
 PEP 440 version `1.0.dev0`. This snapshot name does not create a stable release
 or change the rolling Docker image tags.
 
+- Publish matching third-party source images with verified archives, distribution
+  patches and build recipes; include bundled-library identities and the Intel
+  oneMKL redistribution notice.
 - Block unrelated browser origins from triggering state-changing HTTP requests
   while preserving same-host Studio access and direct API clients.
 - Return an authentication error for malformed non-ASCII Bearer tokens instead

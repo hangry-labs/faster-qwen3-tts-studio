@@ -1,0 +1,155 @@
+# Exact source inputs for copyleft components bundled in the supported wheels.
+# Debian source versions/checksums are resolved from the actual image and
+# signed apt indexes. Version/native-hash changes require a fresh review.
+# GCC runtime origins were matched by ELF build IDs against AlmaLinux and
+# CentOS binary RPMs; source RPMs retain patches and build specifications.
+# SoundFile codec versions/build recipe come from libsndfile-binaries
+# a3e6f9769d0c7e91d2d036cf0fdbe5b4bbf18b87 (SoundFile 0.14.0 gitlink).
+
+[wheels."torch"]
+version = "2.10.0+cu128"
+native_pattern = "libgomp"
+sources = ["gcc-8.5.0-28.el8_10.alma.1.src.rpm", "torch-build-cuda.sh", "torch-build-common.sh"]
+[wheels."torch".native]
+"torch/lib/libgomp.so.1" = "59badd7c550c340a23d217c37232a4bac6e66a99f47aa273a0a0393bc7c68ddb"
+
+[wheels."numpy"]
+version = "2.5.4"
+native_pattern = "libgfortran|libquadmath"
+sources = ["gcc-8.5.0-28.el8_10.alma.1.src.rpm"]
+[wheels."numpy".native]
+"numpy.libs/libgfortran-83c28eba-468e71e5.so.5.0.0" = "a6a368328d02a5d8a149746f13f6268f8cc9192df5c18777b25c3c9b5ef52160"
+"numpy.libs/libquadmath-2284e583-a9307bba.so.0.0.0" = "6bc3069003caec1f075be3c51ae8355332f081fa9465910c4b5724e7fe7d8ad4"
+
+[wheels."scipy"]
+version = "1.18.1"
+native_pattern = "libgfortran|libquadmath"
+sources = ["gcc-8.5.0-28.el8_10.alma.1.src.rpm", "gcc-libraries-8.3.1-2.1.1.el7.src.rpm", "gcc-4.8.5-44.el7.src.rpm"]
+[wheels."scipy".native]
+"scipy.libs/libgfortran-040039e1-0352e75f.so.5.0.0" = "c6090048eccc763522c12ef016f81da6b627cb3a044f55cf0479a839c41c0980"
+"scipy.libs/libgfortran-83c28eba.so.5.0.0" = "468e71e59e1d784821a76702e5ecd1e0dbcfc024499f74a552d1bea4b26f27ad"
+"scipy.libs/libquadmath-2284e583.so.0.0.0" = "a9307bbaa353623fa014e8b682d50c4629f5e5c7d61daa9a8652f7d165cd421a"
+"scipy.libs/libquadmath-96973f99-934c22de.so.0.0.0" = "6ed5137f412781ad7863439fb543613f620b43c32b63292a0029246162f5bbc6"
+
+[wheels."scikit-learn"]
+version = "1.9.1"
+native_pattern = "libgomp"
+sources = ["gcc-8.5.0-28.el8_10.alma.1.src.rpm"]
+[wheels."scikit-learn".native]
+"scikit_learn.libs/libgomp-e985bcbb.so.1.0.0" = "a43904e4fa297301d4640dc1bb3c8a3480b406f99e498eba9b1914b68aab604a"
+
+[wheels."soundfile"]
+version = "0.14.0"
+native_pattern = "_soundfile_data/.*\\.so"
+sources = ["libogg-1.3.5.tar.gz", "libvorbis-1.3.7.tar.gz", "flac-1.4.3.tar.xz", "opus-1.4.tar.gz", "mpg123-1.32.3.tar.bz2", "lame-3.100.tar.gz", "libsndfile-1.2.2.tar.xz", "soundfile-0.14.0.tar.gz", "libsndfile-linux-build.sh", "libsndfile-build-workflow.yml"]
+[wheels."soundfile".native]
+"_soundfile_data/libsndfile_x86_64.so" = "c872fb84af2afc0e96b603e0000f0f407af86c49ad1126f2785e5722c7bb27d7"
+
+[wheels."soxr"]
+version = "1.1.0"
+native_pattern = "soxr/soxr_ext.*\\.so"
+sources = ["soxr-1.1.0.tar.gz"]
+[wheels."soxr".native]
+"soxr/soxr_ext.abi3.so" = "bc2cc091949ba7ea3179e2859128a433f73fb448d6d938129db1ea0204d0f969"
+
+[wheels."certifi"]
+version = "2026.10.23"
+native_pattern = "(?!)"
+sources = ["certifi-2026.10.23.tar.gz"]
+[wheels."certifi".native]
+
+[wheels."tqdm"]
+version = "4.70.1"
+native_pattern = "(?!)"
+sources = ["tqdm-4.70.1.tar.gz"]
+[wheels."tqdm".native]
+
+[sources."gcc-8.5.0-28.el8_10.alma.1.src.rpm"]
+url = "https://repo.almalinux.org/vault/8.10/BaseOS/Source/Packages/gcc-8.5.0-28.el8_10.alma.1.src.rpm"
+size = 65715094
+sha256 = "c94dbbd2cd6d5d01a5a6822ea18f8ce34942c25a80e17b4682d547d5e652dbd0"
+
+[sources."gcc-libraries-8.3.1-2.1.1.el7.src.rpm"]
+url = "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-libraries-8.3.1-2.1.1.el7.src.rpm"
+size = 137336608
+sha256 = "cf2a1d2c2e5a56eb2e495c2638e64769b73db07555e1f7ce34cbd9feff6891f5"
+
+[sources."gcc-4.8.5-44.el7.src.rpm"]
+url = "https://vault.centos.org/7.9.2009/os/Source/SPackages/gcc-4.8.5-44.el7.src.rpm"
+size = 79314655
+sha256 = "642c4085f6af9565e39583e54a9d7a5d9e6b93dd8c8e9474aec8a892d6c7aa36"
+
+[sources."libogg-1.3.5.tar.gz"]
+url = "https://downloads.xiph.org/releases/ogg/libogg-1.3.5.tar.gz"
+size = 593071
+sha256 = "0eb4b4b9420a0f51db142ba3f9c64b333f826532dc0f48c6410ae51f4799b664"
+
+[sources."libvorbis-1.3.7.tar.gz"]
+url = "https://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.gz"
+size = 1658963
+sha256 = "0e982409a9c3fc82ee06e08205b1355e5c6aa4c36bca58146ef399621b0ce5ab"
+
+[sources."flac-1.4.3.tar.xz"]
+url = "https://downloads.xiph.org/releases/flac/flac-1.4.3.tar.xz"
+size = 1006728
+sha256 = "6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70"
+
+[sources."opus-1.4.tar.gz"]
+url = "https://downloads.xiph.org/releases/opus/opus-1.4.tar.gz"
+size = 1063408
+sha256 = "c9b32b4253be5ae63d1ff16eea06b94b5f0f2951b7a02aceef58e3a3ce49c51f"
+
+[sources."mpg123-1.32.3.tar.bz2"]
+url = "https://downloads.sourceforge.net/project/mpg123/mpg123/1.32.3/mpg123-1.32.3.tar.bz2"
+size = 1111054
+sha256 = "2d9913a57d4ee8f497a182c6e82582602409782a4fb481e989feebf4435867b4"
+
+[sources."lame-3.100.tar.gz"]
+url = "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz"
+size = 1524133
+sha256 = "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e"
+
+[sources."libsndfile-1.2.2.tar.xz"]
+url = "https://github.com/libsndfile/libsndfile/releases/download/1.2.2/libsndfile-1.2.2.tar.xz"
+size = 730760
+sha256 = "3799ca9924d3125038880367bf1468e53a1b7e3686a934f098b7e1d286cdb80e"
+
+[sources."soxr-1.1.0.tar.gz"]
+url = "https://files.pythonhosted.org/packages/ed/11/27cebce4a108f77afea7c80545115536b45e3f11ebfb914f638fdd9ba847/soxr-1.1.0.tar.gz"
+size = 173067
+sha256 = "9f228ae21c78fa9359ca98d8a5e8e91f30639e438e574133dace62c5b5309e44"
+
+[sources."soundfile-0.14.0.tar.gz"]
+url = "https://files.pythonhosted.org/packages/d2/db/949331952a6fb1c5b12e9de80fd08747966c2039d1a61db4764fbd3981c2/soundfile-0.14.0.tar.gz"
+size = 47842
+sha256 = "ba1c1a2d618bca5c406647c83b89f07cc8810fa506a50622a6993ba130c1de11"
+
+[sources."certifi-2026.10.23.tar.gz"]
+url = "https://files.pythonhosted.org/packages/fd/11/b524cbd9bbdaca58608e4cf4053fd463417549e1959fa8d3aa18319f9555/certifi-2026.10.23.tar.gz"
+size = 136225
+sha256 = "a9895e6e2758b371e0545e321a3a8fd1fcfd9829ada8824a936dfb16aaaf36cd"
+
+[sources."tqdm-4.70.1.tar.gz"]
+url = "https://files.pythonhosted.org/packages/0d/ea/b2a5bd54b28a324dae8211928b2d730b6547500342c7e6c6dea08bd0a485/tqdm-4.70.1.tar.gz"
+size = 171846
+sha256 = "cefd0eca11b2a37a3aee776544d4f4ae913f02688135b5556b8788dfa474afc4"
+
+[sources."libsndfile-linux-build.sh"]
+url = "https://raw.githubusercontent.com/bastibe/libsndfile-binaries/a3e6f9769d0c7e91d2d036cf0fdbe5b4bbf18b87/linux_build.sh"
+size = 3879
+sha256 = "90709951b06174c4eebc201419e3671e65ec4ef38a279c34a1e9d3dd2bf33bde"
+
+[sources."libsndfile-build-workflow.yml"]
+url = "https://raw.githubusercontent.com/bastibe/libsndfile-binaries/a3e6f9769d0c7e91d2d036cf0fdbe5b4bbf18b87/.github/workflows/build-libs.yml"
+size = 3606
+sha256 = "909b4a795b35f8465cce613852af63a2fcc6e91eb4aed0e079db43bc149206a9"
+
+[sources."torch-build-cuda.sh"]
+url = "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/.ci/manywheel/build_cuda.sh"
+size = 13594
+sha256 = "1c926666e98daaf89c6ed16a79cb07a3ea96dba61f367cb5614323117033daee"
+
+[sources."torch-build-common.sh"]
+url = "https://raw.githubusercontent.com/pytorch/pytorch/v2.10.0/.ci/manywheel/build_common.sh"
+size = 16622
+sha256 = "27d71a70e1a4788dc2bbf8f69b7a542249abe2980b11840e7626636c030217cd"

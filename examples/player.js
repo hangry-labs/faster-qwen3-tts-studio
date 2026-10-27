@@ -558,6 +558,10 @@ function sampleName(recipe) {
 }
 
 function initExamples() {
+  const overview = document.querySelector('[data-project-overview]');
+  if (overview && location.protocol !== 'file:' && location.pathname.startsWith('/faster-qwen3-tts-studio/examples/')) {
+    overview.href = '../';
+  }
   const status = document.querySelector("[data-load-status]");
   try {
     if (!window.EXAMPLE_MANIFEST) {

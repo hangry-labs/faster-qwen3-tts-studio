@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="{{ page.lang | default: site.lang | default: 'en' }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    {% seo %}
+    {% assign theme_assets = site.hangry.asset_root | default: '/assets/hangry-pages' %}
+    {% assign project_repository = site.hangry.repository_url | default: site.github.repository_url %}
+    <link rel="icon" href="{{ theme_assets | append: '/hangrylabs-logo.webp' | relative_url }}" type="image/webp">
+    <link rel="stylesheet" href="{{ theme_assets | append: '/theme.css' | relative_url }}">
+    <script defer src="{{ theme_assets | append: '/theme.js' | relative_url }}"></script>
+    <script id="hangry-page-map" type="application/json">{
+      {% for document in site.pages %}{{ document.path | relative_url | jsonify }}: {{ document.url | relative_url | jsonify }}{% unless forloop.last %},{% endunless %}{% endfor %}
+    }</script>
+  </head>
+  <body data-background="{{ site.hangry.background | default: 'matrix' | escape }}" data-baseurl="{{ site.baseurl | escape }}" data-repository="{{ project_repository | escape }}" data-source-branch="{{ site.hangry.source_branch | default: 'main' | escape }}">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <canvas id="hangry-background" aria-hidden="true"></canvas>
+    <header class="site-header" lang="en">
+      <a class="brand" href="https://hangrylabs.app/" aria-label="Hangry Labs website">
+        <img src="{{ theme_assets | append: '/hangrylabs-logo.webp' | relative_url }}" alt="" width="42" height="42">
+        <span><strong>Hangry Labs</strong><small>Useful tools, easy to run</small></span>
+      </a>
+      <nav class="site-navigation" aria-label="Project">
+        <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Overview</a>
+        {% if site.hangry.examples_path %}<a class="nav-primary" href="{{ site.hangry.examples_path | relative_url }}">Listen to examples <span aria-hidden="true">↗</span></a>{% endif %}
+        {% if site.hangry.docs_path %}<a href="{{ site.hangry.docs_path | relative_url }}">Documentation</a>{% endif %}
+        {% if project_repository %}<a href="{{ project_repository }}">GitHub <span aria-hidden="true">↗</span></a>{% endif %}
+      </nav>
+    </header>
+    <div class="site-grid">
+      <aside class="section-sidebar" lang="en">
+        <details class="section-index" id="section-index" open>
+          <summary>On this page</summary>
+          <nav aria-label="Page sections" id="page-sections"></nav>
+        </details>
+      </aside>
+      <main class="document" id="main-content" tabindex="-1">
+        <article class="readme-content">{{ content }}</article>
+        <footer class="site-footer" lang="en">
+          <a href="https://hangrylabs.app/">Hangry Labs</a>
+          <span>Local tools. Your machine. Your work.</span>
+          {% if project_repository %}<a href="{{ project_repository }}/blob/{{ site.hangry.source_branch | default: 'main' }}/{{ page.path }}">View source</a>{% endif %}
+        </footer>
+      </main>
+    </div>
+    <div class="sr-only" id="copy-status" role="status" aria-live="polite"></div>
+  </body>
+</html>

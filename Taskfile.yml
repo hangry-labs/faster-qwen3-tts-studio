@@ -117,6 +117,18 @@ tasks:
     cmds:
       - uv run --no-project --python 3.13 python -m http.server 9000 --bind 127.0.0.1 --directory examples
 
+  pages-build:
+    desc: Build the README website with the shared Hangry Labs theme
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/pages.ps1 build
+
+  pages:
+    desc: Preview the themed project website at http://127.0.0.1:9004/faster-qwen3-tts-studio/
+    dir: '{{.TASKFILE_DIR}}'
+    cmds:
+      - pwsh -NoProfile -File scripts/pages.ps1 preview
+
   examples-generate:
     desc: Regenerate gallery audio through the running Studio, reusing completed samples
     dir: '{{.TASKFILE_DIR}}'

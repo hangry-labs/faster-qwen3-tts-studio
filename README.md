@@ -4,6 +4,8 @@
 
 <p align="center"><strong>English</strong> · <a href="README.nb.md">Norsk bokmål</a> · <a href="README.pl.md">Polski</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh.md">简体中文</a> · <a href="README.es.md">Español</a></p>
 
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/"><strong>🎧 Listen to voice examples</strong></a></p>
+
 # Hangry Labs Faster Qwen3-TTS Studio
 
 Development version **v1.0-snapshot**. See the [version history](#version-history).
@@ -15,10 +17,11 @@ Describe a new voice, turn it into a cloning reference, or generate speech with
 one of Qwen's built-in speakers. This Hangry Labs fork brings those workflows
 together with audio editing, saved voices and NVIDIA GPU controls.
 
-**Listen first:** open the [example gallery](http://localhost:7860/examples/) in
-your running Studio, with ten designed voices across ten languages, shared-voice
+The [public example gallery](https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/)
+includes ten designed voices across ten languages, shared-voice
 cloning comparisons and downloadable voice recipes. See [the gallery guide](examples/README.md)
-for a static preview and regeneration commands.
+for a static preview and regeneration commands. The gallery is also available
+offline through the Studio's **Examples** button.
 
 ## Quick Start
 
@@ -32,7 +35,7 @@ Open **[http://localhost:7860](http://localhost:7860)** and start generating spe
 The full image includes all five pinned checkpoints and can run offline after
 the image pull. The named volume preserves models, saved voices and scripts.
 
-<details>
+<details markdown="1">
 <summary><strong>Smaller download: tiny image</strong></summary>
 
 ```bash
@@ -130,7 +133,7 @@ checkpoints. See the [model revisions and licenses](docs/LICENSING.md).
 
 ## Docker Reference
 
-<details>
+<details markdown="1">
 <summary><strong>Image tags, persistence and GPU settings</strong></summary>
 
 ### Image And GPU Selection
@@ -202,7 +205,7 @@ cached models, settings and saved voices.
 
 ## API Usage
 
-<details>
+<details markdown="1">
 <summary><strong>OpenAI-compatible and native HTTP API examples</strong></summary>
 
 Discover models and controls with `GET /studio/capabilities`. Generation accepts
@@ -275,7 +278,7 @@ bounded subset, not complete W3C SSML support. OpenAI input stays plain text.
 
 ## Local Development
 
-<details>
+<details markdown="1">
 <summary><strong>Docker-first development and testing commands</strong></summary>
 
 Install Task v3, PowerShell 7 and uv alongside Docker. Heavy runtime dependencies
@@ -306,7 +309,7 @@ moving inputs. See [development tasks](docs/DEVELOPMENT.md).
 
 ## Benchmarks And Engine Reference
 
-<details>
+<details markdown="1">
 <summary><strong>Measured baselines, benchmark commands and engine reference</strong></summary>
 
 The [manual benchmark suite](benchmarks/README.md) follows VoxCPMTTS's speed,
@@ -360,7 +363,7 @@ before sharing logs.
 
 ## Version History
 
-<details>
+<details markdown="1">
 <summary><strong>v1.0-snapshot development notes</strong></summary>
 
 ### v1.0-snapshot
@@ -378,6 +381,8 @@ or change the rolling Docker image tags.
   ten-language speech samples, cross-language cloning and a three-character
   SSML-H scene. Include editable JSON definitions and downloadable recipes.
   Encode listening clips as 64 kbps VBR Opus while keeping lossless cloning references.
+- Present the README and documentation through a reusable Hangry Labs Pages theme,
+  with section navigation, command copying and direct access to the listening gallery.
 - Add OpenAI-compatible saved voice creation/deletion and local consent resources,
   including prompt-based Qwen voice design, over the shared Studio voice library.
 - Expose bounded streaming decoder context in all three voice modes, the UI and

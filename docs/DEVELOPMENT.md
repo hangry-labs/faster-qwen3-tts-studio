@@ -49,6 +49,10 @@ building a full image with all five pinned checkpoints included.
 | `task release DRY_RUN=1` | Validate snapshot/stable/next-snapshot document transformations in memory without mutation. |
 | `task release` | Validate and create local release/next-snapshot commits and an annotated source tag; never push or publish. |
 | `task lock-runtime` | Compile the complete Linux/Python 3.13 NVIDIA wheel-hash lock. `CHECK=1` checks existing pins without changing the lock. |
+| `task pages` | Build and preview the public project website locally, without starting the speech engine. |
+| `task pages-build` | Build the website with the pinned GitHub Pages environment. |
+
+See [the website guide](../site/README.md) for theme configuration and reuse.
 
 The development image uses Python 3.13 and matching Torch 2.10.0 CUDA
 12.8 wheels. It installs the current checkout and serves the

@@ -4,6 +4,8 @@
 
 <p align="center"><a href="README.md">English</a> · <a href="README.nb.md">Norsk bokmål</a> · <a href="README.pl.md">Polski</a> · <strong>日本語</strong> · <a href="README.zh.md">简体中文</a> · <a href="README.es.md">Español</a></p>
 
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/"><strong>🎧 音声サンプルを聴く</strong></a></p>
+
 # Hangry Labs Faster Qwen3-TTS Studio
 
 Qwen3-TTS による声のデザイン、声のクローン、音声生成をローカルで行う Docker 版 Studio。ブラウザー UI、ストリーミング再生、HTTP API を提供します。
@@ -20,7 +22,7 @@ docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0
 
 **[http://localhost:7860](http://localhost:7860)** を開いて音声を生成します。完全版には固定リビジョンのモデルが 5 つ含まれ、イメージ取得後はオフラインで動作します。モデル、保存した声、台本はボリュームに保持します。
 
-<details>
+<details markdown="1">
 <summary><strong>ダウンロード容量を抑える：tiny イメージ</strong></summary>
 
 ```bash
@@ -86,7 +88,7 @@ curl http://localhost:7860/v1/audio/speech -H "Content-Type: application/json" -
 
 プロジェクトのコードは Apache-2.0 です。モデルと Docker 配布物全体には各コンポーネントの条件も適用されます。[LICENSE](LICENSE)、[NOTICE](NOTICE)、[サードパーティ通知](THIRD_PARTY_NOTICES.md)、[ライセンスガイド](docs/LICENSING.md)を保持してください。プロジェクトのライセンスがこれらの義務を置き換えることはありません。
 
-<details>
+<details markdown="1">
 <summary>バージョン履歴</summary>
 
 最新の共通[バージョン履歴](README.md#version-history)はメイン README で管理しています。

@@ -4,6 +4,8 @@
 
 <p align="center"><a href="README.md">English</a> · <a href="README.nb.md">Norsk bokmål</a> · <a href="README.pl.md">Polski</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh.md">简体中文</a> · <strong>Español</strong></p>
 
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/"><strong>🎧 Escuchar ejemplos de voz</strong></a></p>
+
 # Hangry Labs Faster Qwen3-TTS Studio
 
 Diseño de voz, clonación y generación de habla con Qwen3-TTS en un Studio local empaquetado con Docker, con interfaz web, reproducción en streaming y API HTTP.
@@ -20,7 +22,7 @@ docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0
 
 Abre **[http://localhost:7860](http://localhost:7860)** y empieza a generar voz. La imagen completa incluye los cinco modelos fijados y funciona sin conexión después de descargarla. El volumen conserva los modelos, las voces guardadas y los guiones.
 
-<details>
+<details markdown="1">
 <summary><strong>Descarga menor: imagen tiny</strong></summary>
 
 ```bash
@@ -86,7 +88,7 @@ Mantenemos la inferencia local, la aceleración, Studio y las integraciones a pa
 
 El código del proyecto usa Apache-2.0. Los modelos y la distribución Docker completa incluyen condiciones adicionales de sus componentes. Conserva [LICENSE](LICENSE), [NOTICE](NOTICE), los [avisos de terceros](THIRD_PARTY_NOTICES.md) y la [guía de licencias](docs/LICENSING.md). La licencia del proyecto no sustituye estas obligaciones.
 
-<details>
+<details markdown="1">
 <summary>Historial de versiones</summary>
 
 El [historial común actualizado](README.md#version-history) se mantiene en el README principal.

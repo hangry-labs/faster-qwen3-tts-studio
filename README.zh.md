@@ -4,6 +4,8 @@
 
 <p align="center"><a href="README.md">English</a> · <a href="README.nb.md">Norsk bokmål</a> · <a href="README.pl.md">Polski</a> · <a href="README.ja.md">日本語</a> · <strong>简体中文</strong> · <a href="README.es.md">Español</a></p>
 
+<p align="center"><a href="https://hangry-labs.github.io/faster-qwen3-tts-studio/examples/"><strong>🎧 试听语音示例</strong></a></p>
+
 # Hangry Labs Faster Qwen3-TTS Studio
 
 在本地使用 Qwen3-TTS 进行声音设计、声音克隆与语音生成。Studio 通过 Docker 打包，提供浏览器界面、流式播放和 HTTP API。
@@ -20,7 +22,7 @@ docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0
 
 打开 **[http://localhost:7860](http://localhost:7860)**，即可开始生成语音。完整镜像包含五个固定版本的模型，拉取后可离线运行。模型、已保存的声音和脚本会保留在持久卷中。
 
-<details>
+<details markdown="1">
 <summary><strong>更小的下载：tiny 镜像</strong></summary>
 
 ```bash
@@ -86,7 +88,7 @@ curl http://localhost:7860/v1/audio/speech -H "Content-Type: application/json" -
 
 项目代码采用 Apache-2.0。模型与完整 Docker 分发还受各组件条款约束；请保留 [LICENSE](LICENSE)、[NOTICE](NOTICE)、[第三方声明](THIRD_PARTY_NOTICES.md)及[许可指南](docs/LICENSING.md)。项目许可不会替代这些义务。
 
-<details>
+<details markdown="1">
 <summary>版本历史</summary>
 
 最新统一[版本历史](README.md#version-history)在主文档中维护。

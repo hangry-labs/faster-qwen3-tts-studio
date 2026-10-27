@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0. Copyright 2026 Hangry Labs.
 (() => {
-  const content = document.querySelector('.readme-content');
+  const content = document.querySelector('#main-content article');
   if (!content) return;
   // README HTML anchors remain useful on GitHub; map them to rendered pages here.
   const pages = JSON.parse(document.querySelector('#hangry-page-map').textContent);
@@ -23,26 +23,28 @@
   const headings = [...content.querySelectorAll('h2[id]')];
   const navigation = document.querySelector('#page-sections');
   const toc = document.querySelector('#section-index');
-  for (const heading of headings) {
-    const link = document.createElement('a');
-    link.href = `#${heading.id}`;
-    link.textContent = heading.textContent;
-    navigation.append(link);
-  }
-  if (!headings.length) toc.parentElement.hidden = true;
-  const compact = matchMedia('(max-width: 900px)');
-  const fitToc = () => { toc.open = !compact.matches; };
-  fitToc(); compact.addEventListener('change', fitToc);
-  const links = [...navigation.querySelectorAll('a')];
-  const sectionObserver = new IntersectionObserver(entries => {
-    const first = entries.filter(entry => entry.isIntersecting).sort((a,b) => a.boundingClientRect.top-b.boundingClientRect.top)[0];
-    if (!first) return;
-    for (const link of links) {
-      if (link.hash === `#${first.target.id}`) link.setAttribute('aria-current','location');
-      else link.removeAttribute('aria-current');
+  if (navigation && toc) {
+    for (const heading of headings) {
+      const link = document.createElement('a');
+      link.href = `#${heading.id}`;
+      link.textContent = heading.textContent;
+      navigation.append(link);
     }
-  }, {rootMargin:'-10% 0px -65% 0px'});
-  headings.forEach(heading => sectionObserver.observe(heading));
+    if (!headings.length) toc.parentElement.hidden = true;
+    const compact = matchMedia('(max-width: 900px)');
+    const fitToc = () => { toc.open = !compact.matches; };
+    fitToc(); compact.addEventListener('change', fitToc);
+    const links = [...navigation.querySelectorAll('a')];
+    const sectionObserver = new IntersectionObserver(entries => {
+      const first = entries.filter(entry => entry.isIntersecting).sort((a,b) => a.boundingClientRect.top-b.boundingClientRect.top)[0];
+      if (!first) return;
+      for (const link of links) {
+        if (link.hash === `#${first.target.id}`) link.setAttribute('aria-current','location');
+        else link.removeAttribute('aria-current');
+      }
+    }, {rootMargin:'-10% 0px -65% 0px'});
+    headings.forEach(heading => sectionObserver.observe(heading));
+  }
 
   function revealHash() {
     let target;
@@ -56,13 +58,13 @@
   addEventListener('hashchange',revealHash);
   if (location.hash) revealHash();
 
-  for (const table of content.querySelectorAll('table')) {
+  for (const table of content.querySelectorAll('.readme-content table')) {
     const wrapper = document.createElement('div');
     wrapper.className = 'table-scroll'; wrapper.tabIndex = 0;
     wrapper.setAttribute('role','region'); wrapper.setAttribute('aria-label','Scrollable table');
     table.before(wrapper); wrapper.append(table);
   }
-  for (const pre of content.querySelectorAll('pre')) {
+  for (const pre of content.querySelectorAll('.readme-content pre')) {
     const code = pre.querySelector('code');
     if (!code) continue;
     const button = document.createElement('button');

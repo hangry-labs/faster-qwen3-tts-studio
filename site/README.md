@@ -1,8 +1,8 @@
 # Project website
 
 The GitHub Pages overview is built directly from the root README. Translated
-READMEs and Markdown documentation use the same layout. The listening gallery
-keeps its own player at `/examples/`.
+READMEs, Markdown documentation and the listening gallery at `/examples/` share
+the same header and navigation. The gallery keeps its own player.
 
 ## Preview
 
@@ -35,6 +35,13 @@ relative Markdown links usable on GitHub; the website resolves them to rendered
 pages. Source-file links open on GitHub when the file is excluded from the site.
 Use `<details markdown="1">` for collapsible sections containing Markdown, so
 commands and tables render correctly in both Jekyll and GitHub.
+
+The gallery's `index.md` includes the content from its standalone `index.html`.
+The latter is excluded only from Jekyll's output, so the website gets one shared
+header while the Docker and downloaded galleries still open directly. Voice
+definitions, media and player code remain shared between both presentations.
+Rich pages can set `wide`, `sidebar: false`, `content_class`, `stylesheets` and
+`scripts` in front matter to use the same theme with their own content.
 
 ## Reusing the theme
 

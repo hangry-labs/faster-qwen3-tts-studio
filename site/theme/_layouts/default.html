@@ -7,6 +7,7 @@
     {% seo %}
     {% assign theme_assets = site.hangry.asset_root | default: '/assets/hangry-pages' %}
     {% assign project_repository = site.hangry.repository_url | default: site.github.repository_url %}
+    {% for stylesheet in page.stylesheets %}<link rel="stylesheet" href="{{ stylesheet | relative_url }}">{% endfor %}
     <link rel="icon" href="{{ theme_assets | append: '/hangrylabs-logo.webp' | relative_url }}" type="image/webp">
     <link rel="stylesheet" href="{{ theme_assets | append: '/theme.css' | relative_url }}">
     <script defer src="{{ theme_assets | append: '/theme.js' | relative_url }}"></script>
@@ -24,20 +25,22 @@
       </a>
       <nav class="site-navigation" aria-label="Project">
         <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} aria-current="page"{% endif %}>Overview</a>
-        {% if site.hangry.examples_path %}<a class="nav-primary" href="{{ site.hangry.examples_path | relative_url }}">Listen to examples <span aria-hidden="true">↗</span></a>{% endif %}
-        {% if site.hangry.docs_path %}<a href="{{ site.hangry.docs_path | relative_url }}">Documentation</a>{% endif %}
+        {% if site.hangry.examples_path %}<a class="nav-primary" href="{{ site.hangry.examples_path | relative_url }}"{% if page.url == site.hangry.examples_path %} aria-current="page"{% endif %}>Listen to examples</a>{% endif %}
+        {% if site.hangry.docs_path %}<a href="{{ site.hangry.docs_path | relative_url }}"{% if page.url == site.hangry.docs_path %} aria-current="page"{% endif %}>Documentation</a>{% endif %}
         {% if project_repository %}<a href="{{ project_repository }}">GitHub <span aria-hidden="true">↗</span></a>{% endif %}
       </nav>
     </header>
-    <div class="site-grid">
+    <div class="site-grid{% if page.wide %} site-grid--wide{% endif %}">
+      {% unless page.sidebar == false %}
       <aside class="section-sidebar" lang="en">
         <details class="section-index" id="section-index" open>
           <summary>On this page</summary>
           <nav aria-label="Page sections" id="page-sections"></nav>
         </details>
       </aside>
+      {% endunless %}
       <main class="document" id="main-content" tabindex="-1">
-        <article class="readme-content">{{ content }}</article>
+        <article class="{{ page.content_class | default: 'readme-content' | escape }}">{{ content }}</article>
         <footer class="site-footer" lang="en">
           <a href="https://hangrylabs.app/">Hangry Labs</a>
           <span>Local tools. Your machine. Your work.</span>
@@ -46,5 +49,6 @@
       </main>
     </div>
     <div class="sr-only" id="copy-status" role="status" aria-live="polite"></div>
+    {% for script in page.scripts %}<script src="{{ script | relative_url }}"></script>{% endfor %}
   </body>
 </html>

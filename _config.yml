@@ -93,4 +93,5 @@ exclude:
   - site/Dockerfile
   - site/README.md
   - site/theme/hangry-labs-pages.gemspec
+  - examples/index.html
   - "**/__pycache__"

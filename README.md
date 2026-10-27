@@ -9,7 +9,7 @@
 Development version **v1.0-snapshot**. See the [version history](#version-history).
 
 Local Qwen3-TTS voice design, voice cloning and speech generation in a Docker
-Studio with a browser UI, streaming playback and an HTTP API.
+Studio with a browser UI, streaming playback, HTTP APIs and a live WebSocket API.
 
 Describe a new voice, turn it into a cloning reference, or generate speech with
 one of Qwen's built-in speakers. This Hangry Labs fork brings those workflows
@@ -50,6 +50,7 @@ See [building from source](docs/DEVELOPMENT.md#build-from-source) for developmen
 - Nine built-in CustomVoice speakers, with style instructions on the 1.7B model
 - Ten languages plus automatic language selection
 - Complete WAV output or incremental browser playback
+- Live text input with simultaneous PCM audio output through a native WebSocket API (1.7B Base)
 - OpenAI-compatible speech in MP3, WAV, FLAC, Opus, AAC, Ogg and PCM
 - Magic dialogue editing, a bounded SSML subset and SSML-H designed characters
 - Saved script folders, locked/reusable takes and explicit workspace snapshots
@@ -250,6 +251,8 @@ for queue/loading progress around a complete generation.
 The [Studio guide](docs/STUDIO.md) covers the browser and existing multipart
 contracts. The [speech API guide](docs/API.md) covers OpenAI-compatible clients,
 native binary/streaming output, voice saving, Magic and script workspaces.
+For arriving LLM text, use the [live speech API](docs/LIVE_API.md) at
+`ws://localhost:7860/tts/live`, with 1.7B Base saved-voice ICL or speaker-only cloning.
 
 ```bash
 curl http://localhost:7860/v1/audio/speech \
@@ -362,6 +365,9 @@ or change the rolling Docker image tags.
 
 - Fix stereo waveform/sample-rate tuple inputs in the local Qwen Python cloning
   interface while preserving mono inputs and the original sample rate.
+- Add a bounded text-in/audio-out WebSocket API for saved-voice cloning, including
+  reference transcripts, continuous inference, queue sharing and disconnect cleanup.
+  Restrict live text input to 1.7B Base for consistent delivery.
 - Add OpenAI-compatible saved voice creation/deletion and local consent resources,
   including prompt-based Qwen voice design, over the shared Studio voice library.
 - Expose bounded streaming decoder context in all three voice modes, the UI and

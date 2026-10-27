@@ -8,6 +8,8 @@ include docs/API.md docs/DEVELOPMENT.md docs/ENGINE.md docs/LICENSING.md
 include docs/RELEASING.md docs/SSML-H.md docs/STUDIO.md
 include docs/UPSTREAMS.md docs/UPSTREAM_BENCHMARKS.md docs/dockerhub.md
 include docs/MCP.md
+include docs/LIVE_API.md
+recursive-include examples *.py
 recursive-include src *.py *.toml *.html *.css *.js *.json LICENSE *.woff2 *.webp *.svg
 recursive-include scripts *.py *.ps1
 recursive-include tests *.py *.ps1

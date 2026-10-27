@@ -2,7 +2,16 @@
 
 The UI, native API and OpenAI-compatible speech API share port **7860**, one
 FIFO inference queue and the same local Qwen implementation. Discover the exact
-request schemas at `/openapi.json`. The browser API guide is `/docs`.
+HTTP request schemas at `/openapi.json`. The browser API guide is `/docs`.
+
+## Live text input and audio output
+
+Connect to `ws://localhost:7860/tts/live` to send arriving text and receive audio
+from one ongoing cloned utterance. It supports full-reference ICL with the saved
+reference transcript, or speaker-only conditioning. Control messages are JSON;
+audio frames are raw PCM16LE at 24 kHz, mono. This native protocol is documented
+in the [live speech API guide](LIVE_API.md), with a [Python client](../examples/live_speech.py).
+It shares the existing FIFO inference queue and operator model policy.
 
 ## OpenAI-compatible clients
 

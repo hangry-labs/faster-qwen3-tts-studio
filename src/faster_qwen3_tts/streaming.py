@@ -37,6 +37,7 @@ def fast_generate_streaming(
     do_sample: bool = True,
     repetition_penalty: float = 1.05,
     chunk_size: int = 12,
+    text_source=None,
 ) -> Generator[Tuple[torch.Tensor, dict], None, None]:
     """
     Streaming autoregressive generation with CUDA-graphed predictor and talker.
@@ -82,7 +83,7 @@ def fast_generate_streaming(
     gen_step = out.generation_step
 
     logits = out.logits[:, -1, :]
-    suppress_eos = min_new_tokens > 0
+    suppress_eos = min_new_tokens > 0 or (text_source is not None and not text_source.eos_consumed)
     token = sample_logits(
         logits,
         temperature=temperature,
@@ -128,7 +129,9 @@ def fast_generate_streaming(
             codec_hiddens.append(predictor_codec_embeds[i](codebook_token_ids[i].unsqueeze(0).unsqueeze(0)))
         inputs_embeds = torch.cat(codec_hiddens, dim=1).sum(1, keepdim=True)
 
-        if gen_step < trailing_text_hiddens.shape[1]:
+        if text_source is not None:
+            inputs_embeds = inputs_embeds + text_source.next_embedding(gen_step)
+        elif gen_step < trailing_text_hiddens.shape[1]:
             inputs_embeds = inputs_embeds + trailing_text_hiddens[:, gen_step].unsqueeze(1)
         else:
             inputs_embeds = inputs_embeds + tts_pad_embed
@@ -147,7 +150,7 @@ def fast_generate_streaming(
             history = torch.stack(all_first_tokens)
             logits = apply_repetition_penalty(logits, history, repetition_penalty)
 
-        suppress_eos = len(all_first_tokens) < min_new_tokens
+        suppress_eos = len(all_first_tokens) < min_new_tokens or (text_source is not None and not text_source.eos_consumed)
         token = sample_logits(
             logits.squeeze(0),
             temperature=temperature,

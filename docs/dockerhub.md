@@ -7,7 +7,12 @@
 # Hangry Labs Faster Qwen3-TTS Studio
 
 Local Qwen3-TTS voice design, reference cloning and speech generation with a
-browser Studio, streaming playback and an HTTP API.
+browser Studio, streaming playback, HTTP APIs and a live WebSocket API.
+
+The [live speech API](https://github.com/hangry-labs/faster-qwen3-tts-studio/blob/main/docs/LIVE_API.md)
+accepts arriving text and returns PCM audio on `/tts/live` with 1.7B Base, using the same port
+and saved-voice library as the Studio. Full-reference cloning includes the saved
+reference transcript; speaker-only conditioning is also selectable.
 
 The interface supports English, Norwegian Bokmål, Polish, Japanese, Simplified
 Chinese and Spanish. Change interface language without discarding browser work.

@@ -145,7 +145,9 @@ def create_app(engine=None, data_root: Path | None = None):
 
     @app.get('/studio/capabilities')
     def capabilities():
+        from .live_api import capabilities as live_capabilities
         return {'models': list(MODELS.values()), 'languages': LANGUAGES, 'speakers': SPEAKERS,
+                'live_speech': live_capabilities(),
                 'modes': ['custom', 'design', 'clone'], 'backend': 'torch', 'streaming': True,
                 'formats': ['wav'], 'native_formats': ['wav', 'mp3', 'flac', 'ogg', 'opus', 'aac', 'pcm'],
                 'input_types': ['text', 'ssml', 'ssml-h'], 'openai': True, 'magic': True,
@@ -405,6 +407,8 @@ def create_app(engine=None, data_root: Path | None = None):
     from .script_api import attach_scripts
     attach_api(app, engine=engine, store=voice_store, canonical_audio=canonical_audio, transcribe=transcribe)
     attach_scripts(app, data / 'scripts')
+    from .live_api import attach_live_api
+    attach_live_api(app, engine=engine, store=voice_store)
     from .mcp_server import attach_mcp
     attach_mcp(app, data=data, settings=settings)
     return app
@@ -412,7 +416,8 @@ def create_app(engine=None, data_root: Path | None = None):
 
 def main():
     import uvicorn
-    uvicorn.run(create_app(), host=os.getenv('HOST', '0.0.0.0'), port=int(os.getenv('PORT', '7860')))
+    uvicorn.run(create_app(), host=os.getenv('HOST', '0.0.0.0'), port=int(os.getenv('PORT', '7860')),
+                ws_max_size=64*1024, ws_max_queue=4)
 
 
 if __name__ == '__main__':

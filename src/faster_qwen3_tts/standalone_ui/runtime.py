@@ -6,6 +6,7 @@ import os
 import sys
 import threading
 import time
+import traceback
 from contextlib import contextmanager
 from collections import deque
 from pathlib import Path
@@ -331,6 +332,60 @@ class StudioEngine:
             self._unload()
             self._state('idle')
         return self.status()
+
+    def generate_live(self, request, reference, feed, emit):
+        """Own one FIFO GPU lease, including bounded waits for incoming text."""
+        from ..live_input import generate_voice_clone_live, validate_live_model
+        import torch
+        validate_live_model(request.model)
+        started = time.perf_counter()
+        with self.session(feed.cancelled, emit):
+            queued_ms = (time.perf_counter()-started)*1000
+            try:
+                feed.check()
+                if self.model_id != request.model or self.model is None:
+                    emit({'type': 'loading', 'model': request.model})
+                self._load(request.model)
+                feed.check()
+                torch.manual_seed(request.seed)
+                torch.cuda.manual_seed_all(request.seed)
+                self._state('generating')
+                self.model.last_generation_stop_reason = None
+                samples, first_audio_ms, rate = 0, None, 24000
+                with torch.inference_mode():
+                    generator = generate_voice_clone_live(self.model, feed, request, reference, emit)
+                    try:
+                        for wave, rate, timing in generator:
+                            feed.check()
+                            wave = flatten_audio(wave)
+                            if not len(wave):
+                                continue
+                            if first_audio_ms is None:
+                                first_audio_ms = (time.perf_counter()-started)*1000
+                            samples += len(wave)
+                            emit({'type': 'chunk', 'audio': wave, 'sample_rate': rate})
+                    finally:
+                        generator.close()
+                feed.check()
+                metrics = {**feed.metrics(), 'queue_ms': round(queued_ms, 2),
+                           'first_audio_ms': round(first_audio_ms, 2) if first_audio_ms is not None else None,
+                           'total_ms': round((time.perf_counter()-started)*1000, 2),
+                           'samples': samples, 'duration_s': samples/rate,
+                           'stop_reason': self.model.last_generation_stop_reason}
+                if self.model.last_generation_stop_reason != 'eos':
+                    raise GenerationIncomplete(self.model.last_generation_stop_reason or 'generation', metrics)
+                if not samples:
+                    raise RuntimeError('The model did not produce audio.')
+                emit({'type': 'done', 'model': request.model, 'seed': request.seed,
+                      'sample_rate': rate, 'metrics': metrics})
+            except BaseException as exc:
+                # Failed generator frames retain tensors and model references.
+                # Release them before session disposal trims transient weights;
+                # keep the traceback's locations for server diagnostics.
+                traceback.clear_frames(exc.__traceback__)
+                raise
+            finally:
+                self._state('ready')
 
     def generate(self, request: GenerationRequest, reference: Path | None,
                  cancelled: threading.Event, emit: Callable[[dict], None], streaming: bool):

@@ -11,9 +11,12 @@ import json
 import struct
 import subprocess
 import threading
+import urllib.error
+import urllib.request
 from unittest.mock import patch
 import wave
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
+from defusedxml.common import DefusedXmlException
 
 import pytest
 
@@ -81,12 +84,19 @@ def service():
             state['calls'] += 1
             if state['fail_call'] == state['calls']:
                 self.send_error(503, 'Synthetic failure'); return
-            audio = wav_bytes(options['seed'])
+            try:
+                seed = int(options['seed'])
+            except (TypeError, ValueError):
+                self.send_error(400, 'Invalid seed'); return
+            audio = wav_bytes(seed)
             text = options['text']
             if options.get('input_type', 'text') != 'text':
-                text = ' '.join(' '.join(ET.fromstring(text).itertext()).split())
+                try:
+                    text = ' '.join(' '.join(ET.fromstring(text).itertext()).split())
+                except (ET.ParseError, DefusedXmlException):
+                    self.send_error(400, 'Invalid SSML'); return
             state['audio'][hashlib.sha256(audio).hexdigest()] = text
-            metrics = {'seed': options['seed'] + state['seed_offset'], 'duration_s': .1, 'generation_ms': 1, 'model_load_ms': 0}
+            metrics = {'seed': seed + int(state['seed_offset']), 'duration_s': .1, 'generation_ms': 1, 'model_load_ms': 0}
             if self.path == '/tts/events':
                 events = [{'type': 'chunk', 'audio_b64': base64.b64encode(audio).decode()}]
                 if state['stream'] == 'error': events.append({'type': 'error', 'message': 'Synthetic stream failure'})
@@ -102,6 +112,21 @@ def service():
         yield f'http://127.0.0.1:{server.server_port}', state
     finally:
         server.shutdown(); server.server_close(); thread.join(timeout=5)
+
+
+@pytest.mark.parametrize('changes', [
+    {'seed': '42\r\nInjected: header'},
+    {'input_type': 'ssml', 'text': '<!DOCTYPE speak [<!ENTITY test "expanded">]><speak>&test;</speak>'},
+])
+def test_synthetic_service_rejects_invalid_seed_and_xml_entities(service, changes):
+    url, _ = service
+    data = json.dumps({'seed': 42, 'text': 'Safe text', **changes}).encode()
+    request = urllib.request.Request(url + '/tts/generate', data=data,
+                                     headers={'Content-Type': 'application/json'})
+    with pytest.raises(urllib.error.HTTPError) as error:
+        urllib.request.urlopen(request, timeout=5)
+    assert error.value.code == 400
+    assert error.value.headers.get('Injected') is None
 
 
 def test_full_catalog_has_360_calls_per_engine_and_checkpoint_separation():

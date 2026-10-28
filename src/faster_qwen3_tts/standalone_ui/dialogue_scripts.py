@@ -302,7 +302,7 @@ def save_dialogue_script(
                 encoding="utf-8",
                 delete=False,
                 dir=script_dir,
-                prefix=f".{script_name}.",
+                prefix=".script.",
                 suffix=".tmp",
             ) as output:
                 temporary_path = Path(output.name)

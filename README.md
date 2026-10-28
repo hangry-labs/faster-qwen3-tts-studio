@@ -388,6 +388,10 @@ docker run -d --name faster-qwen3-tts-studio --restart unless-stopped -p 127.0.0
 - Render the example guide within the project website. Let documentation without
   a section sidebar use the full content width, and extend the navigation bar's
   background across the viewport while keeping its contents centered.
+- Keep wide benchmark tables readable with horizontal scrolling.
+- Remove unused remote-theme and ZIP extraction dependencies from the website
+  builder. Keep user names out of script temporary-file paths, and harden the
+  offline benchmark test server's XML parsing and seed validation.
 
 </details>
 

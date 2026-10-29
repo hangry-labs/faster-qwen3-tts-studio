@@ -43,7 +43,7 @@ jobs:
         run: |
           uv run --no-project --python 3.13 python scripts/check_licensing.py
           uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_licensing.py tests/test_runtime_sources.py tests/test_ci_images.py tests/test_release.py tests/test_runtime_lock.py -q -p no:cacheprovider
-          uv run --no-project --python 3.13 --with 'pytest>=8,<10' python -m pytest tests/test_benchmarks.py -q -p no:cacheprovider
+          uv run --no-project --python 3.13 --with 'pytest>=8,<10' --with defusedxml==0.7.1 python -m pytest tests/test_benchmarks.py -q -p no:cacheprovider
       - name: Check Python distribution notices and metadata
         run: |
           uv build
